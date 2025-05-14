@@ -158,3 +158,5 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.drawImage(downCanvas, 0, 0, canvas.width, canvas.height);
   }
 });
+
+*/
