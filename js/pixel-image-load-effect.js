@@ -111,8 +111,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function doStep() {
       if (currentStep > steps) {
-        canvas.remove();
-        // Reset all positioning and size styles to default
+        const wrapper = canvas.parentElement;
+        const originalParent = wrapper.parentElement;
+        
+        // Reset all styles
         img.style.position = "";
         img.style.top = "";
         img.style.left = "";
@@ -120,6 +122,11 @@ document.addEventListener("DOMContentLoaded", () => {
         img.style.height = "";
         img.style.objectFit = "";
         img.style.visibility = "visible";
+        img.style.zIndex = "";
+        
+        // Move the image back to its original position
+        originalParent.insertBefore(img, wrapper);
+        wrapper.remove();
         return;
       }
 
