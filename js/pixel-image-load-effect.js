@@ -59,11 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       canvas.width = rect.width;
       canvas.height = rect.height;
-      canvas.style.width = rect.width + "px";
-      canvas.style.height = rect.height + "px";
-      wrapper.style.width = rect.width + "px";
-      wrapper.style.height = rect.height + "px";
-
+      wrapper.style.width = "100%";
+      wrapper.style.height = "auto";
       drawPixelStep(img, canvas, ctx, steps);
     });
   }, 150));
@@ -103,17 +100,17 @@ document.addEventListener("DOMContentLoaded", () => {
     canvas.style.left = "0";
     canvas.style.zIndex = "2";
     canvas.style.pointerEvents = "none";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
     canvas.style.objectFit = computedStyles.objectFit || "cover";
-    canvas.style.width = rect.width + "px";
-    canvas.style.height = rect.height + "px";
 
     const wrapper = document.createElement("div");
     wrapper.classList.add("pixel-loading-wrapper");
     wrapper.style.position = "relative";
     wrapper.style.display = "inline-block";
     wrapper.style.overflow = "hidden";
-    wrapper.style.width = rect.width + "px";
-    wrapper.style.height = rect.height + "px";
+    wrapper.style.width = "100%";
+    wrapper.style.height = "auto";
 
     img.style.position = "absolute";
     img.style.top = "0";
