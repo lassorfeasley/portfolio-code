@@ -59,6 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       canvas.width = rect.width;
       canvas.height = rect.height;
+      canvas.style.width = rect.width + "px";
+      canvas.style.height = rect.height + "px";
       wrapper.style.width = rect.width + "px";
       wrapper.style.height = rect.height + "px";
 
@@ -99,23 +101,25 @@ document.addEventListener("DOMContentLoaded", () => {
     canvas.style.position = "absolute";
     canvas.style.top = "0";
     canvas.style.left = "0";
-    canvas.style.width = computedStyles.width;
-    canvas.style.height = computedStyles.height;
     canvas.style.zIndex = "2";
     canvas.style.pointerEvents = "none";
+    canvas.style.objectFit = computedStyles.objectFit || "cover";
+    canvas.style.width = rect.width + "px";
+    canvas.style.height = rect.height + "px";
 
     const wrapper = document.createElement("div");
     wrapper.classList.add("pixel-loading-wrapper");
     wrapper.style.position = "relative";
     wrapper.style.display = "inline-block";
-    wrapper.style.width = computedStyles.width;
-    wrapper.style.height = computedStyles.height;
+    wrapper.style.overflow = "hidden";
+    wrapper.style.width = rect.width + "px";
+    wrapper.style.height = rect.height + "px";
 
     img.style.position = "absolute";
     img.style.top = "0";
     img.style.left = "0";
-    img.style.width = computedStyles.width;
-    img.style.height = computedStyles.height;
+    img.style.width = "100%";
+    img.style.height = "100%";
     img.style.visibility = "hidden";
 
     img.parentNode.insertBefore(wrapper, img);
