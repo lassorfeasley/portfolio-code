@@ -99,8 +99,8 @@ document.addEventListener("DOMContentLoaded", () => {
     canvas.style.position = "absolute";
     canvas.style.top = "0";
     canvas.style.left = "0";
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
+    canvas.style.width = computedStyles.width;
+    canvas.style.height = computedStyles.height;
     canvas.style.zIndex = "2";
     canvas.style.pointerEvents = "none";
 
@@ -108,14 +108,14 @@ document.addEventListener("DOMContentLoaded", () => {
     wrapper.classList.add("pixel-loading-wrapper");
     wrapper.style.position = "relative";
     wrapper.style.display = "inline-block";
-    wrapper.style.width = rect.width + "px";
-    wrapper.style.height = rect.height + "px";
+    wrapper.style.width = computedStyles.width;
+    wrapper.style.height = computedStyles.height;
 
     img.style.position = "absolute";
     img.style.top = "0";
     img.style.left = "0";
-    img.style.width = "100%";
-    img.style.height = "100%";
+    img.style.width = computedStyles.width;
+    img.style.height = computedStyles.height;
     img.style.visibility = "hidden";
 
     img.parentNode.insertBefore(wrapper, img);
@@ -142,7 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         img.style.visibility = "visible";
-        img.style.position = "static";
+        img.style.position = "";
         img.style.width = "";
         img.style.height = "";
 
