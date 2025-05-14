@@ -71,18 +71,18 @@ document.addEventListener("DOMContentLoaded", () => {
     canvas.width = w;
     canvas.height = h;
     canvas.style.width = "100%";
-    canvas.style.height = "auto";
+    canvas.style.height = "100%";
     canvas.style.position = "absolute";
     canvas.style.top = "0";
     canvas.style.left = "0";
     canvas.style.zIndex = "2";
     canvas.style.pointerEvents = "none";
 
-    wrapper.style.width = img.offsetWidth + "px";
-    wrapper.style.height = img.offsetHeight + "px";
+    wrapper.style.width = "100%";
+    wrapper.style.height = "100%";
     wrapper.style.position = "relative";
     wrapper.style.overflow = "hidden";
-    wrapper.style.display = "inline-block";
+    wrapper.style.display = "block";
 
     img.style.position = "absolute";
     img.style.top = "0";
