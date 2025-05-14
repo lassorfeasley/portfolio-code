@@ -59,8 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       canvas.width = rect.width;
       canvas.height = rect.height;
-      wrapper.style.width = "100%";
-      wrapper.style.height = "auto";
+      canvas.style.width = "100%";
+      canvas.style.height = "auto";
       drawPixelStep(img, canvas, ctx, steps);
     });
   }, 150));
@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
     canvas.style.zIndex = "2";
     canvas.style.pointerEvents = "none";
     canvas.style.width = "100%";
-    canvas.style.height = "100%";
+    canvas.style.height = "auto";
     canvas.style.objectFit = computedStyles.objectFit || "cover";
 
     const wrapper = document.createElement("div");
@@ -116,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
     img.style.top = "0";
     img.style.left = "0";
     img.style.width = "100%";
-    img.style.height = "100%";
+    img.style.height = "auto";
     img.style.visibility = "hidden";
 
     img.parentNode.insertBefore(wrapper, img);
