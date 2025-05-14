@@ -18,38 +18,65 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const retroWindows = document.querySelectorAll(".retro-window");
+  let initialLoadComplete = false;
+
+  function handleInitialLoad() {
+    if (initialLoadComplete) return;
+    initialLoadComplete = true;
+
+    retroWindows.forEach(windowEl => {
+      const rect = windowEl.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) {
+        const images = windowEl.querySelectorAll("img");
+        let allImagesReady = true;
+        
+        images.forEach(img => {
+          if (!img.complete || !img.dataset.canvasId) {
+            allImagesReady = false;
+          }
+        });
+
+        if (allImagesReady) {
+          triggerImagesInWindow(windowEl);
+          observer.unobserve(windowEl);
+        } else {
+          // If not all images are ready, wait a bit longer
+          setTimeout(() => {
+            triggerImagesInWindow(windowEl);
+            observer.unobserve(windowEl);
+          }, 200);
+        }
+      }
+    });
+  }
 
   retroWindows.forEach(windowEl => {
     const images = windowEl.querySelectorAll("img");
+    let loadedImages = 0;
+
     images.forEach(img => {
       if (img.complete) {
         prepareInitialPixel(img);
+        loadedImages++;
+        if (loadedImages === images.length) {
+          handleInitialLoad();
+        }
       } else {
-        img.addEventListener("load", () => prepareInitialPixel(img));
+        img.addEventListener("load", () => {
+          prepareInitialPixel(img);
+          loadedImages++;
+          if (loadedImages === images.length) {
+            handleInitialLoad();
+          }
+        });
       }
     });
-    
-    // Check if window is already in viewport immediately
-    const rect = windowEl.getBoundingClientRect();
-    if (rect.top < window.innerHeight && rect.bottom > 0) {
-      setTimeout(() => {
-        triggerImagesInWindow(windowEl);
-        observer.unobserve(windowEl);
-      }, 50);
-    }
     
     observer.observe(windowEl);
   });
 
-  window.addEventListener("load", () => {
-    retroWindows.forEach(windowEl => {
-      const rect = windowEl.getBoundingClientRect();
-      if (rect.top < window.innerHeight && rect.bottom > 0) {
-        triggerImagesInWindow(windowEl);
-        observer.unobserve(windowEl);
-      }
-    });
-  });
+  // Backup check for window load
+  window.addEventListener("load", handleInitialLoad);
 
   function triggerImagesInWindow(windowEl) {
     const images = windowEl.querySelectorAll("img");
