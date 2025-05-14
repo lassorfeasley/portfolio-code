@@ -6,6 +6,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const minStepDelay = 250;
   const maxStepDelay = Math.max(0, (totalTargetDuration - steps * minStepDelay) / steps);
 
+  // Add ResizeObserver to handle retro window resizing
+  const resizeObserver = new ResizeObserver(entries => {
+    entries.forEach(entry => {
+      const retroWindow = entry.target;
+      const wrappers = retroWindow.querySelectorAll('.pixel-loading-wrapper');
+      wrappers.forEach(wrapper => {
+        const img = wrapper.querySelector('img');
+        if (img) {
+          wrapper.style.width = img.offsetWidth + "px";
+          wrapper.style.height = img.offsetHeight + "px";
+        }
+      });
+    });
+  });
+
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -20,6 +35,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const retroWindows = document.querySelectorAll(".retro-window");
 
   retroWindows.forEach(windowEl => {
+    // Start observing resize on the retro window
+    resizeObserver.observe(windowEl);
+    
     const images = windowEl.querySelectorAll("img");
     images.forEach(img => {
       if (img.complete) {
@@ -32,7 +50,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Check if window is already in viewport immediately
     const rect = windowEl.getBoundingClientRect();
     if (rect.top < window.innerHeight && rect.bottom > 0) {
-      // Add a small delay to ensure preparation is complete
       setTimeout(() => {
         triggerImagesInWindow(windowEl);
         observer.unobserve(windowEl);
@@ -71,18 +88,18 @@ document.addEventListener("DOMContentLoaded", () => {
     canvas.width = w;
     canvas.height = h;
     canvas.style.width = "100%";
-    canvas.style.height = "100%";
+    canvas.style.height = "auto";
     canvas.style.position = "absolute";
     canvas.style.top = "0";
     canvas.style.left = "0";
     canvas.style.zIndex = "2";
     canvas.style.pointerEvents = "none";
 
-    wrapper.style.width = "100%";
-    wrapper.style.height = "100%";
+    wrapper.style.width = img.offsetWidth + "px";
+    wrapper.style.height = img.offsetHeight + "px";
     wrapper.style.position = "relative";
     wrapper.style.overflow = "hidden";
-    wrapper.style.display = "block";
+    wrapper.style.display = "inline-block";
 
     img.style.position = "absolute";
     img.style.top = "0";
@@ -127,6 +144,12 @@ document.addEventListener("DOMContentLoaded", () => {
         // Move the image back to its original position
         originalParent.insertBefore(img, wrapper);
         wrapper.remove();
+        
+        // Stop observing the retro window when all effects are complete
+        const retroWindow = originalParent.closest('.retro-window');
+        if (retroWindow && !retroWindow.querySelector('.pixel-loading-wrapper')) {
+          resizeObserver.unobserve(retroWindow);
+        }
         return;
       }
 
