@@ -28,8 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
         img.addEventListener("load", () => prepareInitialPixel(img));
       }
     });
-    
-    // Check if window is already in viewport immediately
+
     const rect = windowEl.getBoundingClientRect();
     if (rect.top < window.innerHeight && rect.bottom > 0) {
       setTimeout(() => {
@@ -37,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
         observer.unobserve(windowEl);
       }, 50);
     }
-    
+
     observer.observe(windowEl);
   });
 
@@ -51,29 +50,52 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  window.addEventListener("resize", debounce(() => {
+    document.querySelectorAll(".pixel-loading-wrapper").forEach(wrapper => {
+      const img = wrapper.querySelector("img");
+      const canvas = wrapper.querySelector("canvas");
+      const ctx = canvas.getContext("2d");
+      const rect = img.getBoundingClientRect();
+
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      wrapper.style.width = rect.width + "px";
+      wrapper.style.height = rect.height + "px";
+
+      drawPixelStep(img, canvas, ctx, steps);
+    });
+  }, 150));
+
+  function debounce(fn, delay) {
+    let timeout;
+    return function (...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+
   function triggerImagesInWindow(windowEl) {
     const images = windowEl.querySelectorAll("img");
     images.forEach(img => pixelate(img));
   }
 
   function prepareInitialPixel(img) {
-    // Store original styles
+    const computedStyles = getComputedStyle(img);
     const originalStyles = {
-      width: img.style.width,
-      height: img.style.height,
-      position: img.style.position,
-      display: img.style.display
+      width: computedStyles.width,
+      height: computedStyles.height,
+      position: computedStyles.position,
+      display: computedStyles.display
     };
     img.dataset.originalStyles = JSON.stringify(originalStyles);
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    // Set canvas size to match displayed image size
     const rect = img.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
-    
+
     canvas.style.position = "absolute";
     canvas.style.top = "0";
     canvas.style.left = "0";
@@ -82,7 +104,6 @@ document.addEventListener("DOMContentLoaded", () => {
     canvas.style.zIndex = "2";
     canvas.style.pointerEvents = "none";
 
-    // Create wrapper
     const wrapper = document.createElement("div");
     wrapper.classList.add("pixel-loading-wrapper");
     wrapper.style.position = "relative";
@@ -90,7 +111,6 @@ document.addEventListener("DOMContentLoaded", () => {
     wrapper.style.width = rect.width + "px";
     wrapper.style.height = rect.height + "px";
 
-    // Position image
     img.style.position = "absolute";
     img.style.top = "0";
     img.style.left = "0";
@@ -98,7 +118,6 @@ document.addEventListener("DOMContentLoaded", () => {
     img.style.height = "100%";
     img.style.visibility = "hidden";
 
-    // Set up DOM structure
     img.parentNode.insertBefore(wrapper, img);
     wrapper.appendChild(img);
     wrapper.appendChild(canvas);
@@ -116,17 +135,17 @@ document.addEventListener("DOMContentLoaded", () => {
     function doStep() {
       if (currentStep > steps) {
         const wrapper = canvas.parentElement;
-        
-        // Restore original styles
+
         const originalStyles = JSON.parse(img.dataset.originalStyles || '{}');
         Object.entries(originalStyles).forEach(([prop, value]) => {
           img.style[prop] = value;
         });
-        
+
         img.style.visibility = "visible";
         img.style.position = "static";
-        
-        // Move image back to original position
+        img.style.width = "";
+        img.style.height = "";
+
         wrapper.parentNode.insertBefore(img, wrapper);
         wrapper.remove();
         return;
