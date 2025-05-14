@@ -1,6 +1,5 @@
 /* === Makes images load in a pixelated effect === */
 
-/*
 document.addEventListener("DOMContentLoaded", () => {
   const steps = 6;
   const totalTargetDuration = 5000;
@@ -158,5 +157,3 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.drawImage(downCanvas, 0, 0, canvas.width, canvas.height);
   }
 });
-
-*/
