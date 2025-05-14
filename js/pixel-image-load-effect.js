@@ -6,18 +6,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const minStepDelay = 250;
   const maxStepDelay = Math.max(0, (totalTargetDuration - steps * minStepDelay) / steps);
 
-  // Add ResizeObserver to handle retro window resizing
+  // Add ResizeObserver to handle window-content resizing
   const resizeObserver = new ResizeObserver(entries => {
     entries.forEach(entry => {
-      const retroWindow = entry.target;
-      const wrappers = retroWindow.querySelectorAll('.pixel-loading-wrapper');
-      wrappers.forEach(wrapper => {
-        const img = wrapper.querySelector('img');
-        if (img) {
-          wrapper.style.width = img.offsetWidth + "px";
-          wrapper.style.height = img.offsetHeight + "px";
-        }
-      });
+      const windowContent = entry.target;
+      const wrapper = windowContent.querySelector('.pixel-loading-wrapper');
+      if (wrapper) {
+        const parentWidth = windowContent.offsetWidth;
+        const parentHeight = windowContent.offsetHeight;
+        wrapper.style.width = parentWidth + "px";
+        wrapper.style.height = parentHeight + "px";
+      }
     });
   });
 
@@ -35,11 +34,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const retroWindows = document.querySelectorAll(".retro-window");
 
   retroWindows.forEach(windowEl => {
-    // Start observing resize on the retro window
-    resizeObserver.observe(windowEl);
-    
     const images = windowEl.querySelectorAll("img");
     images.forEach(img => {
+      // Start observing resize on the window-content parent
+      const windowContent = img.closest('.window-content');
+      if (windowContent) {
+        resizeObserver.observe(windowContent);
+      }
+      
       if (img.complete) {
         prepareInitialPixel(img);
       } else {
@@ -50,6 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Check if window is already in viewport immediately
     const rect = windowEl.getBoundingClientRect();
     if (rect.top < window.innerHeight && rect.bottom > 0) {
+      // Add a small delay to ensure preparation is complete
       setTimeout(() => {
         triggerImagesInWindow(windowEl);
         observer.unobserve(windowEl);
@@ -130,6 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (currentStep > steps) {
         const wrapper = canvas.parentElement;
         const originalParent = wrapper.parentElement;
+        const windowContent = originalParent.closest('.window-content');
         
         // Reset all styles
         img.style.position = "";
@@ -145,10 +149,9 @@ document.addEventListener("DOMContentLoaded", () => {
         originalParent.insertBefore(img, wrapper);
         wrapper.remove();
         
-        // Stop observing the retro window when all effects are complete
-        const retroWindow = originalParent.closest('.retro-window');
-        if (retroWindow && !retroWindow.querySelector('.pixel-loading-wrapper')) {
-          resizeObserver.unobserve(retroWindow);
+        // Stop observing the window-content when effect is complete
+        if (windowContent) {
+          resizeObserver.unobserve(windowContent);
         }
         return;
       }
