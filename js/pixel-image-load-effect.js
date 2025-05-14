@@ -112,8 +112,14 @@ document.addEventListener("DOMContentLoaded", () => {
     function doStep() {
       if (currentStep > steps) {
         canvas.remove();
+        // Reset all positioning and size styles to default
+        img.style.position = "";
+        img.style.top = "";
+        img.style.left = "";
+        img.style.width = "";
+        img.style.height = "";
+        img.style.objectFit = "";
         img.style.visibility = "visible";
-        img.style.position = "relative";
         return;
       }
 
