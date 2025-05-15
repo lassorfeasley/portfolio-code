@@ -12,6 +12,8 @@ window.addEventListener('load', () => {
       // Force absolute positioning and sizing
       canvas.style.position = 'relative';     // Ensure proper positioning context
       canvas.style.overflow = 'visible';      // Allow windows to be visible outside
+      canvas.style.overflowX = 'visible';    // Explicitly set both directions
+      canvas.style.overflowY = 'visible';    // to ensure no scrollbars appear
       canvas.style.height = `${initH}px`;
       canvas.style.minHeight = `${initH}px`;
       canvas.style.maxHeight = `${initH}px`;
