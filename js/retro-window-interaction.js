@@ -1,64 +1,32 @@
 /* === Makes retro windows interactive, with a close button, resizer, and link click handler === */
 window.addEventListener('load', () => {
   // ————————————————————————————————
-  // 1) Find the canvas element - Webflow component version
+  // 1) Find all canvas elements - Webflow component version
   // ————————————————————————————————
-  console.log('🔍 Searching for windowCanvas element...');
-  
-  // Try multiple selector strategies
-  const canvasSelectors = [
-    '[class*="windowCanvas"]',
-    '[class*="window-canvas"]',
-    '[class*="WindowCanvas"]',
-    '.windowCanvas',
-    '#windowCanvas'
-  ];
-  
-  let canvas = null;
-  for (const selector of canvasSelectors) {
-    const found = document.querySelector(selector);
-    if (found) {
-      console.log('✅ Found canvas with selector:', selector);
-      canvas = found;
-      break;
-    }
-  }
+  const allCanvases = Array.from(document.querySelectorAll('[class*="retro-window"]'))
+    .map(el => el.parentElement.parentElement)
+    .filter((el, index, self) => self.indexOf(el) === index); // Remove duplicates
 
-  // If still not found, try finding by the component structure
-  if (!canvas) {
-    console.log('⚠️ Trying alternative component structure search...');
-    const possibleCanvas = document.querySelector('.retro-window-placeholder').parentElement;
-    if (possibleCanvas) {
-      console.log('✅ Found canvas through component structure');
-      canvas = possibleCanvas;
-    }
-  }
-
-  if (canvas) {
-    console.log('📐 Canvas element found:', canvas);
-    console.log('Classes:', canvas.className);
-    
-    // ————————————————————————————————
-    // 2) Delay one tick so CSS/layout is final
-    // ————————————————————————————————
-    setTimeout(() => {
-      // 3) Measure its height and lock it in
-      const initH = canvas.getBoundingClientRect().height;
-      console.log('🔒 Locking canvas height at', initH, 'px for', canvas);
-      canvas.style.height = `${initH}px`;          // Set exact height
-      canvas.style.minHeight = `${initH}px`;       // Prevent shrinking
-      canvas.style.maxHeight = `${initH}px`;       // Prevent growing
-      canvas.style.overflowY = 'auto';             // allow scrolling if content grows taller
-      canvas.style.flexShrink = '0';               // if inside a flex container, don't let it shrink
-      canvas.style.flexGrow = '0';                 // prevent growing in flex containers
-      canvas.style.position = 'relative';          // ensure positioning context
-    }, 0);
+  if (allCanvases.length > 0) {
+    allCanvases.forEach(canvas => {
+      // ————————————————————————————————
+      // 2) Delay one tick so CSS/layout is final
+      // ————————————————————————————————
+      setTimeout(() => {
+        // 3) Measure its height and lock it in
+        const initH = canvas.getBoundingClientRect().height;
+        console.log('🔒 Locking canvas height at', initH, 'px for', canvas);
+        canvas.style.height = `${initH}px`;          // Set exact height
+        canvas.style.minHeight = `${initH}px`;       // Prevent shrinking
+        canvas.style.maxHeight = `${initH}px`;       // Prevent growing
+        canvas.style.overflowY = 'auto';             // allow scrolling if content grows taller
+        canvas.style.flexShrink = '0';               // if inside a flex container, don't let it shrink
+        canvas.style.flexGrow = '0';                 // prevent growing in flex containers
+        canvas.style.position = 'relative';          // ensure positioning context
+      }, 0);
+    });
   } else {
-    console.warn('⚠️ No windowCanvas element found with any selector');
-    console.log('Available elements with similar classes:', 
-      Array.from(document.querySelectorAll('[class*="window"]'))
-        .map(el => ({element: el.tagName, classes: el.className}))
-    );
+    console.warn('⚠️ Could not find any canvas elements');
   }
 
   // ————————————————————————————————
