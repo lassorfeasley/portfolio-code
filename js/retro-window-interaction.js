@@ -1,31 +1,38 @@
 /* === Makes retro windows interactive, with a close button, resizer, and link click handler === */
 window.addEventListener('load', () => {
-  // ——————————————————————————————————————————————————————
-  // Lock in the canvas’s initial height so it never shrinks
-  // ——————————————————————————————————————————————————————
-  const canvas = document.getElementById('windowCanvas');
+  // ————————————————————————————————
+  // 1) Find the canvas element
+  // ————————————————————————————————
+  const canvas = document.querySelector('#windowCanvas, .windowCanvas');
   if (canvas) {
-    const initH = canvas.getBoundingClientRect().height;
-    canvas.style.height    = `${initH}px`;
-    canvas.style.overflowY = 'auto';  // allow scrolling if children grow taller
+    // ————————————————————————————————
+    // 2) Delay one tick so CSS/layout is final
+    // ————————————————————————————————
+    setTimeout(() => {
+      // 3) Measure its height and lock it in
+      const initH = canvas.getBoundingClientRect().height;
+      console.log('🔒 Locking canvas min-height at', initH, 'px for', canvas);
+      canvas.style.minHeight  = `${initH}px`;
+      canvas.style.overflowY  = 'auto';    // allow scrolling if content grows taller
+      canvas.style.flexShrink = '0';       // if inside a flex container, don’t let it shrink
+    }, 0);
+  } else {
+    console.warn('⚠️ No element found with #windowCanvas or .windowCanvas');
   }
 
-  // Now initialize each retro window…
+  // ————————————————————————————————
+  // 4) The rest of your retro-window logic…
+  // ————————————————————————————————
   document.querySelectorAll('.retro-window').forEach(windowEl => {
-    // Required and optional elements within the window.
     const header    = windowEl.querySelector('.window-bar');
     const closeBtn  = windowEl.querySelector('.x-out');
     const resizer   = windowEl.querySelector('.resize-corner');
     const contentEl = windowEl.querySelector('.window-content');
     const link      = windowEl.querySelector('a, .link-block');
+    if (!header) return;
 
-    if (!header) return; // skip windows without a header
-
-    // ——————————————————————————————
-    // Helpers: get and bump z-index
-    // ——————————————————————————————
     const getZIndex = el => {
-      const z = parseInt(window.getComputedStyle(el).zIndex, 10);
+      const z = parseInt(getComputedStyle(el).zIndex, 10);
       return isNaN(z) ? 0 : z;
     };
     const bringToFront = () => {
@@ -34,28 +41,21 @@ window.addEventListener('load', () => {
       windowEl.style.zIndex = max + 1;
     };
 
-    // ——————————————————————————————
-    // Global mousedown: bring forward (unless clicking a link)
-    // ——————————————————————————————
+    // global mousedown
     windowEl.addEventListener('mousedown', e => {
-      if (!e.target.closest('a, .link-block')) {
-        bringToFront();
-      }
+      if (!e.target.closest('a, .link-block')) bringToFront();
     }, true);
 
-    // ——————————————————————————————
-    // Drag-to-move via header
-    // ——————————————————————————————
+    // drag
     let isDragging = false, offsetX = 0, offsetY = 0;
     header.addEventListener('mousedown', e => {
       e.preventDefault();
       isDragging = true;
       bringToFront();
-
-      const curLeft = parseInt(windowEl.style.left, 10) || windowEl.offsetLeft;
-      const curTop  = parseInt(windowEl.style.top, 10)  || windowEl.offsetTop;
-      offsetX = e.pageX - curLeft;
-      offsetY = e.pageY - curTop;
+      const curL = parseInt(windowEl.style.left, 10) || windowEl.offsetLeft;
+      const curT = parseInt(windowEl.style.top, 10)  || windowEl.offsetTop;
+      offsetX = e.pageX - curL;
+      offsetY = e.pageY - curT;
       windowEl.style.cursor = 'grabbing';
     });
     document.addEventListener('mousemove', e => {
@@ -70,49 +70,35 @@ window.addEventListener('load', () => {
       }
     });
 
-    // ——————————————————————————————
-    // Close button
-    // ——————————————————————————————
-    if (closeBtn) {
-      closeBtn.addEventListener('click', () => {
-        windowEl.style.display = 'none';
-      });
-    }
+    // close
+    if (closeBtn) closeBtn.addEventListener('click', () => {
+      windowEl.style.display = 'none';
+    });
 
-    // ——————————————————————————————
-    // Resize via corner drag
-    // ——————————————————————————————
+    // resize
     if (resizer) {
-      let isResizing = false,
-          startX, startY,
-          startW, startH;
-
+      let isResizing = false, startX, startY, startW, startH;
       resizer.addEventListener('mousedown', e => {
         e.preventDefault();
         isResizing = true;
         bringToFront();
-
-        startX = e.pageX;
-        startY = e.pageY;
-        startW = parseInt(window.getComputedStyle(windowEl).width, 10);
-        startH = parseInt(window.getComputedStyle(windowEl).height, 10);
-
+        startX = e.pageX; startY = e.pageY;
+        startW = parseInt(getComputedStyle(windowEl).width, 10);
+        startH = parseInt(getComputedStyle(windowEl).height, 10);
         document.addEventListener('mousemove', doResize);
         document.addEventListener('mouseup', stopResize);
       });
-
       const doResize = e => {
         if (!isResizing) return;
-        const newW = Math.max(200, startW + (e.pageX - startX));
-        const newH = Math.max(100, startH + (e.pageY - startY));
-        windowEl.style.width  = `${newW}px`;
-        windowEl.style.height = `${newH}px`;
+        const w = Math.max(200, startW + (e.pageX - startX));
+        const h = Math.max(100, startH + (e.pageY - startY));
+        windowEl.style.width  = `${w}px`;
+        windowEl.style.height = `${h}px`;
         if (contentEl) {
-          contentEl.style.maxWidth  = `${newW}px`;
-          contentEl.style.maxHeight = `${newH}px`;
+          contentEl.style.maxWidth  = `${w}px`;
+          contentEl.style.maxHeight = `${h}px`;
         }
       };
-
       const stopResize = () => {
         isResizing = false;
         document.removeEventListener('mousemove', doResize);
@@ -120,19 +106,16 @@ window.addEventListener('load', () => {
       };
     }
 
-    // ——————————————————————————————
-    // Two-click link activation: first click brings to front
-    // ——————————————————————————————
+    // two-click links
     if (link) {
       link.addEventListener('click', e => {
         const all = Array.from(document.querySelectorAll('.retro-window'));
         const max = all.reduce((m, el) => Math.max(m, getZIndex(el)), 0);
-        const thisZ = getZIndex(windowEl);
-        if (thisZ < max) {
+        if (getZIndex(windowEl) < max) {
           e.preventDefault();
           e.stopPropagation();
           bringToFront();
-          console.log('Brought to front — click again to follow link.');
+          console.log('👉 Brought to front—click again to activate link.');
         }
       });
     }
