@@ -1,9 +1,9 @@
 /* === Makes retro windows interactive, with a close button, resizer, and link click handler === */
 window.addEventListener('load', () => {
   // ————————————————————————————————
-  // 1) Find the canvas element
+  // 1) Find the canvas element - including nested components
   // ————————————————————————————————
-  const canvas = document.querySelector('#windowCanvas, .windowCanvas');
+  const canvas = document.querySelector('[class*="windowCanvas"], .windowCanvas');
   if (canvas) {
     // ————————————————————————————————
     // 2) Delay one tick so CSS/layout is final
