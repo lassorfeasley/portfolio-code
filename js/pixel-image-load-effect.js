@@ -14,7 +14,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }, {
-    threshold: 0.1
+    threshold: 0.1,
+    // Add rootMargin to start loading images slightly before they enter the viewport
+    // and to catch images above the viewport
+    rootMargin: "100% 0px 100% 0px"
   });
 
   const retroWindows = document.querySelectorAll(".retro-window");
@@ -29,9 +32,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
     
-    // Check if window is already in viewport immediately
+    // Check if window is in or above viewport immediately
     const rect = windowEl.getBoundingClientRect();
-    if (rect.top < window.innerHeight && rect.bottom > 0) {
+    if (rect.bottom > 0) { // Changed condition to trigger for elements above viewport too
       setTimeout(() => {
         triggerImagesInWindow(windowEl);
         observer.unobserve(windowEl);
@@ -44,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("load", () => {
     retroWindows.forEach(windowEl => {
       const rect = windowEl.getBoundingClientRect();
-      if (rect.top < window.innerHeight && rect.bottom > 0) {
+      if (rect.bottom > 0) { // Changed to match the new condition
         triggerImagesInWindow(windowEl);
         observer.unobserve(windowEl);
       }
