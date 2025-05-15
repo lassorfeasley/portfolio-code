@@ -1,18 +1,28 @@
 /* === Makes retro windows interactive, with a close button, resizer, and link click handler === */
 window.addEventListener('load', () => {
   // ————————————————————————————————
-  // 1) Find and lock all windowCanvas elements
+  // 1) Function to lock canvas heights
   // ————————————————————————————————
-  document.querySelectorAll('.windowCanvas').forEach(canvas => {
-    const initH = canvas.getBoundingClientRect().height;
-    canvas.style.height = `${initH}px`;
-    canvas.style.minHeight = `${initH}px`;
-    canvas.style.maxHeight = `${initH}px`;
-    canvas.style.position = 'relative';     // Ensure proper positioning context
-    canvas.style.overflow = 'visible';      // Allow windows to be visible outside
-    canvas.style.flexShrink = '0';
-    canvas.style.flexGrow = '0';
-  });
+  const lockCanvasHeights = () => {
+    document.querySelectorAll('.windowCanvas').forEach(canvas => {
+      // Get the current computed height
+      const computedStyle = window.getComputedStyle(canvas);
+      const initH = canvas.getBoundingClientRect().height;
+      
+      // Force absolute positioning and sizing
+      canvas.style.position = 'relative';     // Ensure proper positioning context
+      canvas.style.overflow = 'visible';      // Allow windows to be visible outside
+      canvas.style.height = `${initH}px`;
+      canvas.style.minHeight = `${initH}px`;
+      canvas.style.maxHeight = `${initH}px`;
+      canvas.style.flexShrink = '0';
+      canvas.style.flexGrow = '0';
+      canvas.style.boxSizing = 'border-box';  // Ensure padding doesn't affect size
+    });
+  };
+
+  // Initial height lock
+  lockCanvasHeights();
 
   // ————————————————————————————————
   // 2) The retro-window logic
@@ -67,6 +77,8 @@ window.addEventListener('load', () => {
     // close
     if (closeBtn) closeBtn.addEventListener('click', () => {
       windowEl.style.display = 'none';
+      // Relock heights after window is closed
+      setTimeout(lockCanvasHeights, 0);
     });
 
     // resize
@@ -92,11 +104,15 @@ window.addEventListener('load', () => {
           contentEl.style.maxWidth  = `${w}px`;
           contentEl.style.maxHeight = `${h}px`;
         }
+        // Relock heights during resize
+        lockCanvasHeights();
       };
       const stopResize = () => {
         isResizing = false;
         document.removeEventListener('mousemove', doResize);
         document.removeEventListener('mouseup', stopResize);
+        // Final height lock after resize
+        setTimeout(lockCanvasHeights, 0);
       };
     }
 
