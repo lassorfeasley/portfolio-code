@@ -11,10 +11,13 @@ window.addEventListener('load', () => {
     setTimeout(() => {
       // 3) Measure its height and lock it in
       const initH = canvas.getBoundingClientRect().height;
-      console.log('🔒 Locking canvas min-height at', initH, 'px for', canvas);
-      canvas.style.minHeight  = `${initH}px`;
-      canvas.style.overflowY  = 'auto';    // allow scrolling if content grows taller
-      canvas.style.flexShrink = '0';       // if inside a flex container, don’t let it shrink
+      console.log('🔒 Locking canvas height at', initH, 'px for', canvas);
+      canvas.style.height = `${initH}px`;          // Set exact height
+      canvas.style.minHeight = `${initH}px`;       // Prevent shrinking
+      canvas.style.maxHeight = `${initH}px`;       // Prevent growing
+      canvas.style.overflowY = 'auto';             // allow scrolling if content grows taller
+      canvas.style.flexShrink = '0';               // if inside a flex container, don't let it shrink
+      canvas.style.flexGrow = '0';                 // prevent growing in flex containers
     }, 0);
   } else {
     console.warn('⚠️ No element found with #windowCanvas or .windowCanvas');
