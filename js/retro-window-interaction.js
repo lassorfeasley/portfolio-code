@@ -8,7 +8,7 @@ window.addEventListener('load', () => {
     
     // Set all the styles at once to avoid reflow
     Object.assign(canvas.style, {
-      height: `${initH}px`,
+      height: ${initH}px,
       position: 'relative',
       overflow: 'visible',
       flexShrink: '0',
@@ -18,13 +18,13 @@ window.addEventListener('load', () => {
 
     // Create a height-locking style element
     const style = document.createElement('style');
-    style.textContent = `
+    style.textContent = 
       .windowCanvas {
         min-height: ${initH}px !important;
         max-height: ${initH}px !important;
         overflow: visible !important;
       }
-    `;
+    ;
     document.head.appendChild(style);
   });
 
@@ -71,8 +71,8 @@ window.addEventListener('load', () => {
     });
     document.addEventListener('mousemove', e => {
       if (!isDragging) return;
-      windowEl.style.left = `${e.pageX - offsetX}px`;
-      windowEl.style.top  = `${e.pageY - offsetY}px`;
+      windowEl.style.left = ${e.pageX - offsetX}px;
+      windowEl.style.top  = ${e.pageY - offsetY}px;
     });
     document.addEventListener('mouseup', () => {
       if (isDragging) {
@@ -103,11 +103,11 @@ window.addEventListener('load', () => {
         if (!isResizing) return;
         const w = Math.max(200, startW + (e.pageX - startX));
         const h = Math.max(100, startH + (e.pageY - startY));
-        windowEl.style.width  = `${w}px`;
-        windowEl.style.height = `${h}px`;
+        windowEl.style.width  = ${w}px;
+        windowEl.style.height = ${h}px;
         if (contentEl) {
-          contentEl.style.maxWidth  = `${w}px`;
-          contentEl.style.maxHeight = `${h}px`;
+          contentEl.style.maxWidth  = ${w}px;
+          contentEl.style.maxHeight = ${h}px;
         }
       };
       const stopResize = () => {
