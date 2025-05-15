@@ -1,30 +1,32 @@
 /* === Makes retro windows interactive, with a close button, resizer, and link click handler === */
 window.addEventListener('load', () => {
   // ————————————————————————————————
-  // 1) Function to lock canvas heights
+  // 1) Set up windowCanvas elements
   // ————————————————————————————————
-  const lockCanvasHeights = () => {
-    document.querySelectorAll('.windowCanvas').forEach(canvas => {
-      // Get the current computed height
-      const computedStyle = window.getComputedStyle(canvas);
-      const initH = canvas.getBoundingClientRect().height;
-      
-      // Force absolute positioning and sizing
-      canvas.style.position = 'relative';     // Ensure proper positioning context
-      canvas.style.overflow = 'visible';      // Allow windows to be visible outside
-      canvas.style.overflowX = 'visible';    // Explicitly set both directions
-      canvas.style.overflowY = 'visible';    // to ensure no scrollbars appear
-      canvas.style.height = `${initH}px`;
-      canvas.style.minHeight = `${initH}px`;
-      canvas.style.maxHeight = `${initH}px`;
-      canvas.style.flexShrink = '0';
-      canvas.style.flexGrow = '0';
-      canvas.style.boxSizing = 'border-box';  // Ensure padding doesn't affect size
+  document.querySelectorAll('.windowCanvas').forEach(canvas => {
+    const initH = canvas.getBoundingClientRect().height;
+    
+    // Set all the styles at once to avoid reflow
+    Object.assign(canvas.style, {
+      height: `${initH}px`,
+      position: 'relative',
+      overflow: 'visible',
+      flexShrink: '0',
+      flexGrow: '0',
+      boxSizing: 'border-box'
     });
-  };
 
-  // Initial height lock
-  lockCanvasHeights();
+    // Create a height-locking style element
+    const style = document.createElement('style');
+    style.textContent = `
+      .windowCanvas {
+        min-height: ${initH}px !important;
+        max-height: ${initH}px !important;
+        overflow: visible !important;
+      }
+    `;
+    document.head.appendChild(style);
+  });
 
   // ————————————————————————————————
   // 2) The retro-window logic
@@ -36,6 +38,9 @@ window.addEventListener('load', () => {
     const contentEl = windowEl.querySelector('.window-content');
     const link      = windowEl.querySelector('a, .link-block');
     if (!header) return;
+
+    // Ensure window is positioned absolutely
+    windowEl.style.position = 'absolute';
 
     const getZIndex = el => {
       const z = parseInt(getComputedStyle(el).zIndex, 10);
@@ -79,8 +84,6 @@ window.addEventListener('load', () => {
     // close
     if (closeBtn) closeBtn.addEventListener('click', () => {
       windowEl.style.display = 'none';
-      // Relock heights after window is closed
-      setTimeout(lockCanvasHeights, 0);
     });
 
     // resize
@@ -106,15 +109,11 @@ window.addEventListener('load', () => {
           contentEl.style.maxWidth  = `${w}px`;
           contentEl.style.maxHeight = `${h}px`;
         }
-        // Relock heights during resize
-        lockCanvasHeights();
       };
       const stopResize = () => {
         isResizing = false;
         document.removeEventListener('mousemove', doResize);
         document.removeEventListener('mouseup', stopResize);
-        // Final height lock after resize
-        setTimeout(lockCanvasHeights, 0);
       };
     }
 
