@@ -199,18 +199,38 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const ctx = canvas.getContext("2d");
     
-    // Make sure image is visible for proper rendering
-    img.style.visibility = "visible";
+    // Safari-specific checks
+    if (isSafari) {
+      // Ensure image is fully loaded for Safari
+      if (!img.complete || img.naturalWidth === 0) {
+        setTimeout(() => pixelate(img), 50);
+        return;
+      }
+      
+      // Temporarily make image visible for Safari rendering
+      img.style.visibility = "visible";
+      
+      // Force a repaint in Safari
+      canvas.style.display = "none";
+      void canvas.offsetHeight; // Force reflow
+      canvas.style.display = "block";
+    }
     
     // Draw the initial step to ensure something is shown
     drawPixelStep(img, canvas, ctx, steps);
     
-    // Then hide the image again until animation completes
-    img.style.visibility = "hidden";
+    // Hide the image again until animation completes
+    if (!isSafari) {
+      img.style.visibility = "hidden";
+    }
 
     let currentStep = 0;
+    let animationRunning = true;
 
     function doStep() {
+      // Don't continue if animation was interrupted
+      if (!animationRunning) return;
+      
       if (currentStep > steps) {
         const wrapper = canvas.parentElement;
         
@@ -224,11 +244,23 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         
         img.style.visibility = "visible";
-        img.style.position = "static";
+        
+        // For Safari, ensure position is set correctly
+        if (isSafari) {
+          img.style.position = "static";
+          img.style.width = "auto";
+          img.style.height = "auto";
+        } else {
+          img.style.position = "static";
+        }
         
         // Move image back to original position
-        wrapper.parentNode.insertBefore(img, wrapper);
-        wrapper.remove();
+        if (wrapper && wrapper.parentNode) {
+          wrapper.parentNode.insertBefore(img, wrapper);
+          wrapper.remove();
+        }
+        
+        animationRunning = false;
         return;
       }
 
@@ -237,8 +269,25 @@ document.addEventListener("DOMContentLoaded", () => {
       const randomDelay = minStepDelay + Math.floor(Math.random() * maxStepDelay);
       setTimeout(doStep, randomDelay);
     }
-
-    doStep();
+    
+    // Safari-specific: give a moment before starting animation
+    if (isSafari) {
+      setTimeout(doStep, 50);
+    } else {
+      doStep();
+    }
+    
+    // Handle browser visibility change (tab switching)
+    document.addEventListener("visibilitychange", function() {
+      if (document.hidden) {
+        // Page is hidden, pause animation
+        animationRunning = false;
+      } else if (currentStep <= steps) {
+        // Page is visible again and animation wasn't complete
+        animationRunning = true;
+        doStep();
+      }
+    });
   }
 
   function drawPixelStep(img, canvas, ctx, exponent) {
