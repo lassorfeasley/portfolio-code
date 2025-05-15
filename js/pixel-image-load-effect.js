@@ -8,6 +8,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Track which images have been processed
   const processedImages = new Set();
+  
+  // Detect Safari browser
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -29,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   retroWindows.forEach(windowEl => {
     const images = windowEl.querySelectorAll("img");
     images.forEach(img => {
-      if (img.complete) {
+      if (img.complete && img.naturalWidth !== 0) {
         prepareInitialPixel(img);
       } else {
         img.addEventListener("load", () => prepareInitialPixel(img));
@@ -52,11 +55,46 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Run initial check after a short delay to ensure all images are prepared
-  setTimeout(checkInitialVisibility, 100);
+  // Special handling for Safari
+  if (isSafari) {
+    // Force all images to load their data first (Safari specific fix)
+    const allImages = document.querySelectorAll(".retro-window img");
+    let loadedCount = 0;
+    const totalImages = allImages.length;
+    
+    // Function to check when all images are fully loaded
+    const checkAllImagesLoaded = () => {
+      loadedCount++;
+      if (loadedCount >= totalImages) {
+        // When all images are loaded, run the visibility check
+        setTimeout(checkInitialVisibility, 100);
+      }
+    };
+    
+    // Check each image
+    allImages.forEach(img => {
+      if (img.complete && img.naturalWidth !== 0) {
+        checkAllImagesLoaded();
+      } else {
+        img.addEventListener("load", checkAllImagesLoaded);
+        
+        // Force load by setting src again for Safari
+        const currentSrc = img.src;
+        img.src = "";
+        setTimeout(() => {
+          img.src = currentSrc;
+        }, 10);
+      }
+    });
+  } else {
+    // For non-Safari browsers, use the original approach
+    setTimeout(checkInitialVisibility, 100);
+  }
 
   // Also check on full page load
-  window.addEventListener("load", checkInitialVisibility);
+  window.addEventListener("load", () => {
+    setTimeout(checkInitialVisibility, 100);
+  });
 
   function triggerImagesInWindow(windowEl) {
     const images = windowEl.querySelectorAll("img");
@@ -70,6 +108,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function prepareInitialPixel(img) {
+    // Don't prepare if already prepared
+    if (img.dataset.canvasId) return;
+    
+    // Safari may report complete but not actually have loaded the image
+    if (isSafari && (!img.complete || img.naturalWidth === 0)) {
+      setTimeout(() => prepareInitialPixel(img), 50);
+      return;
+    }
+
     // Store original styles
     const originalStyles = {
       width: img.style.width,
@@ -84,8 +131,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Set canvas size to match displayed image size
     const rect = img.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    
+    // Safety check for Safari
+    if (rect.width <= 0 || rect.height <= 0) {
+      if (isSafari) {
+        // Try again later
+        setTimeout(() => prepareInitialPixel(img), 50);
+        return;
+      }
+    }
+    
+    canvas.width = Math.max(1, rect.width);
+    canvas.height = Math.max(1, rect.height);
     
     canvas.style.position = "absolute";
     canvas.style.top = "0";
@@ -116,8 +173,22 @@ document.addEventListener("DOMContentLoaded", () => {
     wrapper.appendChild(img);
     wrapper.appendChild(canvas);
 
-    img.dataset.canvasId = canvas.id = "canvas-" + Math.random().toString(36).slice(2);
-    drawPixelStep(img, canvas, ctx, steps);
+    // Create a unique canvas ID
+    const canvasId = "canvas-" + Math.random().toString(36).slice(2);
+    img.dataset.canvasId = canvas.id = canvasId;
+    
+    // Special handling for Safari
+    if (isSafari) {
+      // Create a temporary image to ensure Safari has fully loaded this image
+      const tempImg = new Image();
+      tempImg.crossOrigin = img.crossOrigin;
+      tempImg.onload = function() {
+        drawPixelStep(img, canvas, ctx, steps);
+      };
+      tempImg.src = img.src;
+    } else {
+      drawPixelStep(img, canvas, ctx, steps);
+    }
   }
 
   function pixelate(img) {
@@ -175,29 +246,49 @@ document.addEventListener("DOMContentLoaded", () => {
       const rect = img.getBoundingClientRect();
       
       // Skip if image has no dimensions
-      if (rect.width <= 0 || rect.height <= 0) return;
+      if (rect.width <= 0 || rect.height <= 0) {
+        // For Safari, try again later
+        if (isSafari && exponent === steps) {
+          setTimeout(() => drawPixelStep(img, canvas, ctx, exponent), 50);
+        }
+        return;
+      }
       
       // Ensure canvas dimensions match the image
       if (canvas.width !== rect.width || canvas.height !== rect.height) {
-        canvas.width = rect.width;
-        canvas.height = rect.height;
+        canvas.width = Math.max(1, rect.width);
+        canvas.height = Math.max(1, rect.height);
       }
       
       const pixelSize = Math.pow(2, exponent);
 
       const downCanvas = document.createElement("canvas");
-      downCanvas.width = Math.max(1, rect.width / pixelSize);
-      downCanvas.height = Math.max(1, rect.height / pixelSize);
+      downCanvas.width = Math.max(1, Math.floor(rect.width / pixelSize));
+      downCanvas.height = Math.max(1, Math.floor(rect.height / pixelSize));
       const downCtx = downCanvas.getContext("2d");
       downCtx.imageSmoothingEnabled = false;
       
+      // Safari-specific check
+      if (isSafari && (!img.complete || img.naturalWidth === 0)) {
+        // Try again in a moment
+        setTimeout(() => drawPixelStep(img, canvas, ctx, exponent), 50);
+        return;
+      }
+      
       // Make sure image is loaded before drawing
-      if (img.complete) {
+      if (img.complete && img.naturalWidth !== 0) {
+        // Force image to be visible for Safari to properly render
+        const originalVisibility = img.style.visibility;
+        if (isSafari) img.style.visibility = 'visible';
+        
         downCtx.drawImage(img, 0, 0, downCanvas.width, downCanvas.height);
 
         ctx.imageSmoothingEnabled = false;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(downCanvas, 0, 0, canvas.width, canvas.height);
+        
+        // Restore visibility
+        if (isSafari) img.style.visibility = originalVisibility;
       }
     } catch (error) {
       console.error("Error during pixelation:", error);
