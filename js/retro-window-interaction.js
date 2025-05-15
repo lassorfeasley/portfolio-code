@@ -1,108 +1,102 @@
-/* === Makes retro windows interactive, with a close button, resizer, and link click handler === */
+/* === Makes retro windows interactive: move, resize, close — now detached from their windowCanvas so the canvas size never changes === */
+
 window.addEventListener('load', () => {
-  // ————————————————————————————————
-  // 1) Set up windowCanvas elements
-  // ————————————————————————————————
-  document.querySelectorAll('.windowCanvas').forEach(canvas => {
-    const initH = canvas.getBoundingClientRect().height;
-    
-    // Set all the styles at once to avoid reflow
+  // ──────────────────────────────────────────────
+  // Give every .windowCanvas an id for reference
+  // ──────────────────────────────────────────────
+  document.querySelectorAll('.windowCanvas').forEach((canvas, i) => {
+    if (!canvas.id) canvas.id = `windowCanvas-${i+1}`;
+    // lock its height so it never collapses
+    const h = canvas.getBoundingClientRect().height;
     Object.assign(canvas.style, {
-      height: `${initH}px`,
       position: 'relative',
       overflow: 'visible',
-      flexShrink: '0',
-      flexGrow: '0',
-      boxSizing: 'border-box'
+      minHeight: `${h}px`,
+      maxHeight: `${h}px`  // keep fixed
     });
-
-    // Create a height-locking style element
-    const style = document.createElement('style');
-    style.textContent = `
-      .windowCanvas {
-        min-height: ${initH}px !important;
-        max-height: ${initH}px !important;
-        overflow: visible !important;
-      }
-    `;
-    document.head.appendChild(style);
   });
 
-  // ————————————————————————————————
-  // 2) The retro-window logic
-  // ————————————————————————————————
+  // ──────────────────────────────────────────────
+  // Retro‑window logic (detached to <body>)
+  // ──────────────────────────────────────────────
   document.querySelectorAll('.retro-window').forEach(windowEl => {
+    // Remember which canvas it came from
+    const parentCanvas = windowEl.closest('.windowCanvas');
+    if (parentCanvas) {
+      windowEl.dataset.originCanvas = parentCanvas.id;
+    }
+
+    // Move window to the end of <body> so its containing‑block is viewport
+    document.body.appendChild(windowEl);
+    windowEl.style.position = 'absolute';
+
     const header    = windowEl.querySelector('.window-bar');
     const closeBtn  = windowEl.querySelector('.x-out');
     const resizer   = windowEl.querySelector('.resize-corner');
     const contentEl = windowEl.querySelector('.window-content');
-    const link      = windowEl.querySelector('a, .link-block');
-    if (!header) return;
 
-    // Ensure window is positioned absolutely
-    windowEl.style.position = 'absolute';
-
-    const getZIndex = el => {
+    const zOf = el => {
       const z = parseInt(getComputedStyle(el).zIndex, 10);
       return isNaN(z) ? 0 : z;
     };
     const bringToFront = () => {
-      const all = Array.from(document.querySelectorAll('.retro-window'));
-      const max = all.reduce((m, el) => Math.max(m, getZIndex(el)), 0);
+      const max = Array.from(document.querySelectorAll('.retro-window'))
+                    .reduce((m, el) => Math.max(m, zOf(el)), 0);
       windowEl.style.zIndex = max + 1;
     };
 
-    // global mousedown
+    // click anywhere (except links) to focus
     windowEl.addEventListener('mousedown', e => {
       if (!e.target.closest('a, .link-block')) bringToFront();
     }, true);
 
-    // drag
-    let isDragging = false, offsetX = 0, offsetY = 0;
-    header.addEventListener('mousedown', e => {
-      e.preventDefault();
-      isDragging = true;
-      bringToFront();
-      const curL = parseInt(windowEl.style.left, 10) || windowEl.offsetLeft;
-      const curT = parseInt(windowEl.style.top, 10)  || windowEl.offsetTop;
-      offsetX = e.pageX - curL;
-      offsetY = e.pageY - curT;
-      windowEl.style.cursor = 'grabbing';
-    });
-    document.addEventListener('mousemove', e => {
-      if (!isDragging) return;
-      windowEl.style.left = `${e.pageX - offsetX}px`;
-      windowEl.style.top  = `${e.pageY - offsetY}px`;
-    });
-    document.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
+    // ─── Dragging ────────────────────────────────
+    if (header) {
+      let dragging = false, offX = 0, offY = 0;
+      header.addEventListener('mousedown', e => {
+        e.preventDefault();
+        dragging = true;
+        bringToFront();
+        const rect = windowEl.getBoundingClientRect();
+        offX = e.pageX - rect.left;
+        offY = e.pageY - rect.top;
+        windowEl.style.cursor = 'grabbing';
+      });
+      document.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        windowEl.style.left = `${e.pageX - offX}px`;
+        windowEl.style.top  = `${e.pageY - offY}px`;
+      });
+      document.addEventListener('mouseup', () => {
+        dragging = false;
         windowEl.style.cursor = 'default';
-      }
-    });
+      });
+    }
 
-    // close
-    if (closeBtn) closeBtn.addEventListener('click', () => {
-      windowEl.style.display = 'none';
-    });
+    // ─── Close button ────────────────────────────
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        windowEl.style.display = 'none';
+      });
+    }
 
-    // resize
+    // ─── Resizing ───────────────────────────────
     if (resizer) {
-      let isResizing = false, startX, startY, startW, startH;
+      let resizing = false, sx, sy, sw, sh;
       resizer.addEventListener('mousedown', e => {
         e.preventDefault();
-        isResizing = true;
+        resizing = true;
         bringToFront();
-        startX = e.pageX; startY = e.pageY;
-        startW = parseInt(getComputedStyle(windowEl).width, 10);
-        startH = parseInt(getComputedStyle(windowEl).height, 10);
+        sx = e.pageX; sy = e.pageY;
+        const rect = windowEl.getBoundingClientRect();
+        sw = rect.width; sh = rect.height;
         document.addEventListener('mousemove', doResize);
         document.addEventListener('mouseup', stopResize);
       });
       const doResize = e => {
-        if (!isResizing) return;
-        const w = Math.max(200, startW + (e.pageX - startX));
-        const h = Math.max(100, startH + (e.pageY - startY));
+        if (!resizing) return;
+        const w = Math.max(200, sw + (e.pageX - sx));
+        const h = Math.max(100, sh + (e.pageY - sy));
         windowEl.style.width  = `${w}px`;
         windowEl.style.height = `${h}px`;
         if (contentEl) {
@@ -111,18 +105,19 @@ window.addEventListener('load', () => {
         }
       };
       const stopResize = () => {
-        isResizing = false;
+        resizing = false;
         document.removeEventListener('mousemove', doResize);
         document.removeEventListener('mouseup', stopResize);
       };
     }
 
-    // two-click links
+    // ─── Two‑click links (keep behaviour) ───────
+    const link = windowEl.querySelector('a, .link-block');
     if (link) {
       link.addEventListener('click', e => {
-        const all = Array.from(document.querySelectorAll('.retro-window'));
-        const max = all.reduce((m, el) => Math.max(m, getZIndex(el)), 0);
-        if (getZIndex(windowEl) < max) {
+        const max = Array.from(document.querySelectorAll('.retro-window'))
+                       .reduce((m, el) => Math.max(m, zOf(el)), 0);
+        if (zOf(windowEl) < max) {
           e.preventDefault();
           e.stopPropagation();
           bringToFront();
