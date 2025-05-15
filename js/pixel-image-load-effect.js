@@ -6,6 +6,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const minStepDelay = 250;
   const maxStepDelay = Math.max(0, (totalTargetDuration - steps * minStepDelay) / steps);
 
+  // Track which images have been processed
+  const processedImages = new Set();
+
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -22,6 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const retroWindows = document.querySelectorAll(".retro-window");
 
+  // Process all images immediately to ensure preparation
   retroWindows.forEach(windowEl => {
     const images = windowEl.querySelectorAll("img");
     images.forEach(img => {
@@ -31,32 +35,38 @@ document.addEventListener("DOMContentLoaded", () => {
         img.addEventListener("load", () => prepareInitialPixel(img));
       }
     });
-    
-    // Check if window is in or above viewport immediately
-    const rect = windowEl.getBoundingClientRect();
-    if (rect.bottom > 0) { // Changed condition to trigger for elements above viewport too
-      setTimeout(() => {
-        triggerImagesInWindow(windowEl);
-        observer.unobserve(windowEl);
-      }, 50);
-    }
-    
-    observer.observe(windowEl);
   });
 
-  window.addEventListener("load", () => {
+  // Separate function to handle initial visibility detection
+  function checkInitialVisibility() {
     retroWindows.forEach(windowEl => {
       const rect = windowEl.getBoundingClientRect();
-      if (rect.bottom > 0) { // Changed to match the new condition
+      // Process any elements that are above or within the viewport
+      if (rect.bottom > 0) {
         triggerImagesInWindow(windowEl);
         observer.unobserve(windowEl);
+      } else {
+        // For elements below the viewport, observe them
+        observer.observe(windowEl);
       }
     });
-  });
+  }
+
+  // Run initial check after a short delay to ensure all images are prepared
+  setTimeout(checkInitialVisibility, 100);
+
+  // Also check on full page load
+  window.addEventListener("load", checkInitialVisibility);
 
   function triggerImagesInWindow(windowEl) {
     const images = windowEl.querySelectorAll("img");
-    images.forEach(img => pixelate(img));
+    images.forEach(img => {
+      // Only animate images that have been prepared and not already processed
+      if (img.dataset.canvasId && !processedImages.has(img.dataset.canvasId)) {
+        pixelate(img);
+        processedImages.add(img.dataset.canvasId);
+      }
+    });
   }
 
   function prepareInitialPixel(img) {
@@ -112,13 +122,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function pixelate(img) {
     const canvas = document.getElementById(img.dataset.canvasId);
+    
+    // Safety check - if canvas doesn't exist or image is already processed
+    if (!canvas) return;
+    
     const ctx = canvas.getContext("2d");
+    
+    // Make sure image is visible for proper rendering
+    img.style.visibility = "visible";
+    
+    // Draw the initial step to ensure something is shown
+    drawPixelStep(img, canvas, ctx, steps);
+    
+    // Then hide the image again until animation completes
+    img.style.visibility = "hidden";
 
     let currentStep = 0;
 
     function doStep() {
       if (currentStep > steps) {
         const wrapper = canvas.parentElement;
+        
+        // Safety check
+        if (!wrapper) return;
         
         // Restore original styles
         const originalStyles = JSON.parse(img.dataset.originalStyles || '{}');
@@ -145,18 +171,36 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function drawPixelStep(img, canvas, ctx, exponent) {
-    const rect = img.getBoundingClientRect();
-    const pixelSize = Math.pow(2, exponent);
+    try {
+      const rect = img.getBoundingClientRect();
+      
+      // Skip if image has no dimensions
+      if (rect.width <= 0 || rect.height <= 0) return;
+      
+      // Ensure canvas dimensions match the image
+      if (canvas.width !== rect.width || canvas.height !== rect.height) {
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+      }
+      
+      const pixelSize = Math.pow(2, exponent);
 
-    const downCanvas = document.createElement("canvas");
-    downCanvas.width = rect.width / pixelSize;
-    downCanvas.height = rect.height / pixelSize;
-    const downCtx = downCanvas.getContext("2d");
-    downCtx.imageSmoothingEnabled = false;
-    downCtx.drawImage(img, 0, 0, downCanvas.width, downCanvas.height);
+      const downCanvas = document.createElement("canvas");
+      downCanvas.width = Math.max(1, rect.width / pixelSize);
+      downCanvas.height = Math.max(1, rect.height / pixelSize);
+      const downCtx = downCanvas.getContext("2d");
+      downCtx.imageSmoothingEnabled = false;
+      
+      // Make sure image is loaded before drawing
+      if (img.complete) {
+        downCtx.drawImage(img, 0, 0, downCanvas.width, downCanvas.height);
 
-    ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(downCanvas, 0, 0, canvas.width, canvas.height);
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(downCanvas, 0, 0, canvas.width, canvas.height);
+      }
+    } catch (error) {
+      console.error("Error during pixelation:", error);
+    }
   }
 });
