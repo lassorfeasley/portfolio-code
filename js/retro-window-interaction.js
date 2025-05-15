@@ -1,36 +1,21 @@
 /* === Makes retro windows interactive, with a close button, resizer, and link click handler === */
 window.addEventListener('load', () => {
   // ————————————————————————————————
-  // 1) Find all canvas elements - Webflow component version
+  // 1) Find and lock all windowCanvas elements
   // ————————————————————————————————
-  const allCanvases = Array.from(document.querySelectorAll('[class*="retro-window"]'))
-    .map(el => el.parentElement.parentElement)
-    .filter((el, index, self) => self.indexOf(el) === index); // Remove duplicates
-
-  if (allCanvases.length > 0) {
-    allCanvases.forEach(canvas => {
-      // ————————————————————————————————
-      // 2) Delay one tick so CSS/layout is final
-      // ————————————————————————————————
-      setTimeout(() => {
-        // 3) Measure its height and lock it in
-        const initH = canvas.getBoundingClientRect().height;
-        console.log('🔒 Locking canvas height at', initH, 'px for', canvas);
-        canvas.style.height = `${initH}px`;          // Set exact height
-        canvas.style.minHeight = `${initH}px`;       // Prevent shrinking
-        canvas.style.maxHeight = `${initH}px`;       // Prevent growing
-        canvas.style.overflowY = 'auto';             // allow scrolling if content grows taller
-        canvas.style.flexShrink = '0';               // if inside a flex container, don't let it shrink
-        canvas.style.flexGrow = '0';                 // prevent growing in flex containers
-        canvas.style.position = 'relative';          // ensure positioning context
-      }, 0);
-    });
-  } else {
-    console.warn('⚠️ Could not find any canvas elements');
-  }
+  document.querySelectorAll('.windowCanvas').forEach(canvas => {
+    const initH = canvas.getBoundingClientRect().height;
+    canvas.style.height = `${initH}px`;
+    canvas.style.minHeight = `${initH}px`;
+    canvas.style.maxHeight = `${initH}px`;
+    canvas.style.position = 'relative';     // Ensure proper positioning context
+    canvas.style.overflow = 'visible';      // Allow windows to be visible outside
+    canvas.style.flexShrink = '0';
+    canvas.style.flexGrow = '0';
+  });
 
   // ————————————————————————————————
-  // 4) The rest of your retro-window logic…
+  // 2) The retro-window logic
   // ————————————————————————————————
   document.querySelectorAll('.retro-window').forEach(windowEl => {
     const header    = windowEl.querySelector('.window-bar');
