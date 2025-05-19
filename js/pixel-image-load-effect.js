@@ -108,7 +108,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function pixelate(img) {
+    if (!img.dataset.canvasId) {
+      // console.warn("pixelate: canvasId not set for image:", img.src, ". Image may not be loaded/prepared yet.");
+      return;
+    }
     const canvas = document.getElementById(img.dataset.canvasId);
+    if (!canvas) {
+      // console.error("Pixelate: Canvas element not found for ID:", img.dataset.canvasId, "for image:", img.src);
+      return;
+    }
+
+    if (img.dataset.animationFinished === "true") {
+      return; // Animation already completed
+    }
+    if (img.dataset.animationStarted === "true") {
+      return; // Animation already in progress
+    }
+    img.dataset.animationStarted = "true";
+
     const ctx = canvas.getContext("2d");
 
     let currentStep = 0;
@@ -116,19 +133,22 @@ document.addEventListener("DOMContentLoaded", () => {
     function doStep() {
       if (currentStep > steps) {
         const wrapper = canvas.parentElement;
-        
+
         // Restore original styles
         const originalStyles = JSON.parse(img.dataset.originalStyles || '{}');
         Object.entries(originalStyles).forEach(([prop, value]) => {
           img.style[prop] = value;
         });
-        
+
         img.style.visibility = "visible";
-        img.style.position = "static";
-        
+        // img.style.position = "static"; // This line is removed as originalStyles should handle position restoration.
+
         // Move image back to original position
         wrapper.parentNode.insertBefore(img, wrapper);
         wrapper.remove();
+
+        delete img.dataset.animationStarted;
+        img.dataset.animationFinished = "true";
         return;
       }
 
