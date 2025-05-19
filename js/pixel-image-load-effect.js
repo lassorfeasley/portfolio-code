@@ -52,8 +52,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   function triggerImagesInWindow(windowEl) {
+    windowEl.dataset.animationTriggerActivated = "true"; // Mark the window as ready for animations
     const images = windowEl.querySelectorAll("img");
-    images.forEach(img => pixelate(img));
+    images.forEach(img => {
+      // Only attempt to pixelate if the image has been prepared (canvasId exists)
+      // and its parent window is now marked as activated.
+      // pixelate() itself has guards against re-animating.
+      if (img.dataset.canvasId) {
+        pixelate(img);
+      }
+      // If canvasId is not set yet, prepareInitialPixel will handle calling pixelate
+      // for this image once it's ready, because windowEl.dataset.animationTriggerActivated is now true.
+    });
   }
 
   function prepareInitialPixel(img) {
@@ -104,7 +114,15 @@ document.addEventListener("DOMContentLoaded", () => {
     wrapper.appendChild(canvas);
 
     img.dataset.canvasId = canvas.id = "canvas-" + Math.random().toString(36).slice(2);
-    drawPixelStep(img, canvas, ctx, steps);
+    drawPixelStep(img, canvas, ctx, steps); // Draw initial highly pixelated state
+
+    // Check if the parent window is already activated for animations
+    const parentWindow = img.closest('.retro-window');
+    if (parentWindow && parentWindow.dataset.animationTriggerActivated === "true") {
+      // If so, and the canvas is ready (which it is at this point), trigger animation for this image.
+      // pixelate() has its own guards to prevent re-animation if already started/finished.
+      pixelate(img);
+    }
   }
 
   function pixelate(img) {
