@@ -22,5 +22,3 @@ export async function GET() {
 
   return NextResponse.json(map, { status: 200 });
 }
-
-
