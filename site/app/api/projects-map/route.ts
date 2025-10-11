@@ -14,11 +14,32 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  type Row = { slug: string; project_types: { slug: string } | null };
+  type RowLike = { slug: string; project_types?: unknown };
+  const hasSlug = (value: unknown): value is { slug: string } => {
+    if (typeof value !== 'object' || value === null) return false;
+    const slug = (value as Record<string, unknown>).slug;
+    return typeof slug === 'string';
+  };
+
+  const extractProjectTypeSlug = (rel: unknown): string | undefined => {
+    if (Array.isArray(rel)) {
+      const first = rel[0];
+      return hasSlug(first) ? first.slug : undefined;
+    }
+    return hasSlug(rel) ? rel.slug : undefined;
+  };
+
+  const isRowLike = (value: unknown): value is RowLike => {
+    if (typeof value !== 'object' || value === null) return false;
+    const slug = (value as Record<string, unknown>).slug;
+    return typeof slug === 'string';
+  };
+
   const map: Record<string, string> = {};
-  const rows: Row[] = ((data ?? []) as Row[]);
-  for (const row of rows) {
-    map[row.slug] = row.project_types?.slug ?? '';
+  const rows = Array.isArray(data) ? data : [];
+  for (const item of rows) {
+    if (!isRowLike(item)) continue;
+    map[item.slug] = extractProjectTypeSlug(item.project_types) ?? '';
   }
 
   return NextResponse.json(map, { status: 200 });
