@@ -14,8 +14,9 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  type Row = { slug: string; project_types: { slug: string } | null };
   const map: Record<string, string> = {};
-  (data ?? []).forEach((row: any) => {
+  (data as Row[] | null)?.forEach((row) => {
     map[row.slug] = row.project_types?.slug ?? '';
   });
 
