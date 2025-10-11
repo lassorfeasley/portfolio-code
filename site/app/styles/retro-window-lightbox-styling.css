@@ -1,0 +1,7 @@
+/*causes lightbox to overlay over retro windows*/
+
+  /* Example override based on inspected classes */
+  .w-lightbox-backdrop,
+  .w-lightbox-modal {
+    z-index: 99999 !important; /* Ensure the Lightbox overlays the retro windows */
+  }

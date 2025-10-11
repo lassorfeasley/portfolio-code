@@ -1,0 +1,33 @@
+/* === styling for old time scroll bars === */
+
+/* General container overflow control */
+  .window-content-wrapper {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Custom vertical scrollbar width */
+  .window-content-wrapper::-webkit-scrollbar {
+    width: 20px;
+  }
+
+  /* Vertical scrollbar track */
+  .window-content-wrapper::-webkit-scrollbar-track {
+    border-width: .5px;
+    border-style: solid;
+    border-color: rgb(178, 190, 195);
+  }
+
+  /* Vertical scrollbar thumb */
+  .window-content-wrapper::-webkit-scrollbar-thumb {
+    background: rgb(238, 238, 238);
+    border-width: .5px;
+    border-style: solid;
+    border-color: rgb(178, 190, 195);
+  }
+
+  /* Hide horizontal scrollbar (WebKit-only) */
+  .window-content-wrapper::-webkit-scrollbar:horizontal {
+    height: 0 !important;
+    display: none !important;
+  }
