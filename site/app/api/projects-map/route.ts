@@ -16,9 +16,10 @@ export async function GET() {
 
   type Row = { slug: string; project_types: { slug: string } | null };
   const map: Record<string, string> = {};
-  (data as Row[] | null)?.forEach((row) => {
+  const rows: Row[] = ((data ?? []) as Row[]);
+  for (const row of rows) {
     map[row.slug] = row.project_types?.slug ?? '';
-  });
+  }
 
   return NextResponse.json(map, { status: 200 });
 }
