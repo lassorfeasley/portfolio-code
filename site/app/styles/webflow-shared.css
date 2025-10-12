@@ -217,6 +217,9 @@ td, th {
 
 html {
   height: 100%;
+  /* Keep layout width stable when vertical scrollbar appears */
+  overflow-y: scroll;
+  scrollbar-gutter: stable both-edges;
 }
 
 body {
@@ -227,6 +230,9 @@ body {
   font-family: Arial, sans-serif;
   font-size: 14px;
   line-height: 20px;
+  /* Also stabilize on body in case UA ignores html */
+  overflow-y: scroll;
+  scrollbar-gutter: stable both-edges;
 }
 
 img {
@@ -2542,6 +2548,13 @@ a {
   display: flex;
 }
 
+/* Ensure the page root fills the width even when body is a flex container */
+.retro-root {
+  width: 100%;
+  align-self: stretch;
+  display: block;
+}
+
 .body.beig {
   background-color: var(--offwhite);
 }
@@ -2972,7 +2985,7 @@ a {
   height: auto;
 }
 
-.globalmargin {
+.globalmargin, html.w-mod-js .globalmargin, html.w-mod-touch .globalmargin {
   grid-column-gap: 60px;
   grid-row-gap: 60px;
   flex-flow: column;
@@ -2981,7 +2994,8 @@ a {
   width: 100%;
   max-width: 1500px;
   min-height: auto;
-  margin: 0 40px;
+  /* Center the wrapper like Webflow and avoid subtracting 80px from the width */
+  margin: 0 auto;
   padding: 40px 40px 80px;
   display: flex;
   overflow: visible;
@@ -4141,6 +4155,7 @@ a {
   flex-flow: column;
   padding: 40px;
   display: flex;
+  width: 100%;
 }
 
 .windowcanvas.search {
@@ -4156,6 +4171,7 @@ a {
   grid-template-columns: 1fr 1fr 1fr;
   grid-auto-columns: 1fr;
   display: grid;
+  width: 100%;
 }
 
 .onetwogrid {
@@ -4166,6 +4182,12 @@ a {
   grid-template-columns: 1fr 2fr;
   grid-auto-columns: 1fr;
   display: inline-grid;
+}
+
+/* Ensure intro/alert canvas spans the full container width */
+.windowcanvas.onetwogrid {
+  display: grid;
+  width: 100%;
 }
 
 .onetwogrid._40 {

@@ -1,11 +1,15 @@
 /* === Makes draggable folders mimic GUI folders === */
-document.addEventListener('DOMContentLoaded', function () {
-  const container = document.querySelector('.folder-grid');
-  if (!container) return;
+function initFolderDrags(root) {
+  const containers = (root ? Array.from(root.querySelectorAll('.folder-grid')) : Array.from(document.querySelectorAll('.folder-grid')));
+  if (!root && document.querySelector('.folder-grid')) {
+    // also include top-level if root is not provided
+    containers.unshift(document.querySelector('.folder-grid'));
+  }
 
-  const draggableFolders = container.querySelectorAll('.draggable-folder');
+  containers.filter(Boolean).forEach((container) => {
+    const draggableFolders = container.querySelectorAll('.draggable-folder');
 
-  draggableFolders.forEach(folder => {
+    draggableFolders.forEach(folder => {
     const link = folder.querySelector('a, .link-block');
     let isDragging = false;
     let startX, startY;
@@ -61,6 +65,29 @@ document.addEventListener('DOMContentLoaded', function () {
       document.addEventListener('mouseup', onMouseUp, { once: true });
     });
 
-    folder.ondragstart = () => false;
+      folder.ondragstart = () => false;
+    });
   });
+}
+
+// Run now if DOM is ready, otherwise wait
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => initFolderDrags());
+} else {
+  initFolderDrags();
+}
+
+// Observe for dynamically added folder grids
+const folderObserver = new MutationObserver((mutations) => {
+  for (const m of mutations) {
+    m.addedNodes.forEach((n) => {
+      if (!(n instanceof HTMLElement)) return;
+      if (n.matches && n.matches('.folder-grid')) initFolderDrags(n);
+      else if (n.querySelectorAll) {
+        const grids = n.querySelectorAll('.folder-grid');
+        if (grids.length) initFolderDrags(n);
+      }
+    });
+  }
 });
+folderObserver.observe(document.body, { childList: true, subtree: true });

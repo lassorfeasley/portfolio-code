@@ -51,6 +51,76 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Observe dynamically-added windows so their images pixelate
+  const dynObserver = new MutationObserver((mutations) => {
+    mutations.forEach((m) => {
+      m.addedNodes.forEach((n) => {
+        if (!(n instanceof HTMLElement)) return;
+        const windows = n.matches && n.matches('.retro-window')
+          ? [n]
+          : (n.querySelectorAll ? Array.from(n.querySelectorAll('.retro-window')) : []);
+        windows.forEach((w) => {
+          // Prepare and observe new window
+          const imgs = w.querySelectorAll('img');
+          imgs.forEach((img) => {
+            if (img.complete) {
+              prepareInitialPixel(img);
+            } else {
+              img.addEventListener('load', () => prepareInitialPixel(img));
+            }
+          });
+          observer.observe(w);
+        });
+
+        // Also handle any images added anywhere in the DOM
+        const addedImages = (n.matches && n.matches('img'))
+          ? [n]
+          : (n.querySelectorAll ? Array.from(n.querySelectorAll('img')) : []);
+        addedImages.forEach((img) => {
+          if (img.dataset.canvasId) return; // already prepared
+          if (img.complete) {
+            prepareInitialPixel(img);
+            if (isInViewport(img)) pixelate(img); else imgObserver.observe(img);
+          } else {
+            img.addEventListener('load', () => {
+              if (img.dataset.canvasId) return;
+              prepareInitialPixel(img);
+              if (isInViewport(img)) pixelate(img); else imgObserver.observe(img);
+            });
+          }
+        });
+      });
+    });
+  });
+  dynObserver.observe(document.body, { childList: true, subtree: true });
+
+  // Fallback: pixelate images that are not inside .retro-window across all pages
+  const imgObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      const img = entry.target;
+      imgObserver.unobserve(img);
+      // ensure prepared
+      if (!img.dataset.canvasId) prepareInitialPixel(img);
+      pixelate(img);
+    });
+  }, { threshold: 0.1 });
+
+  const allImages = Array.from(document.querySelectorAll('img'));
+  allImages.forEach((img) => {
+    if (img.dataset.canvasId) return;
+    if (img.complete) {
+      prepareInitialPixel(img);
+      if (isInViewport(img)) pixelate(img); else imgObserver.observe(img);
+    } else {
+      img.addEventListener('load', () => {
+        if (img.dataset.canvasId) return;
+        prepareInitialPixel(img);
+        if (isInViewport(img)) pixelate(img); else imgObserver.observe(img);
+      });
+    }
+  });
+
   function triggerImagesInWindow(windowEl) {
     windowEl.dataset.animationTriggerActivated = "true"; // Mark the window as ready for animations
     const images = windowEl.querySelectorAll("img");
@@ -193,5 +263,10 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(downCanvas, 0, 0, canvas.width, canvas.height);
+  }
+
+  function isInViewport(el) {
+    const r = el.getBoundingClientRect();
+    return r.top < window.innerHeight && r.bottom > 0 && r.left < window.innerWidth && r.right > 0;
   }
 });

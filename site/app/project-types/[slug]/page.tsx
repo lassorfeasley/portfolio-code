@@ -130,8 +130,9 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
       </div>
 
       {/* Footer (desktop icon grid) */}
-      <div id="desktop" className="windowcanvas">
-        <div className="wide">
+      <div className="globalmargin">
+        <div id="desktop" className="windowcanvas">
+          <div className="wide">
           <div className="align-right">
             <div className="folder-grid">
               <div className="icon-placeholder">
@@ -177,6 +178,7 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
             </div>
           </div>
         </div>
+      </div>
       </div>
     </main>
   );

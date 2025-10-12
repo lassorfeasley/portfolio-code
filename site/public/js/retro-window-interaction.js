@@ -1,6 +1,8 @@
 /* === Makes retro windows interactive, with a close button, resizer, and link click handler === */
 window.addEventListener('load', () => {
-  document.querySelectorAll('.retro-window').forEach(windowEl => {
+  const setupWindow = (windowEl) => {
+    if (!windowEl || windowEl.dataset.retroWindowInitialized === 'true') return;
+    windowEl.dataset.retroWindowInitialized = 'true';
     // Required and optional elements within the window.
     const header    = windowEl.querySelector('.window-bar');
     const closeBtn  = windowEl.querySelector('.x-out');
@@ -134,5 +136,23 @@ window.addEventListener('load', () => {
         }
       });
     }
+  };
+
+  // Initialize currently present windows (including those inside project-type lists)
+  document.querySelectorAll('.retro-window, .w-dyn-item .retro-window').forEach(setupWindow);
+
+  // Observe for windows added after client-side navigation
+  const observer = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      m.addedNodes.forEach((n) => {
+        if (!(n instanceof HTMLElement)) return;
+        if (n.classList && n.classList.contains('retro-window')) {
+          setupWindow(n);
+        }
+        // Also search within subtree
+        n.querySelectorAll && n.querySelectorAll('.retro-window').forEach(setupWindow);
+      });
+    }
   });
+  observer.observe(document.body, { childList: true, subtree: true });
 });

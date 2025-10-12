@@ -24,23 +24,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="w-mod-js">
       <head></head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased body`}
       >
+        {/* Guard for layout width early in head/body to prevent width jump */}
+        <style
+          // Using a plain style tag because this is a Server Component
+          dangerouslySetInnerHTML={{
+            __html:
+              '.globalmargin{max-width:1500px!important;margin:0 auto!important;padding:40px 40px 80px!important;}',
+          }}
+        />
         {children}
-        {/* Webflow HTML flags (w-mod-js / w-mod-touch) */}
-        <Script id="webflow-flags" strategy="beforeInteractive">{`
-          (function(o,c){var n=c.documentElement,t=" w-mod-";n.className+=t+"js"; ("ontouchstart" in o || (o.DocumentTouch && c instanceof o.DocumentTouch)) && (n.className+=t+"touch");})(window,document);
-        `}</Script>
         {/* Google WebFont loader for Montserrat and Inconsolata to match Webflow typography */}
         <Script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js" strategy="afterInteractive" />
         <Script id="load-webfonts" strategy="afterInteractive">{`
           try { WebFont.load({ google: { families: ["Montserrat:100,200,300,400,500,600,700,800,900","Inconsolata:400,700"] } }); } catch(e){}
         `}</Script>
-        <Script type="module" src="/js/index.js" strategy="afterInteractive" />
-        <Script type="module" src="/js/filters.js" strategy="afterInteractive" />
+        <Script type="module" src="/js/index.js" strategy="afterInteractive" crossOrigin="anonymous" />
+        <Script type="module" src="/js/filters.js" strategy="afterInteractive" crossOrigin="anonymous" />
       </body>
     </html>
   );

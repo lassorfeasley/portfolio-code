@@ -80,6 +80,22 @@ function setupEchoEffect(draggableSelector) {
 
 // Initialize on page load
 window.addEventListener('load', () => {
-  // Adjust selectors to match your draggable elements (e.g., '.retro-window', '.draggable-folder')
+  // Initial attach
   setupEchoEffect('.retro-window, .draggable-folder');
+
+  // Re-attach echoes for windows added later (client-side nav)
+  const observer = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      m.addedNodes.forEach((n) => {
+        if (!(n instanceof HTMLElement)) return;
+        if (n.matches && (n.matches('.retro-window') || n.matches('.draggable-folder'))) {
+          setupEchoEffect('.retro-window, .draggable-folder');
+        } else if (n.querySelectorAll) {
+          const found = n.querySelectorAll('.retro-window, .draggable-folder');
+          if (found.length) setupEchoEffect('.retro-window, .draggable-folder');
+        }
+      });
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 });
