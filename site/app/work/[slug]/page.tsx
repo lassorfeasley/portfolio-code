@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 
@@ -49,8 +50,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       <div className="globalmargin">
         {/* Top navigation bar */}
         <div className="topbar">
-          <a href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></a>
-          <a href="/work" className="h _5 link w-inline-block"><div>Work</div><div>→</div></a>
+          <Link href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></Link>
+          <Link href="/work" className="h _5 link w-inline-block"><div>Work</div><div>→</div></Link>
           <div className="h _5 link"><div className="text-block-5">{p.name}</div></div>
         </div>
 
@@ -150,12 +151,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
               <div className="folder-grid">
                 <div className="icon-placeholder">
                   <div className="draggable-folder">
-                    <a href="/project-types/interaction-design" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">UI design</div></a>
+                    <Link href="/project-types/interaction-design" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">UI design</div></Link>
                   </div>
                 </div>
                 <div className="icon-placeholder">
                   <div className="draggable-folder">
-                    <a href="/project-types/writing" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Writing</div></a>
+                    <Link href="/project-types/writing" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Writing</div></Link>
                   </div>
                 </div>
                 <div className="icon-placeholder">
@@ -165,12 +166,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                 </div>
                 <div className="icon-placeholder">
                   <div className="draggable-folder">
-                    <a href="/project-types/interaction-design" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">UX design</div></a>
+                    <Link href="/project-types/interaction-design" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">UX design</div></Link>
                   </div>
                 </div>
                 <div className="icon-placeholder">
                   <div className="draggable-folder">
-                    <a href="/work/walking-forward" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Walking forward</div></a>
+                    <Link href="/work/walking-forward" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Walking forward</div></Link>
                   </div>
                 </div>
                 <div className="icon-placeholder">
@@ -180,12 +181,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                 </div>
                 <div className="icon-placeholder">
                   <div className="draggable-folder">
-                    <a href="/project-types/industrial-design" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Industrial design</div></a>
+                    <Link href="/project-types/industrial-design" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Industrial design</div></Link>
                   </div>
                 </div>
                 <div className="icon-placeholder">
                   <div className="draggable-folder">
-                    <a href="/work/seatback-safety" className="iconlink w-inline-block"><div className="folder"></div><p className="navlink foldericon">Seatback Safety</p></a>
+                    <Link href="/work/seatback-safety" className="iconlink w-inline-block"><div className="folder"></div><p className="navlink foldericon">Seatback Safety</p></Link>
                   </div>
                 </div>
               </div>
