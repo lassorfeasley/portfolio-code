@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import FooterDesktop from '@/app/components/FooterDesktop';
 import RetroWindow from '@/app/components/RetroWindow';
+import ExternalLinksWindow from '@/app/components/ExternalLinksWindow';
 
 export const revalidate = 60;
 
@@ -145,30 +146,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             </div>
           ) : null}
         </div>
-        {externalLinks.length > 0 ? (
-          <div className="threetwogrid moveup _200">
-            <div className="hideonm" />
-            <div id="w-node-af26c18b-a7dc-71bf-c3c2-ceb263820a3d-72bd8f4b" className="retro-window-placeholder">
-              <div className="retro-window widescreen">
-                <div className="window-bar">
-                  <div className="paragraph wide">External links</div>
-                  <div className="x-out">×</div>
-                </div>
-                <div className="window-content-wrapper">
-                  <div className="window-content">
-                    <div className="iconlogo"></div>
-                    {externalLinks.map((l, i) => (
-                      <a key={i} href={l.href} target="_blank" rel="noreferrer" className="v w-inline-block">
-                        <div className="paragraph headingbold link w-embed">{l.label}</div>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-                <div className="resize-corner" />
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <ExternalLinksWindow links={externalLinks} />
       </div>
 
       <FooterDesktop />

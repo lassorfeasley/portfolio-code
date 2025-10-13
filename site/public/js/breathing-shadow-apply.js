@@ -27,12 +27,16 @@ function updateBreathingShadow() {
 }
 
 // Initialize on page load
-window.addEventListener('load', () => {
+function initBreathingShadow() {
   updateBreathingShadow();
-
-  // Re-check frequently in case z-index changes dynamically
   setInterval(updateBreathingShadow, 500);
-});
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  try { initBreathingShadow(); } catch (e) { console.error(e); }
+} else {
+  window.addEventListener('load', initBreathingShadow);
+}
 
 // Optional: Immediate update when window is clicked
 document.querySelectorAll('.retro-window').forEach(win => {

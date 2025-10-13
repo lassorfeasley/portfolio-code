@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import FooterDesktop from '@/app/components/FooterDesktop';
 
 const webflowHtml = fs.readFileSync(path.join(process.cwd(), 'public/webflow/index.html'), 'utf-8');
 const originalBody = webflowHtml.match(/<body[\s\S]*?>([\s\S]*?)<\/body>/i)?.[1] ?? '';
@@ -35,19 +36,19 @@ function stripWebflowFormRuntime(html: string): string {
   return out;
 }
 
-const webflowBody = stripWebflowFormRuntime(rewriteHomepageLinks(originalBody))
-  // Lock the wrapper width early to prevent post-hydration width jumps
-  .replace(
-    /<div class=\"globalmargin\"([^>]*)>/i,
-    '<div class="globalmargin" $1 style="max-width:1500px;margin:0 auto;padding:40px 40px 80px;">'
-  )
-  .replace('<div class="globalmargin d">', '<div class="globalmargin d">');
+let webflowBody = stripWebflowFormRuntime(rewriteHomepageLinks(originalBody));
+
+// Do not strip content; only strip inline scripts to avoid hydration drift
+webflowBody = webflowBody.replace(/<script[\s\S]*?<\/script>/gi, '');
 
 // CSS guard to avoid any late-applied class causing a width jump
 const guardCss = '<style id="guard-globalmargin">.globalmargin{max-width:1500px!important;margin:0 auto!important;padding:40px 40px 80px!important;}</style>';
 
 export default function Home() {
   return (
-    <main className="retro-root" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: webflowBody }} />
+    <main className="retro-root" suppressHydrationWarning>
+      <div dangerouslySetInnerHTML={{ __html: webflowBody }} />
+      <FooterDesktop />
+    </main>
   );
 }

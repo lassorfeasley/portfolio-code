@@ -87,7 +87,7 @@ function setupEchoEffect(draggableSelector) {
 }
 
 // Initialize on page load
-window.addEventListener('load', () => {
+function initEcho() {
   // Initial attach
   setupEchoEffect('.retro-window, .draggable-folder');
 
@@ -106,4 +106,10 @@ window.addEventListener('load', () => {
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
-});
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  try { initEcho(); } catch (e) { console.error(e); }
+} else {
+  window.addEventListener('load', initEcho);
+}

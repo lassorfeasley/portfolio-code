@@ -1,5 +1,5 @@
 /* === Causes retro windows to be randomly positioned and  on the screen === */
-  window.addEventListener('load', () => {
+  function initRandomizer() {
     // Only run the script if the screen is at least as wide as an iPad in landscape (1024px)
     if (!window.matchMedia('(min-width: 1024px)').matches) {
       return;
@@ -50,4 +50,10 @@
         win.style.top  = (originalTop + deltaTop) + 'px';
       });
     });
-  });
+  }
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    try { initRandomizer(); } catch (e) { console.error(e); }
+  } else {
+    window.addEventListener('load', initRandomizer);
+  }

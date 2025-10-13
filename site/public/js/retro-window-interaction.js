@@ -1,5 +1,5 @@
 /* === Makes retro windows interactive, with a close button, resizer, and link click handler === */
-window.addEventListener('load', () => {
+function initRetroWindowInteractions() {
   // Treat touch/coarse pointers as mobile; disable drag/resize on mobile
   const isMobile = () => window.matchMedia('(pointer:coarse), (max-width: 767px)').matches;
   const setupWindow = (windowEl) => {
@@ -168,4 +168,10 @@ window.addEventListener('load', () => {
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
-});
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  try { initRetroWindowInteractions(); } catch (e) { console.error(e); }
+} else {
+  window.addEventListener('load', initRetroWindowInteractions);
+}
