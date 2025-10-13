@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import FooterDesktop from '@/app/components/FooterDesktop';
+import RetroWindow from '@/app/components/RetroWindow';
 
 export const revalidate = 60;
 
@@ -83,51 +84,33 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         <div className="windowcanvas">
           <div className="onetwogrid _40">
             <div className="retro-window-placeholder">
-              <div className="retro-window nomax noscrollonm">
-                <div className="window-bar">
-                  <div className="paragraph wide">{p.name}</div>
-                  <div className="x-out">×</div>
-                </div>
-                <div className="window-content-wrapper noscrollonm">
-                  <div className="window-content">
-                    {p.description ? <div className="paragraph">{p.description}</div> : null}
-                    {p.featured_image_url ? (
-                      <img src={p.featured_image_url} alt={p.name ?? ''} className="lightbox-link w-condition-invisible" />
-                    ) : null}
-                    {p.video_url ? (
-                      <div className="videowrapper">
-                        <div className="video w-video w-embed">
-                          <iframe src={p.video_url} title={p.name ?? 'video'} frameBorder={0} allow="autoplay; fullscreen; encrypted-media; picture-in-picture;" allowFullScreen />
-                        </div>
-                      </div>
-                    ) : null}
-                </div>
-              </div>
-                <div className="resize-corner" />
-              </div>
+              <RetroWindow title={p.name ?? ''} className="nomax noscrollonm">
+                {p.description ? <div className="paragraph">{p.description}</div> : null}
+                {p.featured_image_url ? (
+                  <img src={p.featured_image_url} alt={p.name ?? ''} className="lightbox-link w-condition-invisible" />
+                ) : null}
+                {p.video_url ? (
+                  <div className="videowrapper">
+                    <div className="video w-video w-embed">
+                      <iframe src={p.video_url} title={p.name ?? 'video'} frameBorder={0} allow="autoplay; fullscreen; encrypted-media; picture-in-picture;" allowFullScreen />
+                    </div>
+                  </div>
+                ) : null}
+              </RetroWindow>
             </div>
             {hasFinalImages ? (
               <div className="retro-window-placeholder noratio pushdown">
-                <div className="retro-window doublewide square">
-                  <div className="window-bar">
-                    <div className="paragraph wide">Final images and renderings</div>
-                    <div className="x-out">×</div>
-                  </div>
-                  <div className="window-content-wrapper">
-                    <div className="window-content">
-                      <div className="gallery">
-                        <div className="collection-list w-dyn-items">
-                          {p.images_urls!.map((url, i) => (
-                            <div key={i} className="collection-item w-dyn-item w-dyn-repeater-item">
-                            <a href="#" style={{ backgroundImage: `url(${url})` }} className="lightbox-link w-inline-block w-lightbox" />
-                            </div>
-                          ))}
+                <RetroWindow title="Final images and renderings" className="doublewide square">
+                  <div className="gallery">
+                    <div className="collection-list w-dyn-items">
+                      {p.images_urls!.map((url, i) => (
+                        <div key={i} className="collection-item w-dyn-item w-dyn-repeater-item">
+                          <a href="#" style={{ backgroundImage: `url(${url})` }} className="lightbox-link w-inline-block w-lightbox" />
                         </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="resize-corner" />
-                </div>
+                </RetroWindow>
               </div>
             ) : null}
           </div>
@@ -138,36 +121,27 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         <div className="twoonegrid moveup">
           {hasProcessSection ? (
             <div className="retro-window-placeholder">
-              <div className="retro-window doublewide noratioonm">
-                <div className="window-bar">
-                  <div className="paragraph wide">Process and context</div>
-                  <div className="x-out">×</div>
-                </div>
-                <div className="window-content-wrapper portratio">
-                  <div className="window-content">
-                    {(p.process_and_context_html ?? '').trim() !== '' ? (
-                      <div className="v _10">
-                        <div className="paragraph w-richtext" dangerouslySetInnerHTML={{ __html: p.process_and_context_html as string }} />
-                      </div>
-                    ) : null}
-                    {Array.isArray(p.process_image_urls) && p.process_image_urls.length > 0 ? (
-                      <div className="v _10">
-                        {p.process_images_label ? <div className="captionlable">{p.process_images_label}</div> : null}
-                        <div className="gallery">
-                          <div className="collection-list w-dyn-items">
-                            {p.process_image_urls.map((url, i) => (
-                              <div key={i} className="collection-item w-dyn-item w-dyn-repeater-item">
-                              <a href="#" style={{ backgroundImage: `url(${url})` }} className="lightbox-link w-inline-block w-lightbox" />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
+              <RetroWindow title="Process and context" className="doublewide noratioonm">
+                {(p.process_and_context_html ?? '').trim() !== '' ? (
+                  <div className="v _10">
+                    <div className="paragraph w-richtext" dangerouslySetInnerHTML={{ __html: p.process_and_context_html as string }} />
                   </div>
-                </div>
-                <div className="resize-corner" />
-              </div>
+                ) : null}
+                {Array.isArray(p.process_image_urls) && p.process_image_urls.length > 0 ? (
+                  <div className="v _10">
+                    {p.process_images_label ? <div className="captionlable">{p.process_images_label}</div> : null}
+                    <div className="gallery">
+                      <div className="collection-list w-dyn-items">
+                        {p.process_image_urls.map((url, i) => (
+                          <div key={i} className="collection-item w-dyn-item w-dyn-repeater-item">
+                            <a href="#" style={{ backgroundImage: `url(${url})` }} className="lightbox-link w-inline-block w-lightbox" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </RetroWindow>
             </div>
           ) : null}
         </div>

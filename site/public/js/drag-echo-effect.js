@@ -53,6 +53,10 @@ function setupEchoEffect(draggableSelector) {
     let lastY = null;
 
     draggable.addEventListener('mousedown', () => {
+      // Mark element as echo-active to disable expensive breathing shadow
+      draggable.dataset.echoActive = 'true';
+      // Also remove heavy static blur shadow while echoing
+      draggable.classList.add('no-static-shadow');
       lastX = parseInt(draggable.style.left, 10) || draggable.offsetLeft;
       lastY = parseInt(draggable.style.top, 10) || draggable.offsetTop;
 
@@ -73,6 +77,10 @@ function setupEchoEffect(draggableSelector) {
 
       document.addEventListener('mouseup', () => {
         document.removeEventListener('mousemove', mouseMoveHandler);
+        // Clear echo-active mark and request shadow recompute
+        delete draggable.dataset.echoActive;
+        draggable.classList.remove('no-static-shadow');
+        try { if (typeof updateBreathingShadow === 'function') updateBreathingShadow(); } catch (_) {}
       }, { once: true });
     });
   });

@@ -3,6 +3,8 @@ window.addEventListener('load', () => {
   // Treat touch/coarse pointers as mobile; disable drag/resize on mobile
   const isMobile = () => window.matchMedia('(pointer:coarse), (max-width: 767px)').matches;
   const setupWindow = (windowEl) => {
+    // Skip React-managed windows; those are handled in component code
+    if (windowEl && windowEl.dataset && windowEl.dataset.reactManaged === 'true') return;
     if (!windowEl || windowEl.dataset.retroWindowInitialized === 'true') return;
     windowEl.dataset.retroWindowInitialized = 'true';
     // Required and optional elements within the window.
@@ -51,13 +53,19 @@ window.addEventListener('load', () => {
       if (isMobile()) return; // disable header drag on mobile
       e.preventDefault();
       isDragging = true;
+      windowEl.classList.add('no-static-shadow');
       bringToFront();
 
+      // Lock current size before taking the element out of normal flow
+      const rect = windowEl.getBoundingClientRect();
+      windowEl.style.width = `${rect.width}px`;
+      windowEl.style.height = `${rect.height}px`;
       const currentLeft = parseInt(windowEl.style.left, 10) || windowEl.offsetLeft;
       const currentTop  = parseInt(windowEl.style.top, 10) || windowEl.offsetTop;
       offsetX = e.pageX - currentLeft;
       offsetY = e.pageY - currentTop;
       windowEl.style.cursor = 'grabbing';
+      windowEl.style.position = 'absolute';
     });
     document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
@@ -68,6 +76,7 @@ window.addEventListener('load', () => {
       if (isDragging) {
         isDragging = false;
         windowEl.style.cursor = 'default';
+        windowEl.classList.remove('no-static-shadow');
       }
     });
 
