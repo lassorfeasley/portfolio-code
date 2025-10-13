@@ -4211,6 +4211,12 @@ a {
   margin-left: 75px;
 }
 
+/* Ensure wide wrapper spans full container width in windowcanvas contexts */
+.windowcanvas .wide {
+  width: 100% !important;
+  align-self: stretch !important;
+}
+
 .link-block-3, .link-block-4 {
   text-decoration: none;
 }

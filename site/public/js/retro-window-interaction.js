@@ -1,5 +1,7 @@
 /* === Makes retro windows interactive, with a close button, resizer, and link click handler === */
 window.addEventListener('load', () => {
+  // Treat touch/coarse pointers as mobile; disable drag/resize on mobile
+  const isMobile = () => window.matchMedia('(pointer:coarse), (max-width: 767px)').matches;
   const setupWindow = (windowEl) => {
     if (!windowEl || windowEl.dataset.retroWindowInitialized === 'true') return;
     windowEl.dataset.retroWindowInitialized = 'true';
@@ -46,6 +48,7 @@ window.addEventListener('load', () => {
     let isDragging = false;
     let offsetX = 0, offsetY = 0;
     header.addEventListener('mousedown', (e) => {
+      if (isMobile()) return; // disable header drag on mobile
       e.preventDefault();
       isDragging = true;
       bringToFront();
@@ -85,6 +88,7 @@ window.addEventListener('load', () => {
       let startX, startY, startWidth, startHeight;
 
       resizer.addEventListener('mousedown', (e) => {
+        if (isMobile()) return; // disable resize on mobile
         e.preventDefault();
         isResizing = true;
         bringToFront();

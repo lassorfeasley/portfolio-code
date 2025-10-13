@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
+import FooterDesktop from '@/app/components/FooterDesktop';
 
 export const revalidate = 60;
 
@@ -44,6 +45,30 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
   if (error || !data) return notFound();
   const p = data as Project;
+  const hasFinalImages = Array.isArray(p.images_urls) && p.images_urls.length > 0;
+  const hasProcessSection = ((p.process_and_context_html ?? '').trim() !== '') || (Array.isArray(p.process_image_urls) && p.process_image_urls.length > 0);
+  const externalLinks = (() => {
+    const links: { href: string; label: string }[] = [];
+    const toBrand = (rawUrl: string | null): string | null => {
+      if (!rawUrl) return null;
+      try {
+        const u = new URL(rawUrl);
+        const host = u.hostname.replace(/^www\./, '').split('.').slice(0, -1).join('.') || u.hostname;
+        const brand = host.split('-').join(' ').split('.').join(' ');
+        return brand.toUpperCase();
+      } catch {
+        return null;
+      }
+    };
+    const projectName = (p.name ?? '').toUpperCase();
+    const add = (href: string | null) => {
+      const brand = toBrand(href);
+      if (href && brand) links.push({ href, label: `${brand} × ${projectName}` });
+    };
+    add(p.linked_document_url);
+    add(p.fallback_writing_url);
+    return links;
+  })();
 
   return (
     <main className="retro-root">
@@ -76,27 +101,66 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                         </div>
                       </div>
                     ) : null}
-                  </div>
                 </div>
+              </div>
                 <div className="resize-corner" />
               </div>
             </div>
-            <div className="retro-window-placeholder noratio pushdown">
-              <div className="retro-window doublewide square">
-                <div className="window-bar">
-                  <div className="paragraph wide">Final images and renderings</div>
-                  <div className="x-out">×</div>
-                </div>
-                <div className="window-content-wrapper">
-                  <div className="window-content">
-                    {Array.isArray(p.images_urls) && p.images_urls.length > 0 ? (
+            {hasFinalImages ? (
+              <div className="retro-window-placeholder noratio pushdown">
+                <div className="retro-window doublewide square">
+                  <div className="window-bar">
+                    <div className="paragraph wide">Final images and renderings</div>
+                    <div className="x-out">×</div>
+                  </div>
+                  <div className="window-content-wrapper">
+                    <div className="window-content">
                       <div className="gallery">
                         <div className="collection-list w-dyn-items">
-                          {p.images_urls.map((url, i) => (
+                          {p.images_urls!.map((url, i) => (
                             <div key={i} className="collection-item w-dyn-item w-dyn-repeater-item">
-                              <a href="#" style={{ backgroundImage: `url(${url})` }} className="lightbox-link w-inline-block w-lightbox" />
+                            <a href="#" style={{ backgroundImage: `url(${url})` }} className="lightbox-link w-inline-block w-lightbox" />
                             </div>
                           ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="resize-corner" />
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="globalmargin">
+        <div className="twoonegrid moveup">
+          {hasProcessSection ? (
+            <div className="retro-window-placeholder">
+              <div className="retro-window doublewide noratioonm">
+                <div className="window-bar">
+                  <div className="paragraph wide">Process and context</div>
+                  <div className="x-out">×</div>
+                </div>
+                <div className="window-content-wrapper portratio">
+                  <div className="window-content">
+                    {(p.process_and_context_html ?? '').trim() !== '' ? (
+                      <div className="v _10">
+                        <div className="paragraph w-richtext" dangerouslySetInnerHTML={{ __html: p.process_and_context_html as string }} />
+                      </div>
+                    ) : null}
+                    {Array.isArray(p.process_image_urls) && p.process_image_urls.length > 0 ? (
+                      <div className="v _10">
+                        {p.process_images_label ? <div className="captionlable">{p.process_images_label}</div> : null}
+                        <div className="gallery">
+                          <div className="collection-list w-dyn-items">
+                            {p.process_image_urls.map((url, i) => (
+                              <div key={i} className="collection-item w-dyn-item w-dyn-repeater-item">
+                              <a href="#" style={{ backgroundImage: `url(${url})` }} className="lightbox-link w-inline-block w-lightbox" />
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     ) : null}
@@ -105,95 +169,35 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                 <div className="resize-corner" />
               </div>
             </div>
-          </div>
+          ) : null}
         </div>
+        {externalLinks.length > 0 ? (
+          <div className="threetwogrid moveup _200">
+            <div className="hideonm" />
+            <div id="w-node-af26c18b-a7dc-71bf-c3c2-ceb263820a3d-72bd8f4b" className="retro-window-placeholder">
+              <div className="retro-window widescreen">
+                <div className="window-bar">
+                  <div className="paragraph wide">External links</div>
+                  <div className="x-out">×</div>
+                </div>
+                <div className="window-content-wrapper">
+                  <div className="window-content">
+                    <div className="iconlogo"></div>
+                    {externalLinks.map((l, i) => (
+                      <a key={i} href={l.href} target="_blank" rel="noreferrer" className="v w-inline-block">
+                        <div className="paragraph headingbold link w-embed">{l.label}</div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+                <div className="resize-corner" />
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      <div className="globalmargin">
-        <div className="twoonegrid moveup">
-          <div className="retro-window-placeholder">
-            <div className="retro-window doublewide noratioonm">
-              <div className="window-bar">
-                <div className="paragraph wide">Process and context</div>
-                <div className="x-out">×</div>
-              </div>
-              <div className="window-content-wrapper portratio">
-                <div className="window-content">
-                  {p.process_and_context_html ? (
-                    <div className="v _10">
-                      <div className="paragraph w-richtext" dangerouslySetInnerHTML={{ __html: p.process_and_context_html }} />
-                    </div>
-                  ) : null}
-                  {Array.isArray(p.process_image_urls) && p.process_image_urls.length > 0 ? (
-                    <div className="v _10">
-                      {p.process_images_label ? <div className="captionlable">{p.process_images_label}</div> : null}
-                      <div className="gallery">
-                        <div className="collection-list w-dyn-items">
-                          {p.process_image_urls.map((url, i) => (
-                            <div key={i} className="collection-item w-dyn-item w-dyn-repeater-item">
-                              <a href="#" style={{ backgroundImage: `url(${url})` }} className="lightbox-link w-inline-block w-lightbox" />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-              <div className="resize-corner" />
-            </div>
-          </div>
-        </div>
-        {/* Footer (desktop icon grid) aligned to margins */}
-        <div className="windowcanvas foot">
-          <div className="wide">
-            <div className="align-right">
-              <div className="folder-grid">
-                <div className="icon-placeholder">
-                  <div className="draggable-folder">
-                    <Link href="/project-types/interaction-design" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">UI design</div></Link>
-                  </div>
-                </div>
-                <div className="icon-placeholder">
-                  <div className="draggable-folder">
-                    <Link href="/project-types/writing" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Writing</div></Link>
-                  </div>
-                </div>
-                <div className="icon-placeholder">
-                  <div className="draggable-folder">
-                    <a href="https://docs.google.com/document/d/1qz8Qwrk6aoD1n1vEe5Zd7OhaEhun8UOuY0xcW2SnRmg/edit?tab=t.0" target="_blank" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Resume</div></a>
-                  </div>
-                </div>
-                <div className="icon-placeholder">
-                  <div className="draggable-folder">
-                    <Link href="/project-types/interaction-design" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">UX design</div></Link>
-                  </div>
-                </div>
-                <div className="icon-placeholder">
-                  <div className="draggable-folder">
-                    <Link href="/work/walking-forward" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Walking forward</div></Link>
-                  </div>
-                </div>
-                <div className="icon-placeholder">
-                  <div className="draggable-folder">
-                    <a href="https://www.linkedin.com/in/lassor/" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">LinkedIn</div></a>
-                  </div>
-                </div>
-                <div className="icon-placeholder">
-                  <div className="draggable-folder">
-                    <Link href="/project-types/industrial-design" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Industrial design</div></Link>
-                  </div>
-                </div>
-                <div className="icon-placeholder">
-                  <div className="draggable-folder">
-                    <Link href="/work/seatback-safety" className="iconlink w-inline-block"><div className="folder"></div><p className="navlink foldericon">Seatback Safety</p></Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <FooterDesktop />
     </main>
   );
 }

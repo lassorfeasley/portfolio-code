@@ -1,5 +1,6 @@
 /* === Makes draggable folders mimic GUI folders === */
 function initFolderDrags(root) {
+  const isMobile = () => window.matchMedia('(pointer:coarse), (max-width: 767px)').matches;
   const containers = (root ? Array.from(root.querySelectorAll('.folder-grid')) : Array.from(document.querySelectorAll('.folder-grid')));
   if (!root && document.querySelector('.folder-grid')) {
     // also include top-level if root is not provided
@@ -10,6 +11,7 @@ function initFolderDrags(root) {
     const draggableFolders = container.querySelectorAll('.draggable-folder');
 
     draggableFolders.forEach(folder => {
+    if (isMobile()) return; // disable folder dragging on mobile
     const link = folder.querySelector('a, .link-block');
     let isDragging = false;
     let startX, startY;
