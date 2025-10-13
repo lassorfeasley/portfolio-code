@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
@@ -6,6 +7,8 @@ import FooterDesktop from '@/app/components/FooterDesktop';
 export const revalidate = 60;
 
 export async function generateStaticParams() {
+  const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
+  if (!hasEnv) return [];
   const supabase = supabaseServer();
   const { data } = await supabase
     .from('project_types')
@@ -15,8 +18,46 @@ export async function generateStaticParams() {
   return (data ?? []).map((t) => ({ slug: t.slug }));
 }
 
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  const title = slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const url = `/project-types/${slug}`;
+  return {
+    title,
+    alternates: { canonical: url },
+    openGraph: { title, url },
+    twitter: { title },
+  };
+}
+
 export default async function ProjectTypePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
+  if (!hasEnv) {
+    return (
+      <main className="retro-root">
+        <div className="globalmargin">
+          <div className="topbar">
+            <Link href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></Link>
+            <Link href={`/project-types/${slug}`} className="h _5 link w-inline-block"><div>Collections</div><div>→</div></Link>
+            <div className="h _5 link"><div className="text-block-5">{slug}</div></div>
+          </div>
+          <div className="windowcanvas">
+            <div className="retro-window-placeholder">
+              <div className="retro-window">
+                <div className="window-bar"><div className="paragraph">This collection is unavailable in local dev</div><div className="x-out">×</div></div>
+                <div className="window-content-wrapper"><div className="window-content"><div className="paragraph">Supabase env vars are not set.</div></div></div>
+                <div className="resize-corner" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <FooterDesktop />
+      </main>
+    );
+  }
   const supabase = supabaseServer();
 
   const [{ data: typeData }, { data: projects }] = await Promise.all([

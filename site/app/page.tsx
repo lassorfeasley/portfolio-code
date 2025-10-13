@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import FooterDesktop from '@/app/components/FooterDesktop';
+import Script from 'next/script';
 
 const webflowHtml = fs.readFileSync(path.join(process.cwd(), 'public/webflow/index.html'), 'utf-8');
 const originalBody = webflowHtml.match(/<body[\s\S]*?>([\s\S]*?)<\/body>/i)?.[1] ?? '';
@@ -47,6 +48,9 @@ const guardCss = '<style id="guard-globalmargin">.globalmargin{max-width:1500px!
 export default function Home() {
   return (
     <main className="retro-root" suppressHydrationWarning>
+      {/* Scope legacy Webflow scripts to homepage only */}
+      <Script type="module" src="/js/index.js" strategy="afterInteractive" crossOrigin="anonymous" />
+      <Script type="module" src="/js/filters.js" strategy="afterInteractive" crossOrigin="anonymous" />
       <div dangerouslySetInnerHTML={{ __html: webflowBody }} />
       <FooterDesktop />
     </main>

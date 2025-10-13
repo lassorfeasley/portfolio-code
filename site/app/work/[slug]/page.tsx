@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
@@ -24,6 +25,8 @@ type Project = {
 };
 
 export async function generateStaticParams() {
+  const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
+  if (!hasEnv) return [];
   const supabase = supabaseServer();
   const { data } = await supabase
     .from('projects')
@@ -33,8 +36,44 @@ export async function generateStaticParams() {
   return (data ?? []).map((p) => ({ slug: p.slug }));
 }
 
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  const title = slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const url = `/work/${slug}`;
+  return {
+    title,
+    alternates: { canonical: url },
+    openGraph: { title, url },
+    twitter: { title },
+  };
+}
+
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
+  if (!hasEnv) {
+    return (
+      <main className="retro-root">
+        <div className="globalmargin">
+          <div className="topbar">
+            <Link href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></Link>
+            <Link href="/work" className="h _5 link w-inline-block"><div>Work</div><div>→</div></Link>
+            <div className="h _5 link"><div className="text-block-5">{slug}</div></div>
+          </div>
+          <div className="windowcanvas">
+            <div className="retro-window-placeholder">
+              <RetroWindow title="This project is unavailable in local dev">
+                <div className="paragraph">Supabase env vars are not set. Set them to view live content.</div>
+              </RetroWindow>
+            </div>
+          </div>
+        </div>
+        <FooterDesktop />
+      </main>
+    );
+  }
   const supabase = supabaseServer();
 
   const { data, error } = await supabase
