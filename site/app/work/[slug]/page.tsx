@@ -22,6 +22,7 @@ type Project = {
   linked_document_url: string | null;
   video_url: string | null;
   fallback_writing_url: string | null;
+  project_types?: { name: string | null; slug: string } | { name: string | null; slug: string }[] | null;
 };
 
 export async function generateStaticParams() {
@@ -78,7 +79,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
   const { data, error } = await supabase
     .from('projects')
-    .select('id,name,slug,description,featured_image_url,images_urls,process_image_urls,process_images_label,process_and_context_html,year,linked_document_url,video_url,fallback_writing_url')
+    .select('id,name,slug,description,featured_image_url,images_urls,process_image_urls,process_images_label,process_and_context_html,year,linked_document_url,video_url,fallback_writing_url,project_types(name,slug)')
     .eq('slug', slug)
     .eq('draft', false)
     .eq('archived', false)
@@ -86,6 +87,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
   if (error || !data) return notFound();
   const p = data as Project;
+  const projTypeRel = p.project_types as any;
+  const projectType = Array.isArray(projTypeRel) ? (projTypeRel[0] ?? null) : (projTypeRel ?? null);
+  const projectTypeName = projectType?.name ?? 'Work';
+  const projectTypeHref = projectType?.slug ? `/project-types/${projectType.slug}` : '/work';
   const hasFinalImages = Array.isArray(p.images_urls) && p.images_urls.length > 0;
   const hasProcessSection = ((p.process_and_context_html ?? '').trim() !== '') || (Array.isArray(p.process_image_urls) && p.process_image_urls.length > 0);
   const externalLinks = (() => {
@@ -117,7 +122,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         {/* Top navigation bar */}
         <div className="topbar">
           <Link href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></Link>
-          <Link href="/work" className="h _5 link w-inline-block"><div>Work</div><div>→</div></Link>
+          <Link href={projectTypeHref} className="h _5 link w-inline-block"><div>{projectTypeName}</div><div>→</div></Link>
           <div className="h _5 link"><div className="text-block-5">{p.name}</div></div>
         </div>
 
