@@ -114,8 +114,8 @@ export default function RetroWindow({
       document.removeEventListener('mouseup', onUp);
       closeBtn?.removeEventListener('click', onClose);
       resizer?.removeEventListener('mousedown', onResizeDown);
-      document.removeEventListener('mousemove', onResizing as any);
-      document.removeEventListener('mouseup', onResizeUp as any);
+      document.removeEventListener('mousemove', onResizing);
+      document.removeEventListener('mouseup', onResizeUp);
     };
   }, [disableDrag, disableResize]);
 
