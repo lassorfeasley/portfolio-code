@@ -4045,7 +4045,7 @@ a {
 }
 
 .retro-window-placeholder.pushdown {
-  margin-top: 50px;
+  margin-top: 20px;
 }
 
 .retro-window-placeholder.noratio.pushdown {
@@ -4053,8 +4053,8 @@ a {
 }
 
 .retro-window-placeholder.alertmover {
-  top: 50px;
-  left: -30px;
+  top: 20px;
+  left: -15px;
 }
 
 .resize-corner {
@@ -4168,6 +4168,7 @@ a {
   padding: 40px;
   display: flex;
   width: 100%;
+  position: relative;
 }
 
 .windowcanvas.search {
@@ -4219,8 +4220,11 @@ a {
 
 .twoonegrid.moveup {
   grid-template-rows: auto;
-  margin-top: -75px;
-  margin-left: 75px;
+  margin-top: -200px; /* overlap previous window by 200px */
+  margin-left: 0;
+  width: 100%;
+  align-self: stretch;
+  position: relative;
 }
 
 /* Ensure wide wrapper spans full container width in windowcanvas contexts */

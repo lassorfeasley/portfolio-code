@@ -206,32 +206,31 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
               </div>
             ) : null}
           </div>
-        </div>
-      </div>
 
-      <div className="globalmargin">
-        <div className="twoonegrid moveup">
-          {hasProcessSection ? (
-            <div className="retro-window-placeholder">
-              <RetroWindow title="Process and context" className="doublewide noratioonm">
-                {(p.process_and_context_html ?? '').trim() !== '' ? (
-                  <div className="v _10">
-                    <div className="paragraph w-richtext" dangerouslySetInnerHTML={{ __html: p.process_and_context_html as string }} />
-                  </div>
-                ) : null}
-                {Array.isArray(p.process_image_urls) && p.process_image_urls.length > 0 ? (
-                  <div className="v _10">
-                    {p.process_images_label ? <div className="captionlable">{p.process_images_label}</div> : null}
-                    <div className="gallery">
-                      <LightboxGallery images={p.process_image_urls} />
+          <div className="twoonegrid moveup">
+            {hasProcessSection ? (
+              <div className="retro-window-placeholder">
+                <RetroWindow title="Process and context" className="doublewide noratioonm">
+                  {(p.process_and_context_html ?? '').trim() !== '' ? (
+                    <div className="v _10">
+                      <div className="paragraph w-richtext" dangerouslySetInnerHTML={{ __html: p.process_and_context_html as string }} />
                     </div>
-                  </div>
-                ) : null}
-              </RetroWindow>
-            </div>
-          ) : null}
+                  ) : null}
+                  {Array.isArray(p.process_image_urls) && p.process_image_urls.length > 0 ? (
+                    <div className="v _10">
+                      {p.process_images_label ? <div className="captionlable">{p.process_images_label}</div> : null}
+                      <div className="gallery">
+                        <LightboxGallery images={p.process_image_urls} />
+                      </div>
+                    </div>
+                  ) : null}
+                </RetroWindow>
+              </div>
+            ) : null}
+          </div>
+
+          <ExternalLinksWindow links={externalLinks} />
         </div>
-        <ExternalLinksWindow links={externalLinks} />
       </div>
 
       <FooterDesktop />
