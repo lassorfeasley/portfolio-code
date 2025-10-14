@@ -157,20 +157,30 @@ function initPixelImageLoadEffect() {
   }
 
   function prepareInitialPixel(img) {
-    // Store original styles
+    // Get actual displayed size before any manipulation
+    const size = getDisplayedSize(img);
+    
+    // Store computed display value to preserve inline vs block behavior
+    const computedDisplay = window.getComputedStyle(img).display;
+    
+    // Store original styles AND the actual displayed dimensions
     const originalStyles = {
       width: img.style.width,
       height: img.style.height,
       position: img.style.position,
-      display: img.style.display
+      display: img.style.display,
+      verticalAlign: img.style.verticalAlign
     };
     img.dataset.originalStyles = JSON.stringify(originalStyles);
+    // Store the actual dimensions to lock them in after animation
+    img.dataset.displayWidth = size.width;
+    img.dataset.displayHeight = size.height;
+    img.dataset.computedDisplay = computedDisplay;
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
     // Set canvas size to match displayed image size (robust on mobile)
-    const size = getDisplayedSize(img);
     canvas.width = size.width;
     canvas.height = size.height;
     
@@ -242,14 +252,27 @@ function initPixelImageLoadEffect() {
       if (currentStep > steps) {
         const wrapper = canvas.parentElement;
 
-        // Restore original styles
-        const originalStyles = JSON.parse(img.dataset.originalStyles || '{}');
-        Object.entries(originalStyles).forEach(([prop, value]) => {
-          img.style[prop] = value;
-        });
-
+        // First, reset position-related styles before moving the image
+        img.style.position = "";
+        img.style.top = "";
+        img.style.left = "";
         img.style.visibility = "visible";
-        // img.style.position = "static"; // This line is removed as originalStyles should handle position restoration.
+
+        // Lock in the displayed dimensions to prevent reflow
+        const displayWidth = img.dataset.displayWidth;
+        const displayHeight = img.dataset.displayHeight;
+        if (displayWidth && displayHeight) {
+          img.style.width = displayWidth + "px";
+          img.style.height = displayHeight + "px";
+          img.style.maxWidth = displayWidth + "px";
+          img.style.maxHeight = displayHeight + "px";
+        }
+
+        // Restore the original computed display value (inline, inline-block, etc.)
+        const computedDisplay = img.dataset.computedDisplay;
+        if (computedDisplay) {
+          img.style.display = computedDisplay;
+        }
 
         // Move image back to original position
         wrapper.parentNode.insertBefore(img, wrapper);
