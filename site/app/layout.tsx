@@ -81,7 +81,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} ${inconsolata.variable} antialiased body`}
       >
+        {/* Interactive effects for retro windows */}
+        <Script src="/js/windowcanvas-lock.js" strategy="afterInteractive" />
         <Script src="/js/pixel-image-load-effect.js" strategy="afterInteractive" />
+        <Script src="/js/retro-window-interaction.js" strategy="afterInteractive" />
+        <Script src="/js/drag-echo-effect.js" strategy="afterInteractive" />
+        <Script src="/js/breathing-shadow-apply.js" strategy="afterInteractive" />
         {/* Guard for layout width early in head/body to prevent width jump */}
         <style
           // Using a plain style tag because this is a Server Component

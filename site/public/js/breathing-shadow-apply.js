@@ -1,7 +1,10 @@
 /* === Causes active window to have a breathing shadow effect (the effect is stored in webflow) === */
 
+let cachedTopWindow = null;
+let windows = [];
+
 // Function: Find window with highest z-index
-function findTopWindow(windows) {
+function findTopWindow() {
   let topWindow = null;
   let highestZIndex = -Infinity;
 
@@ -18,18 +21,44 @@ function findTopWindow(windows) {
 
 // Function: Update breathing shadow animation
 function updateBreathingShadow() {
-  const windows = document.querySelectorAll('.retro-window');
-  const topWindow = findTopWindow(windows);
+  // Only update if windows exist
+  if (windows.length === 0) {
+    windows = Array.from(document.querySelectorAll('.retro-window'));
+  }
 
-  windows.forEach(win => {
-    win.classList.toggle('breathing-shadow', win === topWindow);
-  });
+  const topWindow = findTopWindow();
+
+  // Only update DOM if the top window changed
+  if (topWindow !== cachedTopWindow) {
+    windows.forEach(win => {
+      if (win === topWindow) {
+        if (!win.classList.contains('breathing-shadow')) {
+          win.classList.add('breathing-shadow');
+        }
+      } else {
+        if (win.classList.contains('breathing-shadow')) {
+          win.classList.remove('breathing-shadow');
+        }
+      }
+    });
+    cachedTopWindow = topWindow;
+  }
 }
 
 // Initialize on page load
 function initBreathingShadow() {
+  windows = Array.from(document.querySelectorAll('.retro-window'));
   updateBreathingShadow();
-  setInterval(updateBreathingShadow, 500);
+  
+  // Less frequent polling - only check every 2 seconds as a fallback
+  setInterval(() => {
+    // Refresh windows list periodically
+    const currentWindows = document.querySelectorAll('.retro-window');
+    if (currentWindows.length !== windows.length) {
+      windows = Array.from(currentWindows);
+    }
+    updateBreathingShadow();
+  }, 2000);
 }
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -38,9 +67,12 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
   window.addEventListener('load', initBreathingShadow);
 }
 
-// Optional: Immediate update when window is clicked
-document.querySelectorAll('.retro-window').forEach(win => {
-  win.addEventListener('mousedown', () => {
+// Event delegation for better performance
+document.addEventListener('mousedown', (e) => {
+  const win = e.target.closest('.retro-window');
+  if (win) {
+    // Refresh windows list if needed
+    windows = Array.from(document.querySelectorAll('.retro-window'));
     setTimeout(updateBreathingShadow, 10);
-  });
-});
+  }
+}, true);

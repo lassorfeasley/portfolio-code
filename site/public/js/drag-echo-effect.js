@@ -10,6 +10,18 @@ const ECHO_BLUR = '0px';              // Blur applied to echoes (CSS blur)
 // Echo management
 let echos = [];
 
+// Throttle helper - limits how often a function can be called
+function throttle(func, limit) {
+  let inThrottle;
+  return function(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+}
+
 function createEcho(el) {
   // Clone the original element
   const echo = el.cloneNode(true);
@@ -48,9 +60,16 @@ function createEcho(el) {
 
 // Setup echo effect on draggable elements
 function setupEchoEffect(draggableSelector) {
-  document.querySelectorAll(draggableSelector).forEach(draggable => {
+  const draggables = document.querySelectorAll(draggableSelector);
+  
+  draggables.forEach(draggable => {
+    // Skip if already initialized to prevent duplicate listeners
+    if (draggable.dataset.echoInitialized === 'true') return;
+    draggable.dataset.echoInitialized = 'true';
+    
     let lastX = null;
     let lastY = null;
+    let mouseMoveHandler = null;
 
     draggable.addEventListener('mousedown', () => {
       // Mark element as echo-active to disable expensive breathing shadow
@@ -60,7 +79,8 @@ function setupEchoEffect(draggableSelector) {
       lastX = parseInt(draggable.style.left, 10) || draggable.offsetLeft;
       lastY = parseInt(draggable.style.top, 10) || draggable.offsetTop;
 
-      const mouseMoveHandler = () => {
+      // Throttled handler to reduce calls - max ~20 echoes per second
+      const checkAndCreateEcho = throttle(() => {
         const currentX = parseInt(draggable.style.left, 10);
         const currentY = parseInt(draggable.style.top, 10);
 
@@ -71,17 +91,21 @@ function setupEchoEffect(draggableSelector) {
           lastX = currentX;
           lastY = currentY;
         }
-      };
+      }, 50);
 
+      mouseMoveHandler = checkAndCreateEcho;
       document.addEventListener('mousemove', mouseMoveHandler);
 
-      document.addEventListener('mouseup', () => {
+      const mouseUpHandler = () => {
+        // Clean up event listener
         document.removeEventListener('mousemove', mouseMoveHandler);
         // Clear echo-active mark and request shadow recompute
         delete draggable.dataset.echoActive;
         draggable.classList.remove('no-static-shadow');
         try { if (typeof updateBreathingShadow === 'function') updateBreathingShadow(); } catch (_) {}
-      }, { once: true });
+      };
+      
+      document.addEventListener('mouseup', mouseUpHandler, { once: true });
     });
   });
 }
@@ -91,19 +115,13 @@ function initEcho() {
   // Initial attach
   setupEchoEffect('.retro-window, .draggable-folder');
 
-  // Re-attach echoes for windows added later (client-side nav)
-  const observer = new MutationObserver((mutations) => {
-    for (const m of mutations) {
-      m.addedNodes.forEach((n) => {
-        if (!(n instanceof HTMLElement)) return;
-        if (n.matches && (n.matches('.retro-window') || n.matches('.draggable-folder'))) {
-          setupEchoEffect('.retro-window, .draggable-folder');
-        } else if (n.querySelectorAll) {
-          const found = n.querySelectorAll('.retro-window, .draggable-folder');
-          if (found.length) setupEchoEffect('.retro-window, .draggable-folder');
-        }
-      });
-    }
+  // Debounced observer to batch DOM changes and reduce overhead
+  let debounceTimer;
+  const observer = new MutationObserver(() => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      setupEchoEffect('.retro-window, .draggable-folder');
+    }, 200);
   });
   observer.observe(document.body, { childList: true, subtree: true });
 }
