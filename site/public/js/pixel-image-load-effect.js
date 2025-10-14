@@ -1,10 +1,29 @@
 /* === Makes images load in a pixelated effect === */
 
-document.addEventListener("DOMContentLoaded", () => {
+function initPixelImageLoadEffect() {
   const steps = 6;
   const totalTargetDuration = 5000;
   const minStepDelay = 250;
   const maxStepDelay = Math.max(0, (totalTargetDuration - steps * minStepDelay) / steps);
+
+  function getDisplayedSize(img) {
+    const rect = img.getBoundingClientRect();
+    let w = rect.width;
+    let h = rect.height;
+    if (!w || !h) {
+      if (img.naturalWidth && img.naturalHeight) {
+        w = img.naturalWidth;
+        h = img.naturalHeight;
+      } else if (img.parentElement) {
+        const pr = img.parentElement.getBoundingClientRect();
+        w = pr.width || 1;
+        h = pr.height || 1;
+      } else {
+        w = 1; h = 1;
+      }
+    }
+    return { width: Math.max(1, Math.round(w)), height: Math.max(1, Math.round(h)) };
+  }
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -14,7 +33,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }, {
-    threshold: 0.1
+    threshold: 0.1,
+    rootMargin: '100px'
   });
 
   const retroWindows = document.querySelectorAll(".retro-window");
@@ -104,7 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!img.dataset.canvasId) prepareInitialPixel(img);
       pixelate(img);
     });
-  }, { threshold: 0.1 });
+  }, { threshold: 0.1, rootMargin: '100px' });
 
   const allImages = Array.from(document.querySelectorAll('img'));
   allImages.forEach((img) => {
@@ -149,10 +169,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    // Set canvas size to match displayed image size
-    const rect = img.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    // Set canvas size to match displayed image size (robust on mobile)
+    const size = getDisplayedSize(img);
+    canvas.width = size.width;
+    canvas.height = size.height;
     
     canvas.style.position = "absolute";
     canvas.style.top = "0";
@@ -167,8 +187,8 @@ document.addEventListener("DOMContentLoaded", () => {
     wrapper.classList.add("pixel-loading-wrapper");
     wrapper.style.position = "relative";
     wrapper.style.display = "inline-block";
-    wrapper.style.width = rect.width + "px";
-    wrapper.style.height = rect.height + "px";
+    wrapper.style.width = size.width + "px";
+    wrapper.style.height = size.height + "px";
 
     // Position image
     img.style.position = "absolute";
@@ -250,12 +270,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function drawPixelStep(img, canvas, ctx, exponent) {
-    const rect = img.getBoundingClientRect();
     const pixelSize = Math.pow(2, exponent);
 
     const downCanvas = document.createElement("canvas");
-    downCanvas.width = rect.width / pixelSize;
-    downCanvas.height = rect.height / pixelSize;
+    downCanvas.width = Math.max(1, Math.round(canvas.width / pixelSize));
+    downCanvas.height = Math.max(1, Math.round(canvas.height / pixelSize));
     const downCtx = downCanvas.getContext("2d");
     downCtx.imageSmoothingEnabled = false;
     downCtx.drawImage(img, 0, 0, downCanvas.width, downCanvas.height);
@@ -269,4 +288,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const r = el.getBoundingClientRect();
     return r.top < window.innerHeight && r.bottom > 0 && r.left < window.innerWidth && r.right > 0;
   }
-});
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  try { initPixelImageLoadEffect(); } catch (e) { console.error(e); }
+} else {
+  document.addEventListener('DOMContentLoaded', initPixelImageLoadEffect);
+}

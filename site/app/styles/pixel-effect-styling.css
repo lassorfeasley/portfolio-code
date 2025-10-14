@@ -17,6 +17,8 @@
   pointer-events: none;
   z-index: 2;
   display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .pixel-loading-wrapper img {

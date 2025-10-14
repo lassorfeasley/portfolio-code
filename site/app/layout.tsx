@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono, Montserrat, Inconsolata } from "next/font/google";
 import "./globals.css";
 
@@ -80,6 +81,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} ${inconsolata.variable} antialiased body`}
       >
+        <Script src="/js/pixel-image-load-effect.js" strategy="afterInteractive" />
         {/* Guard for layout width early in head/body to prevent width jump */}
         <style
           // Using a plain style tag because this is a Server Component
