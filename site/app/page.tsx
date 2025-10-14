@@ -11,6 +11,7 @@ function rewriteHomepageLinks(html: string): string {
     .replace(/https?:\/\/(?:www\.)?lassor\.com\/projects\/([a-z0-9-]+)/gi, '/work/$1')
     // Project types → /project-types/[slug]
     .replace(/https?:\/\/(?:www\.)?lassor\.com\/project-types\/([a-z0-9-]+)/gi, '/project-types/$1')
+    // Legacy webflow.io links
     .replace(/https?:\/\/lassorfeasley\.webflow\.io\/project-types\/([a-z0-9-]+)/gi, '/project-types/$1')
     // Faceblind
     .replace(/https?:\/\/(?:www\.)?lassor\.com\/faceblind/gi, '/faceblind')

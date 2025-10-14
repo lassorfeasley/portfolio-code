@@ -10,6 +10,8 @@ function initPixelImageLoadEffect() {
     const rect = img.getBoundingClientRect();
     let w = rect.width;
     let h = rect.height;
+    
+    // If dimensions are zero or not set, calculate from natural size
     if (!w || !h) {
       if (img.naturalWidth && img.naturalHeight) {
         w = img.naturalWidth;
@@ -22,6 +24,17 @@ function initPixelImageLoadEffect() {
         w = 1; h = 1;
       }
     }
+    
+    // Constrain to parent container width if the image would overflow
+    if (img.parentElement) {
+      const parentWidth = img.parentElement.getBoundingClientRect().width;
+      if (parentWidth > 0 && w > parentWidth) {
+        const aspectRatio = h / w;
+        w = parentWidth;
+        h = w * aspectRatio;
+      }
+    }
+    
     return { width: Math.max(1, Math.round(w)), height: Math.max(1, Math.round(h)) };
   }
 
@@ -199,6 +212,7 @@ function initPixelImageLoadEffect() {
     wrapper.style.display = "inline-block";
     wrapper.style.width = size.width + "px";
     wrapper.style.height = size.height + "px";
+    wrapper.style.maxWidth = "100%";
 
     // Position image
     img.style.position = "absolute";

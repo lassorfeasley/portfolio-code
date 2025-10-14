@@ -176,7 +176,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
               <RetroWindow title={p.name ?? ''} className="nomax noscrollonm">
                 {p.description ? <div className="paragraph">{p.description}</div> : null}
                 {p.featured_image_url ? (
-                  <img src={p.featured_image_url} alt={p.name ?? ''} className="lightbox-link w-condition-invisible" />
+                  <img src={p.featured_image_url} alt={p.name ?? ''} className="lightbox-link w-condition-invisible" style={{ maxWidth: '100%', height: 'auto' }} />
                 ) : null}
                 {p.video_url ? (
                   <div className="videowrapper">
