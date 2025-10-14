@@ -129,8 +129,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
   if (error || !data) return notFound();
   const p = data as Project;
-  const projTypeRel = p.project_types as any;
-  const projectType = Array.isArray(projTypeRel) ? (projTypeRel[0] ?? null) : (projTypeRel ?? null);
+  const projectTypeRel = p.project_types;
+  const projectType = Array.isArray(projectTypeRel)
+    ? (projectTypeRel[0] ?? null)
+    : (projectTypeRel ?? null);
   const projectTypeName = projectType?.name ?? 'Work';
   const projectTypeHref = projectType?.slug ? `/project-types/${projectType.slug}` : '/work';
   const hasFinalImages = Array.isArray(p.images_urls) && p.images_urls.length > 0;
