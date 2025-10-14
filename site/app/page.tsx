@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import FooterDesktop from '@/app/components/FooterDesktop';
 import Script from 'next/script';
 
 const webflowHtml = fs.readFileSync(path.join(process.cwd(), 'public/webflow/index.html'), 'utf-8');
@@ -52,7 +51,6 @@ export default function Home() {
       <Script type="module" src="/js/index.js" strategy="afterInteractive" crossOrigin="anonymous" />
       <Script type="module" src="/js/filters.js" strategy="afterInteractive" crossOrigin="anonymous" />
       <div dangerouslySetInnerHTML={{ __html: webflowBody }} />
-      <FooterDesktop />
     </main>
   );
 }

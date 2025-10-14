@@ -3639,6 +3639,18 @@ a {
   max-width: 500px;
 }
 
+/* Ensure embedded videos are visible and responsive */
+.video {
+  max-height: none !important;
+  height: auto !important;
+}
+.w-video iframe {
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 16 / 9;
+  min-height: 240px;
+}
+
 .footer-wrapper {
   border-top: .5px solid var(--stroke);
   flex-flow: column;

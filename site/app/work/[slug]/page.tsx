@@ -5,6 +5,7 @@ import { supabaseServer } from '@/lib/supabase/server';
 import FooterDesktop from '@/app/components/FooterDesktop';
 import RetroWindow from '@/app/components/RetroWindow';
 import ExternalLinksWindow from '@/app/components/ExternalLinksWindow';
+import LightboxGallery from '@/app/components/LightboxGallery';
 
 export const revalidate = 60;
 
@@ -24,6 +25,47 @@ type Project = {
   fallback_writing_url: string | null;
   project_types?: { name: string | null; slug: string } | { name: string | null; slug: string }[] | null;
 };
+
+function toEmbedUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    // Accept full iframe HTML and extract its src
+    if (/^\s*<iframe[\s\S]*?>/i.test(raw)) {
+      const m = raw.match(/\ssrc=["']([^"']+)["']/i);
+      if (m && m[1]) raw = m[1];
+    }
+    const u = new URL(raw);
+    const host = u.hostname.toLowerCase();
+    // YouTube → embed
+    if (host.includes('youtube.com') || host.includes('youtu.be')) {
+      let id = '';
+      if (host.includes('youtu.be')) {
+        id = u.pathname.replace(/^\//, '');
+      } else if (u.pathname.startsWith('/watch')) {
+        id = u.searchParams.get('v') ?? '';
+      } else if (u.pathname.startsWith('/shorts/')) {
+        id = u.pathname.split('/')[2] ?? '';
+      } else if (u.pathname.startsWith('/embed/')) {
+        id = u.pathname.split('/')[2] ?? '';
+      }
+      if (id) {
+        const params = new URLSearchParams();
+        const start = u.searchParams.get('t') || u.searchParams.get('start');
+        if (start) params.set('start', String(start).replace(/s$/i, ''));
+        const query = params.toString();
+        return `https://www.youtube-nocookie.com/embed/${id}${query ? `?${query}` : ''}`;
+      }
+    }
+    // Vimeo → embed
+    if (host.includes('vimeo.com')) {
+      const m = u.pathname.match(/\/(\d+)/);
+      if (m) return `https://player.vimeo.com/video/${m[1]}`;
+    }
+    return raw;
+  } catch {
+    return raw;
+  }
+}
 
 export async function generateStaticParams() {
   const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
@@ -136,8 +178,19 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                 ) : null}
                 {p.video_url ? (
                   <div className="videowrapper">
-                    <div className="video w-video w-embed">
-                      <iframe src={p.video_url} title={p.name ?? 'video'} frameBorder={0} allow="autoplay; fullscreen; encrypted-media; picture-in-picture;" allowFullScreen />
+                    <div className="video w-video w-embed" style={{ maxHeight: 'none', height: 'auto' }}>
+                      <iframe
+                        src={toEmbedUrl(p.video_url) ?? undefined}
+                        title={p.name ?? 'video'}
+                        frameBorder={0}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        loading="lazy"
+                        width="560"
+                        height="315"
+                        style={{ maxWidth: '100%' }}
+                        referrerPolicy="strict-origin-when-cross-origin"
+                      />
                     </div>
                   </div>
                 ) : null}
@@ -147,13 +200,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
               <div className="retro-window-placeholder noratio pushdown">
                 <RetroWindow title="Final images and renderings" className="doublewide square">
                   <div className="gallery">
-                    <div className="collection-list w-dyn-items">
-                      {p.images_urls!.map((url, i) => (
-                        <div key={i} className="collection-item w-dyn-item w-dyn-repeater-item">
-                          <a href="#" style={{ backgroundImage: `url(${url})` }} className="lightbox-link w-inline-block w-lightbox" />
-                        </div>
-                      ))}
-                    </div>
+                    <LightboxGallery images={p.images_urls!} />
                   </div>
                 </RetroWindow>
               </div>
@@ -176,13 +223,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                   <div className="v _10">
                     {p.process_images_label ? <div className="captionlable">{p.process_images_label}</div> : null}
                     <div className="gallery">
-                      <div className="collection-list w-dyn-items">
-                        {p.process_image_urls.map((url, i) => (
-                          <div key={i} className="collection-item w-dyn-item w-dyn-repeater-item">
-                            <a href="#" style={{ backgroundImage: `url(${url})` }} className="lightbox-link w-inline-block w-lightbox" />
-                          </div>
-                        ))}
-                      </div>
+                      <LightboxGallery images={p.process_image_urls} />
                     </div>
                   </div>
                 ) : null}
