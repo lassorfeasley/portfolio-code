@@ -1,23 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { Geist, Geist_Mono, Montserrat, Inconsolata } from "next/font/google";
+import { Inconsolata } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 const inconsolata = Inconsolata({
   variable: "--font-inconsolata",
@@ -79,7 +63,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} ${inconsolata.variable} antialiased body`}
+        className={`${inconsolata.variable} antialiased body`}
       >
         {/* Interactive effects for retro windows */}
         <Script src="/js/windowcanvas-lock.js" strategy="afterInteractive" />

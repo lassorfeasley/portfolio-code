@@ -81,10 +81,9 @@ export default function LightboxGallery({
           <button className="lf-lightbox-close" aria-label="Close" onClick={hide}>×</button>
           <button className="lf-lightbox-prev" aria-label="Previous" onClick={prev}>‹</button>
           <img
-            className="lf-lightbox-img"
+            className="lf-lightbox-img no-pixelate"
             src={toLargeUrl(images[index], 2200)}
             alt=""
-            className="lf-lightbox-img no-pixelate"
             onError={(e) => {
               const img = e.currentTarget as HTMLImageElement;
               if (isSupabaseTransformedUrl(img.currentSrc || img.src)) {
