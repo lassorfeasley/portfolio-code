@@ -24,72 +24,224 @@ function buildItemIndex(itemEl) {
 
 async function fetchTypeMap() {
   try {
-    const res = await fetch('/api/projects-map', { cache: 'no-store' });
-    if (!res.ok) return {};
-    return await res.json();
-  } catch {
+    // Add timestamp to bypass cache
+    const res = await fetch(`/api/projects-map?t=${Date.now()}`, { 
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
+    });
+    if (!res.ok) {
+      console.error('Failed to fetch type map:', res.status, res.statusText);
+      return {};
+    }
+    const data = await res.json();
+    console.log('Fetched type map:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching type map:', error);
     return {};
   }
 }
 
 function slugFromItem(itemEl) {
-  // Prefer any hidden input present in each item (stable in Webflow export)
+  // Look for the jetboost-list-item input that contains the slug
+  const jetboostInput = itemEl.querySelector('input.jetboost-list-item');
+  if (jetboostInput?.value) {
+    console.log(`Found slug via jetboost input: ${jetboostInput.value}`);
+    return jetboostInput.value;
+  }
+  
+  // Fallback: any hidden input
   const hidden = itemEl.querySelector('input[type="hidden"]');
-  if (hidden?.value) return hidden.value;
-  // Fallback: derive from link; support both /work/ and legacy /projects/
-  const href = itemEl.querySelector('.window-content.w-inline-block')?.getAttribute('href') || '';
-  const m = href.match(/\/(?:work|projects)\/([^\/?#]+)/i);
-  return m ? m[1] : '';
+  if (hidden?.value) {
+    console.log(`Found slug via hidden input: ${hidden.value}`);
+    return hidden.value;
+  }
+  
+  // Fallback: derive from link
+  const link = itemEl.querySelector('a[href*="/work/"], a[href*="/projects/"]');
+  if (link) {
+    const href = link.getAttribute('href') || '';
+    const m = href.match(/\/(?:work|projects)\/([^\/?#]+)/i);
+    if (m) {
+      console.log(`Found slug via href: ${m[1]}`);
+      return m[1];
+    }
+  }
+  
+  console.warn('Could not extract slug from item:', itemEl);
+  return '';
 }
 
 function setActive(buttonEls, activeBtn) {
+  // Fix: Add the missing implementation to remove 'is-active' from all buttons
   buttonEls.forEach(btn => btn.classList.remove('is-active'));
   if (activeBtn) activeBtn.classList.add('is-active');
 }
 
 (async function init() {
   if (window.__homeFiltersInit) return;
+  
+  // Add delay to ensure DOM is ready and React has hydrated
+  if (document.readyState === 'loading') {
+    await new Promise(resolve => {
+      document.addEventListener('DOMContentLoaded', resolve);
+    });
+  }
+  
+  // Additional delay for React hydration
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
   // Use the legacy wrappers present in the exported HTML (no Jetboost runtime required)
   const listWrapper = document.querySelector('.jetboost-list-wrapper-lkmq.jetboost-list-wrapper-wzyl');
-  if (!listWrapper) return;
+  if (!listWrapper) {
+    console.warn('Filter: List wrapper not found');
+    return;
+  }
+  
   window.__homeFiltersInit = true;
 
   const searchInput = document.querySelector('.jetboost-list-search-input-lkmq') || document.querySelector('#Search') || document.querySelector('input.search');
   const filterButtons = Array.from(document.querySelectorAll('.jetboost-filter-wzyl .button, .jetboost-filter-wzyl a.button'));
-  filterButtons.forEach((a) => { try { a.setAttribute('href', '#'); } catch (_) {} });
+  
+  if (!searchInput) console.warn('Filter: Search input not found');
+  if (!filterButtons.length) console.warn('Filter: Filter buttons not found');
+  
+  filterButtons.forEach((a) => { 
+    try { 
+      a.setAttribute('href', '#'); 
+    } catch (_) {} 
+  });
+  
   const itemsContainer = listWrapper.querySelector('.w-dyn-items');
-  if (!itemsContainer) return;
+  if (!itemsContainer) {
+    console.warn('Filter: Items container not found');
+    return;
+  }
 
   const items = Array.from(itemsContainer.querySelectorAll('.w-dyn-item'));
-  if (!items.length) return;
+  if (!items.length) {
+    console.warn('Filter: No items found');
+    return;
+  }
+
+  console.log(`Filter: Found ${items.length} items`);
 
   const typeMap = await fetchTypeMap();
+  // Build reverse index: type -> set of slugs
+  const typeToSlugs = Object.create(null);
+  Object.entries(typeMap).forEach(([slug, t]) => {
+    if (!t) return;
+    (typeToSlugs[t] ||= new Set()).add(slug);
+  });
+  
+  console.log('Type to slugs mapping:', Object.entries(typeToSlugs).map(([type, slugs]) => 
+    ({ type, slugs: Array.from(slugs) })
+  ));
+
   const index = new Map();
 
   items.forEach(item => {
     const text = buildItemIndex(item);
     const slug = slugFromItem(item);
-    const typeSlug = typeMap[slug] || '';
-    item.dataset.typeSlug = typeSlug || '';
-    index.set(item, { text, typeSlug });
+    index.set(item, { text, slug });
   });
+  
+  console.log('Item slugs found:', Array.from(index.values()).map(v => v.slug));
 
   let activeType = null;
   let term = '';
 
+  // Add CSS for filter hiding if not already present
+  if (!document.querySelector('#filter-hide-styles')) {
+    const style = document.createElement('style');
+    style.id = 'filter-hide-styles';
+    style.textContent = `
+      .filter-hidden { 
+        display: none !important; 
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        position: absolute !important;
+        left: -9999px !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function setVisible(placeholderEl, show) {
+    // Debug: Log what we're trying to do
+    const title = placeholderEl.querySelector('.paragraph.wide')?.textContent || 'Unknown';
+    console.log(`Filter: Setting "${title}" to ${show ? 'visible' : 'hidden'}`);
+    
+    // Use class-based hiding for better reliability
+    if (show) {
+      placeholderEl.classList.remove('filter-hidden');
+      // Also try direct style as backup
+      placeholderEl.style.removeProperty('display');
+    } else {
+      placeholderEl.classList.add('filter-hidden');
+      // Also try direct style as backup
+      placeholderEl.style.display = 'none';
+    }
+    
+    // Debug: Verify the class was applied
+    if (!show && !placeholderEl.classList.contains('filter-hidden')) {
+      console.error(`Filter: Failed to add filter-hidden class to "${title}"`);
+    }
+    
+    // Also handle floated windows in the overlay
+    const windowEl = placeholderEl.querySelector('.retro-window');
+    if (windowEl) {
+      const floatId = windowEl.dataset.floatId || windowEl.dataset.floatid;
+      if (floatId) {
+        const floated = document.querySelector(`.window-float-layer .retro-window[data-floatId="${floatId}"]`);
+        if (floated) {
+          if (show) {
+            floated.classList.remove('filter-hidden');
+            floated.style.removeProperty('display');
+          } else {
+            floated.classList.add('filter-hidden');
+            floated.style.display = 'none';
+          }
+        }
+      }
+    }
+  }
+
   function applyFilters() {
     const t = normalize(term);
+    const allowed = activeType ? typeToSlugs[activeType] : null;
+    
+    let visibleCount = 0;
+    let hiddenCount = 0;
     items.forEach(item => {
-      const { text, typeSlug } = index.get(item);
+      const { text, slug } = index.get(item);
       const matchesTerm = !t || text.includes(t);
-      const matchesType = !activeType || typeSlug === activeType;
-      item.style.display = (matchesTerm && matchesType) ? '' : 'none';
+      const matchesType = !allowed || (slug && allowed.has(slug));
+      const isVisible = matchesTerm && matchesType;
+      setVisible(item, isVisible);
+      if (isVisible) {
+        visibleCount++;
+      } else {
+        hiddenCount++;
+      }
     });
+    
+    console.log(`Filter: Showing ${visibleCount} of ${items.length} items (${hiddenCount} hidden)`);
+    
+    // Debug: Check if items actually have the filter-hidden class
+    const actuallyHidden = document.querySelectorAll('.retro-window-placeholder.filter-hidden').length;
+    if (actuallyHidden !== hiddenCount) {
+      console.warn(`Filter: Expected ${hiddenCount} hidden items but found ${actuallyHidden} with filter-hidden class`);
+    }
   }
 
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       term = e.target.value || '';
+      console.log(`Filter: Search term = "${term}"`);
       applyFilters();
     });
   }
@@ -100,6 +252,7 @@ function setActive(buttonEls, activeBtn) {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       activeType = type;
+      console.log(`Filter: Active type = ${type || 'all'}`);
       setActive(filterButtons, btn);
       applyFilters();
     });
@@ -109,4 +262,95 @@ function setActive(buttonEls, activeBtn) {
   if (defaultBtn) setActive(filterButtons, defaultBtn);
 
   applyFilters();
+  
+  // Watch for React re-renders that might remove our filter classes
+  const observer = new MutationObserver((mutations) => {
+    let needsReapply = false;
+    mutations.forEach(mutation => {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+        const target = mutation.target;
+        if (target.classList.contains('retro-window-placeholder')) {
+          // Check if our filter state was lost
+          const shouldBeHidden = Array.from(items).some(item => {
+            if (item === target) {
+              const { text, slug } = index.get(item);
+              const t = normalize(term);
+              const allowed = activeType ? typeToSlugs[activeType] : null;
+              const matchesTerm = !t || text.includes(t);
+              const matchesType = !allowed || (slug && allowed.has(slug));
+              return !(matchesTerm && matchesType);
+            }
+            return false;
+          });
+          
+          if (shouldBeHidden && !target.classList.contains('filter-hidden')) {
+            needsReapply = true;
+          }
+        }
+      }
+    });
+    
+    if (needsReapply) {
+      console.warn('Filter: React removed filter classes, reapplying...');
+      applyFilters();
+    }
+  });
+  
+  observer.observe(itemsContainer, {
+    attributes: true,
+    attributeFilter: ['class'],
+    subtree: true
+  });
+  
+  // Periodic check to ensure filters are applied (fallback for aggressive re-renders)
+  let lastFilterState = { term: '', activeType: null };
+  setInterval(() => {
+    if (term !== lastFilterState.term || activeType !== lastFilterState.activeType) {
+      console.log('Filter: State changed, reapplying filters...');
+      lastFilterState = { term, activeType };
+      applyFilters();
+    } else {
+      // Check if any hidden items lost their hidden state
+      const shouldBeHidden = [];
+      items.forEach(item => {
+        const { text, slug } = index.get(item);
+        const t = normalize(term);
+        const allowed = activeType ? typeToSlugs[activeType] : null;
+        const matchesTerm = !t || text.includes(t);
+        const matchesType = !allowed || (slug && allowed.has(slug));
+        if (!(matchesTerm && matchesType)) {
+          shouldBeHidden.push(item);
+        }
+      });
+      
+      let needsReapply = false;
+      shouldBeHidden.forEach(item => {
+        if (!item.classList.contains('filter-hidden') || item.style.display !== 'none') {
+          needsReapply = true;
+        }
+      });
+      
+      if (needsReapply) {
+        console.warn('Filter: Some items lost their hidden state, reapplying...');
+        applyFilters();
+      }
+    }
+  }, 1000); // Check every second
+  
+  // Export debug function to window for testing
+  window.testFilterHide = () => {
+    const firstItem = document.querySelector('.retro-window-placeholder');
+    if (firstItem) {
+      console.log('Testing hide on:', firstItem);
+      firstItem.classList.add('filter-hidden');
+      firstItem.style.display = 'none';
+      console.log('Applied filter-hidden class and display:none');
+      console.log('Current computed style:', window.getComputedStyle(firstItem).display);
+      console.log('Has filter-hidden class:', firstItem.classList.contains('filter-hidden'));
+    } else {
+      console.log('No retro-window-placeholder found');
+    }
+  };
+  
+  console.log('Filter system initialized. Test with: window.testFilterHide()');
 })();

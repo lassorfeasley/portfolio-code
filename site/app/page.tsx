@@ -48,9 +48,9 @@ const guardCss = '<style id="guard-globalmargin">.globalmargin{max-width:1500px!
 export default function Home() {
   return (
     <main className="retro-root" suppressHydrationWarning>
-      {/* Homepage-specific features */}
-      <Script src="/js/homepage-features.js" strategy="afterInteractive" />
       <div dangerouslySetInnerHTML={{ __html: webflowBody }} />
+      {/* Homepage-specific features - load after markup is in the DOM */}
+      <Script src="/js/homepage-features.js" strategy="afterInteractive" />
     </main>
   );
 }

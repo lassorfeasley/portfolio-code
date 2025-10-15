@@ -753,7 +753,10 @@ function initRandomizer() {
   const MIN_WIDTH = 300;              // Minimum width for each retro window (in pixels)
   const MAX_WIDTH = 475;              // Maximum width for each retro window (in pixels)
   const MAX_HORIZONTAL_SCATTER = 125; // Maximum horizontal scatter (in pixels)
-  const MAX_VERTICAL_SCATTER = 50;   // Maximum vertical scatter (in pixels)
+  const MAX_VERTICAL_SCATTER = 50;    // Maximum vertical scatter (in pixels)
+  const SAFE_SIDE_PADDING = 16;       // Keep windows away from viewport edges to avoid horizontal scroll
+  const SAFE_BOTTOM_PADDING = 80;     // Keep windows above bottom navigation area
+  const ALLOW_OVERFLOW_X = 100;       // Allow up to 100px overflow horizontally (clipped by container)
 
   // Find each container that should have a cluttered desktop effect
   const clutteredContainers = document.querySelectorAll('.cluttered-desktop-container');
@@ -764,12 +767,28 @@ function initRandomizer() {
     // 2. Lock in its height so that it won't collapse when children are set to absolute.
     container.style.position = 'relative';
     container.style.height = container.offsetHeight + 'px';
+    // Do not clip at the container level; we'll avoid horizontal scroll via body style
 
     // Select all retro windows inside this container.
     const windows = container.querySelectorAll('.retro-window');
 
-    // Utility function to generate a random offset in the range [-max, max]
-    const randomOffset = (max) => (Math.random() < 0.5 ? -1 : 1) * Math.floor(Math.random() * (max + 1));
+    // Utility: uniform random within [min, max]
+    const randomBetween = (min, max) => {
+      if (max < min) { const t = min; min = max; max = t; }
+      return min + Math.floor(Math.random() * (max - min + 1));
+    };
+
+    // Choose a value away from hard edges when the range is roomy
+    const randomInterior = (min, max) => {
+      if (max < min) { const t = min; min = max; max = t; }
+      const span = max - min;
+      if (span > 40) {
+        const innerMin = min + 20;
+        const innerMax = max - 20;
+        return randomBetween(innerMin, innerMax);
+      }
+      return randomBetween(min, max);
+    };
 
     windows.forEach(win => {
       // Capture the original rendered position from the static layout.
@@ -784,14 +803,33 @@ function initRandomizer() {
       const randomZIndex = Math.floor(Math.random() * 500) + 1;
       win.style.zIndex = randomZIndex;
 
-      // 3. Calculate random horizontal and vertical offsets.
-      const deltaLeft = randomOffset(MAX_HORIZONTAL_SCATTER);
-      const deltaTop  = randomOffset(MAX_VERTICAL_SCATTER);
+      // Measure after width change so clamping is accurate
+      const winWidth = Math.min(win.offsetWidth || randomWidth, container.clientWidth);
+      const winHeight = win.offsetHeight;
+
+      // Allowed position ranges (permit slight overflow horizontally; clip by container overflow)
+      const minLeft = -ALLOW_OVERFLOW_X;
+      const maxLeft = container.clientWidth - winWidth + ALLOW_OVERFLOW_X;
+      const ALLOW_OVERFLOW_Y = 150;
+      const minTop = -ALLOW_OVERFLOW_Y; // allow windows above the canvas
+      const maxTop = container.clientHeight - winHeight + Math.max(0, ALLOW_OVERFLOW_Y - SAFE_BOTTOM_PADDING);
+
+      // Choose offsets that avoid clamping to edges (compute feasible delta range)
+      const dxMin = Math.max(-MAX_HORIZONTAL_SCATTER, minLeft - originalLeft);
+      const dxMax = Math.min( MAX_HORIZONTAL_SCATTER, maxLeft - originalLeft);
+      const dyMin = Math.max(-MAX_VERTICAL_SCATTER,   minTop  - originalTop);
+      const dyMax = Math.min( MAX_VERTICAL_SCATTER,   maxTop  - originalTop);
+
+      const deltaLeft = randomInterior(dxMin, dxMax);
+      const deltaTop  = randomInterior(dyMin, dyMax);
+
+      const targetLeft = Math.min(maxLeft, Math.max(minLeft, originalLeft + deltaLeft));
+      const targetTop  = Math.min(maxTop, Math.max(minTop,  originalTop  + deltaTop));
 
       // 4. Set the window to absolute positioning and apply the adjusted positions.
       win.style.position = 'absolute';
-      win.style.left = (originalLeft + deltaLeft) + 'px';
-      win.style.top  = (originalTop + deltaTop) + 'px';
+      win.style.left = targetLeft + 'px';
+      win.style.top  = targetTop + 'px';
     });
   });
 }

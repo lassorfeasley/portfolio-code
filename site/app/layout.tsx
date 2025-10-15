@@ -64,7 +64,7 @@ export default function RootLayout({
           // Using a plain style tag because this is a Server Component
           dangerouslySetInnerHTML={{
             __html:
-              '.globalmargin{max-width:1500px!important;margin:0 auto!important;padding:40px 40px 80px!important;}',
+              '.globalmargin{max-width:1500px!important;margin:0 auto!important;padding:40px 40px 80px!important;} body{overflow-x:hidden;}',
           }}
         />
         {children}

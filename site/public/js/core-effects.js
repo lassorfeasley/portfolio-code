@@ -79,6 +79,7 @@ canvasLockObserver.observe(document.body, { childList: true, subtree: true });
       layer.style.height = '100%';
       layer.style.pointerEvents = 'none';
       layer.style.zIndex = '10000';
+      // Do not clip at the canvas level; allow windows to extend beyond canvas
       canvas.appendChild(layer);
     }
     return layer;
@@ -100,10 +101,22 @@ canvasLockObserver.observe(document.body, { childList: true, subtree: true });
     const canvasRect = canvas.getBoundingClientRect();
     const winRect = win.getBoundingClientRect();
 
-    const left = winRect.left - canvasRect.left;
-    const top = winRect.top - canvasRect.top;
     const width = winRect.width;
     const height = winRect.height;
+
+    // Clamp initial position within canvas bounds, with small horizontal overflow allowance
+    const SAFE_SIDE_PADDING = 16;
+    const SAFE_BOTTOM_PADDING = 80;
+    const ALLOW_OVERFLOW_X = 100;
+    const ALLOW_OVERFLOW_Y = 150;
+    const minLeft = -ALLOW_OVERFLOW_X;
+    const maxLeft = canvasRect.width - width + ALLOW_OVERFLOW_X;
+    const minTop = -ALLOW_OVERFLOW_Y; // allow rising above canvas a bit
+    const maxTop = canvasRect.height - height + Math.max(0, ALLOW_OVERFLOW_Y - SAFE_BOTTOM_PADDING);
+    const unclampedLeft = winRect.left - canvasRect.left;
+    const unclampedTop = winRect.top - canvasRect.top;
+    const left = Math.min(maxLeft, Math.max(minLeft, unclampedLeft));
+    const top = Math.min(maxTop, Math.max(minTop, unclampedTop));
 
     // Lock placeholder footprint so the grid never changes
     placeholder.style.minWidth = `${width}px`;
@@ -154,10 +167,22 @@ canvasLockObserver.observe(document.body, { childList: true, subtree: true });
         const canvasRect = canvas.getBoundingClientRect();
         // Get where the placeholder sits in the grid now
         const phRect = ph.getBoundingClientRect();
-        const left = phRect.left - canvasRect.left;
-        const top = phRect.top - canvasRect.top;
         const width = phRect.width;
         const height = phRect.height;
+
+        // Clamp repositioned coordinates within canvas, allow slight horizontal overflow
+        const SAFE_SIDE_PADDING = 16;
+        const SAFE_BOTTOM_PADDING = 80;
+        const ALLOW_OVERFLOW_X = 100;
+        const ALLOW_OVERFLOW_Y = 150;
+        const minLeft = -ALLOW_OVERFLOW_X;
+        const maxLeft = canvasRect.width - width + ALLOW_OVERFLOW_X;
+        const minTop = -ALLOW_OVERFLOW_Y;
+        const maxTop = canvasRect.height - height + Math.max(0, ALLOW_OVERFLOW_Y - SAFE_BOTTOM_PADDING);
+        const unclampedLeft = phRect.left - canvasRect.left;
+        const unclampedTop = phRect.top - canvasRect.top;
+        const left = Math.min(maxLeft, Math.max(minLeft, unclampedLeft));
+        const top = Math.min(maxTop, Math.max(minTop, unclampedTop));
 
         // Keep footprint in sync (in case of responsive changes)
         ph.style.minWidth = `${width}px`;
@@ -266,15 +291,35 @@ function initRetroWindowInteractions() {
       windowEl.style.height = `${rect.height}px`;
       const currentLeft = parseInt(windowEl.style.left, 10) || windowEl.offsetLeft;
       const currentTop  = parseInt(windowEl.style.top, 10) || windowEl.offsetTop;
-      offsetX = e.pageX - currentLeft;
-      offsetY = e.pageY - currentTop;
+      const canvas = windowEl.closest('.windowcanvas');
+      const canvasRect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0 };
+      // Compute offset in canvas (layer) coordinates
+      offsetX = (e.pageX - canvasRect.left) - currentLeft;
+      offsetY = (e.pageY - canvasRect.top)  - currentTop;
       windowEl.style.cursor = 'grabbing';
       windowEl.style.position = 'absolute';
     });
     document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
-      windowEl.style.left = `${e.pageX - offsetX}px`;
-      windowEl.style.top  = `${e.pageY - offsetY}px`;
+      // Clamp drag within its canvas using layer-relative coordinates
+      const canvas = windowEl.closest('.windowcanvas');
+      const canvasRect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+      const width = parseInt(window.getComputedStyle(windowEl).width, 10);
+      const height = parseInt(window.getComputedStyle(windowEl).height, 10);
+      const SAFE_SIDE_PADDING = 16;
+      const SAFE_BOTTOM_PADDING = 80;
+      const ALLOW_OVERFLOW_X = 100;
+      const ALLOW_OVERFLOW_Y = 150;
+      const minLeft = -ALLOW_OVERFLOW_X;
+      const maxLeft = canvasRect.width - width + ALLOW_OVERFLOW_X;
+      const minTop = -ALLOW_OVERFLOW_Y;
+      const maxTop = canvasRect.height - height + Math.max(0, ALLOW_OVERFLOW_Y - SAFE_BOTTOM_PADDING);
+      const pointerX = e.pageX - canvasRect.left;
+      const pointerY = e.pageY - canvasRect.top;
+      const targetLeft = Math.min(maxLeft, Math.max(minLeft, pointerX - offsetX));
+      const targetTop  = Math.min(maxTop, Math.max(minTop,  pointerY - offsetY));
+      windowEl.style.left = `${targetLeft}px`;
+      windowEl.style.top  = `${targetTop}px`;
     });
     document.addEventListener('mouseup', () => {
       if (isDragging) {
