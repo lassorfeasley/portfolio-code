@@ -83,7 +83,9 @@ export default function RootLayout({
       >
         {/* Interactive effects for retro windows */}
         <Script src="/js/windowcanvas-lock.js" strategy="afterInteractive" />
+        <Script src="/js/window-float-layer.js" strategy="afterInteractive" />
         <Script src="/js/pixel-image-load-effect.js" strategy="afterInteractive" />
+        <Script src="/js/supabase-image-fallback.js" strategy="afterInteractive" />
         <Script src="/js/retro-window-interaction.js" strategy="afterInteractive" />
         <Script src="/js/drag-echo-effect.js" strategy="afterInteractive" />
         <Script src="/js/breathing-shadow-apply.js" strategy="afterInteractive" />

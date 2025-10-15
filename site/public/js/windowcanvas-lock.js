@@ -44,7 +44,7 @@ window.addEventListener('load', () => {
 // Debounced observer
 const debouncedLock = debounce(lockWindowCanvasDimensions, 300);
 
-const observer = new MutationObserver((mutations) => {
+const canvasLockObserver = new MutationObserver((mutations) => {
   for (const mutation of mutations) {
     for (const node of mutation.addedNodes) {
       if (!(node instanceof HTMLElement)) continue;
@@ -57,4 +57,4 @@ const observer = new MutationObserver((mutations) => {
   }
 });
 
-observer.observe(document.body, { childList: true, subtree: true });
+canvasLockObserver.observe(document.body, { childList: true, subtree: true });

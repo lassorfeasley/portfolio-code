@@ -117,13 +117,13 @@ function initEcho() {
 
   // Debounced observer to batch DOM changes and reduce overhead
   let debounceTimer;
-  const observer = new MutationObserver(() => {
+  const echoObserver = new MutationObserver(() => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       setupEchoEffect('.retro-window, .draggable-folder');
     }, 200);
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  echoObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {

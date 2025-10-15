@@ -155,7 +155,7 @@ function initRetroWindowInteractions() {
   document.querySelectorAll('.retro-window, .w-dyn-item .retro-window').forEach(setupWindow);
 
   // Observe for windows added after client-side navigation
-  const observer = new MutationObserver((mutations) => {
+  const windowInteractionObserver = new MutationObserver((mutations) => {
     for (const m of mutations) {
       m.addedNodes.forEach((n) => {
         if (!(n instanceof HTMLElement)) return;
@@ -167,7 +167,7 @@ function initRetroWindowInteractions() {
       });
     }
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  windowInteractionObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {

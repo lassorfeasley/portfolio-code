@@ -5,6 +5,8 @@ import { supabaseServer } from '@/lib/supabase/server';
 import FooterDesktop from '@/app/components/FooterDesktop';
 import RetroWindow from '@/app/components/RetroWindow';
 import ExternalLinksWindow from '@/app/components/ExternalLinksWindow';
+import { toLargeUrl } from '@/lib/supabase/image';
+import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
 import LightboxGallery from '@/app/components/LightboxGallery';
 
 export const revalidate = 60;
@@ -175,8 +177,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             <div className="retro-window-placeholder">
               <RetroWindow title={p.name ?? ''} className="nomax noscrollonm">
                 {p.description ? <div className="paragraph">{p.description}</div> : null}
-                {p.featured_image_url ? (
-                  <img src={p.featured_image_url} alt={p.name ?? ''} className="lightbox-link w-condition-invisible" style={{ maxWidth: '100%', height: 'auto' }} />
+                {/* If a video is present, do not show featured image to avoid duplication */}
+                {!p.video_url && p.featured_image_url ? (
+                  <ImageWithSupabaseFallback
+                    src={toLargeUrl(p.featured_image_url, 1800)}
+                    alt={p.name ?? ''}
+                    className="lightbox-link"
+                    style={{ maxWidth: '100%', height: 'auto' }}
+                  />
                 ) : null}
                 {p.video_url ? (
                   <div className="videowrapper">

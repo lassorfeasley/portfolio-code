@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
+import { toLargeUrl, toThumbUrl, toOriginalObjectUrl, isSupabaseTransformedUrl } from '@/lib/supabase/image';
 import { createPortal } from 'react-dom';
 
 type LightboxGalleryProps = {
@@ -43,17 +44,31 @@ export default function LightboxGallery({
   return (
     <>
       <div className="collection-list w-dyn-items">
-        {images.map((url, i) => (
-          <div key={i} className={itemClassName}>
-            <a
-              href="#"
-              className={linkClassName}
-              style={{ backgroundImage: `url(${url})` }}
-              onClick={(e) => { e.preventDefault(); show(i); }}
-              aria-label="Open image"
-            />
-          </div>
-        ))}
+        {images.map((url, i) => {
+          // Sharper thumbnails to reduce visible pixelation while still smaller than full
+          const thumb = toThumbUrl(url, 1000, 88);
+          return (
+            <div key={i} className={itemClassName}>
+              <a href="#" className={linkClassName} onClick={(e) => { e.preventDefault(); show(i); }} aria-label="Open image">
+                <div className="thumb-frame">
+                  <img
+                    src={thumb}
+                    alt=""
+                    loading="lazy"
+                    onError={(e) => {
+                      const img = e.currentTarget as HTMLImageElement;
+                      if (isSupabaseTransformedUrl(img.currentSrc || img.src)) {
+                        img.src = toOriginalObjectUrl(img.currentSrc || img.src);
+                      }
+                    }}
+                    className="cover-object"
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+              </a>
+            </div>
+          );
+        })}
       </div>
 
       {open ? createPortal((
@@ -65,7 +80,18 @@ export default function LightboxGallery({
         >
           <button className="lf-lightbox-close" aria-label="Close" onClick={hide}>×</button>
           <button className="lf-lightbox-prev" aria-label="Previous" onClick={prev}>‹</button>
-          <img className="lf-lightbox-img" src={images[index]} alt="" />
+          <img
+            className="lf-lightbox-img"
+            src={toLargeUrl(images[index], 2200)}
+            alt=""
+            className="lf-lightbox-img no-pixelate"
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement;
+              if (isSupabaseTransformedUrl(img.currentSrc || img.src)) {
+                img.src = toOriginalObjectUrl(img.currentSrc || img.src);
+              }
+            }}
+          />
           <button className="lf-lightbox-next" aria-label="Next" onClick={next}>›</button>
 
           <style jsx>{`

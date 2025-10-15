@@ -3050,7 +3050,6 @@ a {
   aspect-ratio: 3 / 2;
   border: .5px solid var(--stroke);
   cursor: crosshair;
-  object-fit: cover;
   background-image: url("https://d3e54v103j8qbb.cloudfront.net/img/background-image.svg");
   background-position: 50%;
   background-size: cover;
@@ -3058,6 +3057,33 @@ a {
   align-self: auto;
   width: 100%;
   max-width: none;
+}
+
+/* Utility to ensure images cover without distortion inside fixed-aspect wrappers */
+.cover-object {
+  object-fit: cover !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Thumbnail fixed-aspect container to avoid squish while allowing crop */
+.thumb-frame {
+  width: 100%;
+  aspect-ratio: 4 / 3; /* closer to original Webflow gallery cells */
+  position: relative;
+  overflow: hidden;
+}
+.thumb-frame > img,
+.thumb-frame .pixel-loading-wrapper > img {
+  object-fit: cover !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+.thumb-frame .pixel-loading-wrapper {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .collection-item {
@@ -3785,7 +3811,7 @@ a {
 }
 
 .retro-window.noratio.popup {
-  z-index: 10001;
+  z-index: 10001 !important;
   max-width: 600px;
 }
 
@@ -4053,8 +4079,9 @@ a {
 }
 
 .retro-window-placeholder.alertmover {
-  top: 20px;
-  left: -15px;
+  position: relative !important;
+  top: 20px !important;
+  left: -30px !important;
 }
 
 .resize-corner {
@@ -4168,7 +4195,18 @@ a {
   padding: 40px;
   display: flex;
   width: 100%;
-  position: relative;
+  position: relative !important;
+}
+
+/* Float layer overlay to keep live windows on top without affecting layout */
+.window-float-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10000;
+}
+.window-float-layer .retro-window {
+  pointer-events: auto;
 }
 
 .windowcanvas.search {
