@@ -1,5 +1,218 @@
-/* === Makes images load in a pixelated effect === */
+/* === BUNDLE: Visual Effects (Non-Critical) === */
+/* Combined: breathing-shadow-apply.js, drag-echo-effect.js, pixel-image-load-effect.js, window-randomizer.js, drag-and-drop-icons.js */
 
+/* === Causes active window to have a breathing shadow effect (the effect is stored in webflow) === */
+let cachedTopWindow = null;
+let windows = [];
+
+// Function: Find window with highest z-index
+function findTopWindow() {
+  let topWindow = null;
+  let highestZIndex = -Infinity;
+
+  windows.forEach(win => {
+    const z = parseInt(window.getComputedStyle(win).zIndex, 10);
+    if (z > highestZIndex) {
+      highestZIndex = z;
+      topWindow = win;
+    }
+  });
+
+  return topWindow;
+}
+
+// Function: Update breathing shadow animation
+function updateBreathingShadow() {
+  // Only update if windows exist
+  if (windows.length === 0) {
+    windows = Array.from(document.querySelectorAll('.retro-window'));
+  }
+
+  const topWindow = findTopWindow();
+
+  // Only update DOM if the top window changed
+  if (topWindow !== cachedTopWindow) {
+    windows.forEach(win => {
+      if (win === topWindow) {
+        if (!win.classList.contains('breathing-shadow')) {
+          win.classList.add('breathing-shadow');
+        }
+      } else {
+        if (win.classList.contains('breathing-shadow')) {
+          win.classList.remove('breathing-shadow');
+        }
+      }
+    });
+    cachedTopWindow = topWindow;
+  }
+}
+
+// Initialize on page load
+function initBreathingShadow() {
+  windows = Array.from(document.querySelectorAll('.retro-window'));
+  updateBreathingShadow();
+  
+  // Less frequent polling - only check every 2 seconds as a fallback
+  setInterval(() => {
+    // Refresh windows list periodically
+    const currentWindows = document.querySelectorAll('.retro-window');
+    if (currentWindows.length !== windows.length) {
+      windows = Array.from(currentWindows);
+    }
+    updateBreathingShadow();
+  }, 2000);
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  try { initBreathingShadow(); } catch (e) { console.error(e); }
+} else {
+  window.addEventListener('load', initBreathingShadow);
+}
+
+// Event delegation for better performance
+document.addEventListener('mousedown', (e) => {
+  const win = e.target.closest('.retro-window');
+  if (win) {
+    // Refresh windows list if needed
+    windows = Array.from(document.querySelectorAll('.retro-window'));
+    setTimeout(updateBreathingShadow, 10);
+  }
+}, true);
+
+/* === Causes a 'drag echo' effect when dragging elements === */
+// === Easy-to-configure variables ===
+const PIXEL_DISTANCE_FOR_ECHO = 10;   // How many pixels movement before leaving an echo
+const ECHO_DURATION_MS = 2000;        // How long each echo lasts (milliseconds)
+const MAX_ECHOS = 500;                // Maximum number of echoes visible at once
+const ECHO_OPACITY = 1;               // Opacity of each echo
+const ECHO_BLUR = '0px';              // Blur applied to echoes (CSS blur)
+
+// Echo management
+let echos = [];
+
+// Throttle helper - limits how often a function can be called
+function throttle(func, limit) {
+  let inThrottle;
+  return function(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+}
+
+function createEcho(el) {
+  // Clone the original element
+  const echo = el.cloneNode(true);
+
+  // Get computed style to preserve visual appearance
+  const style = window.getComputedStyle(el);
+
+  // Set basic styling for the echo
+  echo.style.position = 'absolute';
+  echo.style.pointerEvents = 'none';
+  echo.style.margin = '0';
+  echo.style.left = el.style.left;
+  echo.style.top = el.style.top;
+  echo.style.width = style.width;
+  echo.style.height = style.height;
+  echo.style.opacity = ECHO_OPACITY;
+  echo.style.filter = `blur(${ECHO_BLUR})`;
+  echo.style.zIndex = parseInt(style.zIndex || 0, 10) - 1; // behind original
+
+  // Add echo to DOM
+  el.parentElement.appendChild(echo);
+  echos.push(echo);
+
+  // Remove echo after specified duration without dissolve
+  setTimeout(() => {
+    if (echo.parentElement) echo.parentElement.removeChild(echo);
+    echos = echos.filter(e => e !== echo);
+  }, ECHO_DURATION_MS);
+
+  // Maintain maximum number of echoes
+  if (echos.length > MAX_ECHOS) {
+    const oldEcho = echos.shift();
+    if (oldEcho.parentElement) oldEcho.parentElement.removeChild(oldEcho);
+  }
+}
+
+// Setup echo effect on draggable elements
+function setupEchoEffect(draggableSelector) {
+  const draggables = document.querySelectorAll(draggableSelector);
+  
+  draggables.forEach(draggable => {
+    // Skip if already initialized to prevent duplicate listeners
+    if (draggable.dataset.echoInitialized === 'true') return;
+    draggable.dataset.echoInitialized = 'true';
+    
+    let lastX = null;
+    let lastY = null;
+    let mouseMoveHandler = null;
+
+    draggable.addEventListener('mousedown', () => {
+      // Mark element as echo-active to disable expensive breathing shadow
+      draggable.dataset.echoActive = 'true';
+      // Also remove heavy static blur shadow while echoing
+      draggable.classList.add('no-static-shadow');
+      lastX = parseInt(draggable.style.left, 10) || draggable.offsetLeft;
+      lastY = parseInt(draggable.style.top, 10) || draggable.offsetTop;
+
+      // Throttled handler to reduce calls - max ~20 echoes per second
+      const checkAndCreateEcho = throttle(() => {
+        const currentX = parseInt(draggable.style.left, 10);
+        const currentY = parseInt(draggable.style.top, 10);
+
+        const distanceMoved = Math.sqrt(Math.pow(currentX - lastX, 2) + Math.pow(currentY - lastY, 2));
+
+        if (distanceMoved >= PIXEL_DISTANCE_FOR_ECHO) {
+          createEcho(draggable);
+          lastX = currentX;
+          lastY = currentY;
+        }
+      }, 50);
+
+      mouseMoveHandler = checkAndCreateEcho;
+      document.addEventListener('mousemove', mouseMoveHandler);
+
+      const mouseUpHandler = () => {
+        // Clean up event listener
+        document.removeEventListener('mousemove', mouseMoveHandler);
+        // Clear echo-active mark and request shadow recompute
+        delete draggable.dataset.echoActive;
+        draggable.classList.remove('no-static-shadow');
+        try { if (typeof updateBreathingShadow === 'function') updateBreathingShadow(); } catch (_) {}
+      };
+      
+      document.addEventListener('mouseup', mouseUpHandler, { once: true });
+    });
+  });
+}
+
+// Initialize on page load
+function initEcho() {
+  // Initial attach
+  setupEchoEffect('.retro-window, .draggable-folder');
+
+  // Debounced observer to batch DOM changes and reduce overhead
+  let debounceTimer;
+  const echoObserver = new MutationObserver(() => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      setupEchoEffect('.retro-window, .draggable-folder');
+    }, 200);
+  });
+  echoObserver.observe(document.body, { childList: true, subtree: true });
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  try { initEcho(); } catch (e) { console.error(e); }
+} else {
+  window.addEventListener('load', initEcho);
+}
+
+/* === Makes images load in a pixelated effect === */
 function initPixelImageLoadEffect() {
   // Slightly faster steps for thumbnails to reduce time looking blocky
   const steps = 5;
@@ -528,3 +741,174 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 } else {
   document.addEventListener('DOMContentLoaded', initPixelImageLoadEffect);
 }
+
+/* === Causes retro windows to be randomly positioned and  on the screen === */
+function initRandomizer() {
+  // Only run the script if the screen is at least as wide as an iPad in landscape (1024px)
+  if (!window.matchMedia('(min-width: 1024px)').matches) {
+    return;
+  }
+
+  // Adjustable parameters
+  const MIN_WIDTH = 300;              // Minimum width for each retro window (in pixels)
+  const MAX_WIDTH = 475;              // Maximum width for each retro window (in pixels)
+  const MAX_HORIZONTAL_SCATTER = 125; // Maximum horizontal scatter (in pixels)
+  const MAX_VERTICAL_SCATTER = 50;   // Maximum vertical scatter (in pixels)
+
+  // Find each container that should have a cluttered desktop effect
+  const clutteredContainers = document.querySelectorAll('.cluttered-desktop-container');
+
+  clutteredContainers.forEach(container => {
+    // Ensure the container stays in place:
+    // 1. Set its position to relative (to serve as positioning context)
+    // 2. Lock in its height so that it won't collapse when children are set to absolute.
+    container.style.position = 'relative';
+    container.style.height = container.offsetHeight + 'px';
+
+    // Select all retro windows inside this container.
+    const windows = container.querySelectorAll('.retro-window');
+
+    // Utility function to generate a random offset in the range [-max, max]
+    const randomOffset = (max) => (Math.random() < 0.5 ? -1 : 1) * Math.floor(Math.random() * (max + 1));
+
+    windows.forEach(win => {
+      // Capture the original rendered position from the static layout.
+      const originalLeft = win.offsetLeft;
+      const originalTop  = win.offsetTop;
+
+      // 1. Randomize width between MIN_WIDTH and MAX_WIDTH.
+      const randomWidth = Math.floor(Math.random() * (MAX_WIDTH - MIN_WIDTH + 1)) + MIN_WIDTH;
+      win.style.width = randomWidth + 'px';
+
+      // 2. Randomize the z-index between 1 and 500.
+      const randomZIndex = Math.floor(Math.random() * 500) + 1;
+      win.style.zIndex = randomZIndex;
+
+      // 3. Calculate random horizontal and vertical offsets.
+      const deltaLeft = randomOffset(MAX_HORIZONTAL_SCATTER);
+      const deltaTop  = randomOffset(MAX_VERTICAL_SCATTER);
+
+      // 4. Set the window to absolute positioning and apply the adjusted positions.
+      win.style.position = 'absolute';
+      win.style.left = (originalLeft + deltaLeft) + 'px';
+      win.style.top  = (originalTop + deltaTop) + 'px';
+    });
+  });
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  try { initRandomizer(); } catch (e) { console.error(e); }
+} else {
+  window.addEventListener('load', initRandomizer);
+}
+
+// Fallback: if markup arrives later, trigger once the clutter container exists
+(function ensureRandomizerRuns() {
+  let started = false;
+  const tryRun = () => {
+    if (!started && document.querySelector('.cluttered-desktop-container')) {
+      started = true;
+      try { initRandomizer(); } catch (_) {}
+      observer.disconnect();
+    }
+  };
+  const observer = new MutationObserver(tryRun);
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  tryRun();
+})();
+
+/* === Makes draggable folders mimic GUI folders === */
+function initFolderDrags(root) {
+  const isMobile = () => window.matchMedia('(pointer:coarse), (max-width: 767px)').matches;
+  const containers = (root ? Array.from(root.querySelectorAll('.folder-grid')) : Array.from(document.querySelectorAll('.folder-grid')));
+  if (!root && document.querySelector('.folder-grid')) {
+    // also include top-level if root is not provided
+    containers.unshift(document.querySelector('.folder-grid'));
+  }
+
+  containers.filter(Boolean).forEach((container) => {
+    const draggableFolders = container.querySelectorAll('.draggable-folder');
+
+    draggableFolders.forEach(folder => {
+    if (isMobile()) return; // disable folder dragging on mobile
+    const link = folder.querySelector('a, .link-block');
+    let isDragging = false;
+    let startX, startY;
+
+    folder.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      isDragging = false;
+      startX = e.clientX;
+      startY = e.clientY;
+
+      const containerRect = container.getBoundingClientRect();
+      const folderRect = folder.getBoundingClientRect();
+
+      const offsetX = startX - folderRect.left;
+      const offsetY = startY - folderRect.top;
+
+      folder.style.position = 'absolute';
+      folder.style.left = (folderRect.left - containerRect.left) + 'px';
+      folder.style.top = (folderRect.top - containerRect.top) + 'px';
+      folder.style.width = folderRect.width + 'px';
+      folder.style.height = folderRect.height + 'px';
+      folder.style.zIndex = '9999';
+
+      const onMouseMove = (moveEvent) => {
+        const dx = moveEvent.clientX - startX;
+        const dy = moveEvent.clientY - startY;
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+          isDragging = true;
+        }
+
+        const left = moveEvent.clientX - containerRect.left - offsetX;
+        const top = moveEvent.clientY - containerRect.top - offsetY;
+        folder.style.left = `${left}px`;
+        folder.style.top = `${top}px`;
+      };
+
+      const onMouseUp = (upEvent) => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        folder.style.zIndex = '';
+
+        if (isDragging) {
+          const preventClick = (clickEvent) => {
+            clickEvent.preventDefault();
+            clickEvent.stopPropagation();
+            if (link) link.removeEventListener('click', preventClick, true);
+          };
+          if (link) link.addEventListener('click', preventClick, true);
+        }
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp, { once: true });
+    });
+
+      folder.ondragstart = () => false;
+    });
+  });
+}
+
+// Run now if DOM is ready, otherwise wait
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => initFolderDrags());
+} else {
+  initFolderDrags();
+}
+
+// Observe for dynamically added folder grids
+const folderObserver = new MutationObserver((mutations) => {
+  for (const m of mutations) {
+    m.addedNodes.forEach((n) => {
+      if (!(n instanceof HTMLElement)) return;
+      if (n.matches && n.matches('.folder-grid')) initFolderDrags(n);
+      else if (n.querySelectorAll) {
+        const grids = n.querySelectorAll('.folder-grid');
+        if (grids.length) initFolderDrags(n);
+      }
+    });
+  }
+});
+folderObserver.observe(document.body, { childList: true, subtree: true });

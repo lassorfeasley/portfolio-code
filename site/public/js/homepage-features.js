@@ -1,4 +1,7 @@
-// Simple homepage filter (replaces Jetboost)
+/* === BUNDLE: Homepage Features (Page-Specific) === */
+/* Combined: index.js imports and filters.js */
+
+/* === Simple homepage filter (replaces Jetboost) === */
 const TYPE_LABEL_TO_SLUG = {
   'collections': null,
   'ui & interactive': 'interaction-design',
@@ -8,7 +11,7 @@ const TYPE_LABEL_TO_SLUG = {
 };
 
 function normalize(s) {
-  return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  return (s || '').toLowerCase().replace(/\s+/g, ' ').replace(/&amp;/g, '&').trim();
 }
 
 function buildItemIndex(itemEl) {
@@ -30,10 +33,12 @@ async function fetchTypeMap() {
 }
 
 function slugFromItem(itemEl) {
-  const hidden = itemEl.querySelector('input.jetboost-list-item');
+  // Prefer any hidden input present in each item (stable in Webflow export)
+  const hidden = itemEl.querySelector('input[type="hidden"]');
   if (hidden?.value) return hidden.value;
+  // Fallback: derive from link; support both /work/ and legacy /projects/
   const href = itemEl.querySelector('.window-content.w-inline-block')?.getAttribute('href') || '';
-  const m = href.match(/\/projects\/([^\/?#]+)/i);
+  const m = href.match(/\/(?:work|projects)\/([^\/?#]+)/i);
   return m ? m[1] : '';
 }
 
@@ -43,11 +48,15 @@ function setActive(buttonEls, activeBtn) {
 }
 
 (async function init() {
+  if (window.__homeFiltersInit) return;
+  // Use the legacy wrappers present in the exported HTML (no Jetboost runtime required)
   const listWrapper = document.querySelector('.jetboost-list-wrapper-lkmq.jetboost-list-wrapper-wzyl');
   if (!listWrapper) return;
+  window.__homeFiltersInit = true;
 
-  const searchInput = document.querySelector('.jetboost-list-search-input-lkmq');
+  const searchInput = document.querySelector('.jetboost-list-search-input-lkmq') || document.querySelector('#Search') || document.querySelector('input.search');
   const filterButtons = Array.from(document.querySelectorAll('.jetboost-filter-wzyl .button, .jetboost-filter-wzyl a.button'));
+  filterButtons.forEach((a) => { try { a.setAttribute('href', '#'); } catch (_) {} });
   const itemsContainer = listWrapper.querySelector('.w-dyn-items');
   if (!itemsContainer) return;
 
@@ -101,5 +110,3 @@ function setActive(buttonEls, activeBtn) {
 
   applyFilters();
 })();
-
-

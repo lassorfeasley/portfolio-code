@@ -1,0 +1,416 @@
+/* === BUNDLE: Core Effects (Critical) === */
+/* Combined: windowcanvas-lock.js, window-float-layer.js, retro-window-interaction.js, supabase-image-fallback.js */
+
+/* === Lock windowcanvas dimensions to prevent reflow when windows are moved/resized === */
+function lockWindowCanvasDimensions() {
+  const canvases = document.querySelectorAll('.windowcanvas');
+  
+  // Use requestAnimationFrame for better performance
+  requestAnimationFrame(() => {
+    canvases.forEach(canvas => {
+      if (canvas.dataset.dimensionsLocked === 'true') return;
+      
+      // Use offsetHeight instead of getBoundingClientRect for better performance
+      const currentHeight = canvas.offsetHeight;
+      
+      if (currentHeight > 0) {
+        canvas.style.minHeight = `${currentHeight}px`;
+        canvas.dataset.dimensionsLocked = 'true';
+      }
+    });
+  });
+}
+
+// Debounce helper
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+// Run when DOM is ready
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  setTimeout(lockWindowCanvasDimensions, 100);
+} else {
+  window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(lockWindowCanvasDimensions, 100);
+  });
+}
+
+window.addEventListener('load', () => {
+  setTimeout(lockWindowCanvasDimensions, 100);
+});
+
+// Debounced observer
+const debouncedLock = debounce(lockWindowCanvasDimensions, 300);
+
+const canvasLockObserver = new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    for (const node of mutation.addedNodes) {
+      if (!(node instanceof HTMLElement)) continue;
+      if ((node.classList && node.classList.contains('windowcanvas')) ||
+          (node.querySelectorAll && node.querySelectorAll('.windowcanvas').length > 0)) {
+        debouncedLock();
+        return; // Exit early once we find a match
+      }
+    }
+  }
+});
+
+canvasLockObserver.observe(document.body, { childList: true, subtree: true });
+
+/* === Float retro windows into an overlay layer while keeping a static ghost in the grid === */
+(function () {
+  const FLOAT_FLAG = 'floated';
+  const ID_ATTR = 'floatId';
+  let idCounter = 0;
+
+  function ensureFloatLayer(canvas) {
+    let layer = canvas.querySelector('.window-float-layer');
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.className = 'window-float-layer';
+      layer.style.position = 'absolute';
+      layer.style.top = '0';
+      layer.style.left = '0';
+      layer.style.width = '100%';
+      layer.style.height = '100%';
+      layer.style.pointerEvents = 'none';
+      layer.style.zIndex = '10000';
+      canvas.appendChild(layer);
+    }
+    return layer;
+  }
+
+  function floatWindow(canvas, placeholder, win) {
+    // Ensure canvas is the positioning context
+    if (getComputedStyle(canvas).position === 'static') {
+      canvas.style.position = 'relative';
+    }
+
+    // Assign a stable mapping id between placeholder and window
+    if (!placeholder.dataset[ID_ATTR]) {
+      placeholder.dataset[ID_ATTR] = `${++idCounter}`;
+    }
+    win.dataset[ID_ATTR] = placeholder.dataset[ID_ATTR];
+
+    // Measure where the window rendered inside the grid
+    const canvasRect = canvas.getBoundingClientRect();
+    const winRect = win.getBoundingClientRect();
+
+    const left = winRect.left - canvasRect.left;
+    const top = winRect.top - canvasRect.top;
+    const width = winRect.width;
+    const height = winRect.height;
+
+    // Lock placeholder footprint so the grid never changes
+    placeholder.style.minWidth = `${width}px`;
+    placeholder.style.maxWidth = `${width}px`;
+    placeholder.style.minHeight = `${height}px`;
+    placeholder.style.maxHeight = `${height}px`;
+    if (getComputedStyle(placeholder).position === 'static') {
+      placeholder.style.position = 'relative';
+    }
+
+    // Float the live window into the overlay layer
+    const layer = ensureFloatLayer(canvas);
+    if (win.parentElement !== layer) {
+      layer.appendChild(win);
+    }
+    win.style.position = 'absolute';
+    win.style.left = `${left}px`;
+    win.style.top = `${top}px`;
+    win.style.width = `${width}px`;
+    win.style.pointerEvents = 'auto';
+    win.dataset[FLOAT_FLAG] = 'true';
+  }
+
+  function initCanvas(canvas) {
+    const placeholders = canvas.querySelectorAll('.retro-window-placeholder');
+    placeholders.forEach((ph) => {
+      const win = ph.querySelector('.retro-window');
+      if (!win) return;
+      floatWindow(canvas, ph, win);
+    });
+  }
+
+  function initAll() {
+    document.querySelectorAll('.windowcanvas').forEach(initCanvas);
+  }
+
+  // Debounced handler to reflow on viewport size changes
+  let resizeTimer;
+  function refloatAll() {
+    document.querySelectorAll('.windowcanvas').forEach((canvas) => {
+      const layer = ensureFloatLayer(canvas);
+      // For each placeholder, find its paired window in the layer and reposition
+      canvas.querySelectorAll('.retro-window-placeholder').forEach((ph) => {
+        const id = ph.dataset[ID_ATTR];
+        const win = id ? layer.querySelector(`.retro-window[data-${ID_ATTR}="${id}"]`) : null;
+        if (!win) return;
+
+        const canvasRect = canvas.getBoundingClientRect();
+        // Get where the placeholder sits in the grid now
+        const phRect = ph.getBoundingClientRect();
+        const left = phRect.left - canvasRect.left;
+        const top = phRect.top - canvasRect.top;
+        const width = phRect.width;
+        const height = phRect.height;
+
+        // Keep footprint in sync (in case of responsive changes)
+        ph.style.minWidth = `${width}px`;
+        ph.style.maxWidth = `${width}px`;
+        ph.style.minHeight = `${height}px`;
+        ph.style.maxHeight = `${height}px`;
+
+        // Reposition the floated window to match
+        win.style.left = `${left}px`;
+        win.style.top = `${top}px`;
+        win.style.width = `${width}px`;
+      });
+    });
+  }
+
+  // Start after everything renders
+  const start = () => setTimeout(initAll, 500);
+  if (document.readyState === 'complete' || document.readyState === 'interactive') start();
+  else window.addEventListener('load', start);
+
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(refloatAll, 200);
+  });
+
+  // Observe for newly added windows/canvases
+  const floatLayerObserver = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      for (const n of m.addedNodes) {
+        if (!(n instanceof HTMLElement)) continue;
+        if (n.matches?.('.windowcanvas, .retro-window-placeholder') ||
+            n.querySelector?.('.windowcanvas, .retro-window-placeholder')) {
+          setTimeout(() => {
+            if (n.matches?.('.windowcanvas')) initCanvas(n);
+            else initAll();
+          }, 100);
+          return;
+        }
+      }
+    }
+  });
+  floatLayerObserver.observe(document.body, { childList: true, subtree: true });
+})();
+
+/* === Makes retro windows interactive, with a close button, resizer, and link click handler === */
+function initRetroWindowInteractions() {
+  // Treat touch/coarse pointers as mobile; disable drag/resize on mobile
+  const isMobile = () => window.matchMedia('(pointer:coarse), (max-width: 767px)').matches;
+  const setupWindow = (windowEl) => {
+    // Skip React-managed windows; those are handled in component code
+    if (windowEl && windowEl.dataset && windowEl.dataset.reactManaged === 'true') return;
+    if (!windowEl || windowEl.dataset.retroWindowInitialized === 'true') return;
+    windowEl.dataset.retroWindowInitialized = 'true';
+    // Required and optional elements within the window.
+    const header    = windowEl.querySelector('.window-bar');
+    const closeBtn  = windowEl.querySelector('.x-out');
+    const resizer   = windowEl.querySelector('.resize-corner');
+    const contentEl = windowEl.querySelector('.window-content');
+    const link      = windowEl.querySelector('a, .link-block');
+
+    // If no header, skip this window.
+    if (!header) return;
+
+    // ---------------------------------------------------
+    // Helper: Get computed z-index
+    // ---------------------------------------------------
+    const getZIndex = (el) => {
+      const z = parseInt(window.getComputedStyle(el).zIndex, 10);
+      return isNaN(z) ? 0 : z;
+    };
+
+    // ---------------------------------------------------
+    // Bring-to-Front Helper
+    // ---------------------------------------------------
+    const bringToFront = () => {
+      const allWindows = Array.from(document.querySelectorAll('.retro-window'));
+      const maxZ = allWindows.reduce((max, el) => Math.max(max, getZIndex(el)), 0);
+      windowEl.style.zIndex = maxZ + 1;
+    };
+
+    // ---------------------------------------------------
+    // Global Mouse Down: Bring window to front if the click is NOT on a link.
+    // ---------------------------------------------------
+    windowEl.addEventListener('mousedown', (e) => {
+      // If the click target is a link (or inside one), do nothing. Let the link handler manage it.
+      if (!e.target.closest('a, .link-block')) {
+        bringToFront();
+      }
+    }, true);
+
+    // ---------------------------------------------------
+    // DRAG FUNCTIONALITY: Header Drag to Move and Bring Window Forward.
+    // ---------------------------------------------------
+    let isDragging = false;
+    let offsetX = 0, offsetY = 0;
+    header.addEventListener('mousedown', (e) => {
+      if (isMobile()) return; // disable header drag on mobile
+      e.preventDefault();
+      isDragging = true;
+      windowEl.classList.add('no-static-shadow');
+      bringToFront();
+
+      // Lock current size before taking the element out of normal flow
+      const rect = windowEl.getBoundingClientRect();
+      windowEl.style.width = `${rect.width}px`;
+      windowEl.style.height = `${rect.height}px`;
+      const currentLeft = parseInt(windowEl.style.left, 10) || windowEl.offsetLeft;
+      const currentTop  = parseInt(windowEl.style.top, 10) || windowEl.offsetTop;
+      offsetX = e.pageX - currentLeft;
+      offsetY = e.pageY - currentTop;
+      windowEl.style.cursor = 'grabbing';
+      windowEl.style.position = 'absolute';
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      windowEl.style.left = `${e.pageX - offsetX}px`;
+      windowEl.style.top  = `${e.pageY - offsetY}px`;
+    });
+    document.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        windowEl.style.cursor = 'default';
+        windowEl.classList.remove('no-static-shadow');
+      }
+    });
+
+    // ---------------------------------------------------
+    // CLOSE BUTTON FUNCTIONALITY
+    // ---------------------------------------------------
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        windowEl.style.display = 'none';
+      });
+    }
+
+    // ---------------------------------------------------
+    // RESIZE FUNCTIONALITY
+    // ---------------------------------------------------
+    if (resizer) {
+      let isResizing = false;
+      let startX, startY, startWidth, startHeight;
+
+      resizer.addEventListener('mousedown', (e) => {
+        if (isMobile()) return; // disable resize on mobile
+        e.preventDefault();
+        isResizing = true;
+        bringToFront();
+
+        startX = e.pageX;
+        startY = e.pageY;
+        startWidth = parseInt(window.getComputedStyle(windowEl).width, 10);
+        startHeight = parseInt(window.getComputedStyle(windowEl).height, 10);
+
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+      });
+
+      const doResize = (e) => {
+        if (!isResizing) return;
+        const newWidth = Math.max(200, startWidth + (e.pageX - startX));
+        const newHeight = Math.max(100, startHeight + (e.pageY - startY));
+        windowEl.style.width = `${newWidth}px`;
+        windowEl.style.height = `${newHeight}px`;
+
+        if (contentEl) {
+          contentEl.style.maxWidth = `${newWidth}px`;
+          contentEl.style.maxHeight = `${newHeight}px`;
+        }
+      };
+
+      const stopResize = () => {
+        isResizing = false;
+        document.removeEventListener('mousemove', doResize);
+        document.removeEventListener('mouseup', stopResize);
+      };
+    }
+
+    // ---------------------------------------------------
+    // LINK CLICK HANDLER: Two-Click Activation
+    // ---------------------------------------------------
+    if (link) {
+      link.addEventListener('click', (e) => {
+        const allWindows = Array.from(document.querySelectorAll('.retro-window'));
+        const maxZ = allWindows.reduce((max, el) => Math.max(max, getZIndex(el)), 0);
+        const thisZ = getZIndex(windowEl);
+
+        // If this window is not the top window, prevent the link activation.
+        if (thisZ < maxZ) {
+          e.preventDefault();
+          e.stopPropagation();
+          bringToFront();
+          console.log("Window was behind: First click brings it to front. Click again to activate the link.");
+        }
+      });
+    }
+  };
+
+  // Initialize currently present windows (including those inside project-type lists)
+  document.querySelectorAll('.retro-window, .w-dyn-item .retro-window').forEach(setupWindow);
+
+  // Observe for windows added after client-side navigation
+  const windowInteractionObserver = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      m.addedNodes.forEach((n) => {
+        if (!(n instanceof HTMLElement)) return;
+        if (n.classList && n.classList.contains('retro-window')) {
+          setupWindow(n);
+        }
+        // Also search within subtree
+        n.querySelectorAll && n.querySelectorAll('.retro-window').forEach(setupWindow);
+      });
+    }
+  });
+  windowInteractionObserver.observe(document.body, { childList: true, subtree: true });
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  try { initRetroWindowInteractions(); } catch (e) { console.error(e); }
+} else {
+  window.addEventListener('load', initRetroWindowInteractions);
+}
+
+/* === Swap Supabase transformed image URLs to original object URLs on error (400/403/etc.) === */
+(function () {
+  function toOriginalUrl(url) {
+    try {
+      const u = new URL(url, window.location.href);
+      if (!/\/storage\/v1\/render\/image\//.test(u.pathname)) return url;
+      u.pathname = u.pathname.replace('/storage/v1/render/image/', '/storage/v1/object/');
+      u.search = '';
+      return u.toString();
+    } catch {
+      return url;
+    }
+  }
+
+  function isTransformed(url) {
+    try { return /\/storage\/v1\/render\/image\//.test(new URL(url, location.href).pathname); }
+    catch { return false; }
+  }
+
+  // Global error handler for <img> loads
+  window.addEventListener('error', (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLImageElement)) return;
+    const src = target.currentSrc || target.src || '';
+    if (!isTransformed(src)) return;
+    const fallback = toOriginalUrl(src);
+    if (fallback && fallback !== src) {
+      // Prevent infinite loops
+      target.onerror = null;
+      target.crossOrigin = '';
+      target.src = fallback;
+    }
+  }, true);
+})();

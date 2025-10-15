@@ -29,16 +29,6 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   alternates: { canonical: '/' },
-  icons: {
-    icon: [
-      { url: '/favicon.ico', type: 'image/x-icon' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-    ],
-    apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
-    ],
-  },
 };
 
 export const viewport: Viewport = {
@@ -65,14 +55,10 @@ export default function RootLayout({
       <body
         className={`${inconsolata.variable} antialiased body`}
       >
-        {/* Interactive effects for retro windows */}
-        <Script src="/js/windowcanvas-lock.js" strategy="afterInteractive" />
-        <Script src="/js/window-float-layer.js" strategy="afterInteractive" />
-        <Script src="/js/pixel-image-load-effect.js" strategy="afterInteractive" />
-        <Script src="/js/supabase-image-fallback.js" strategy="afterInteractive" />
-        <Script src="/js/retro-window-interaction.js" strategy="afterInteractive" />
-        <Script src="/js/drag-echo-effect.js" strategy="afterInteractive" />
-        <Script src="/js/breathing-shadow-apply.js" strategy="afterInteractive" />
+        {/* Core effects - critical functionality */}
+        <Script src="/js/core-effects.js?v=2" strategy="afterInteractive" />
+        {/* Visual effects - ensure it runs reliably */}
+        <Script src="/js/visual-effects.js?v=2" strategy="afterInteractive" />
         {/* Guard for layout width early in head/body to prevent width jump */}
         <style
           // Using a plain style tag because this is a Server Component
