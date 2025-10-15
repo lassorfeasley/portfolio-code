@@ -86,6 +86,8 @@ canvasLockObserver.observe(document.body, { childList: true, subtree: true });
   }
 
   function floatWindow(canvas, placeholder, win) {
+    // Respect grid mode: do not float while grid mode is active
+    if (canvas && canvas.dataset && canvas.dataset.gridMode === 'true') return;
     // Ensure canvas is the positioning context
     if (getComputedStyle(canvas).position === 'static') {
       canvas.style.position = 'relative';
@@ -141,6 +143,8 @@ canvasLockObserver.observe(document.body, { childList: true, subtree: true });
   }
 
   function initCanvas(canvas) {
+    // Skip floating if grid mode is active
+    if (canvas && canvas.dataset && canvas.dataset.gridMode === 'true') return;
     const placeholders = canvas.querySelectorAll('.retro-window-placeholder');
     placeholders.forEach((ph) => {
       const win = ph.querySelector('.retro-window');
@@ -157,11 +161,13 @@ canvasLockObserver.observe(document.body, { childList: true, subtree: true });
   let resizeTimer;
   function refloatAll() {
     document.querySelectorAll('.windowcanvas').forEach((canvas) => {
+      if (canvas && canvas.dataset && canvas.dataset.gridMode === 'true') return; // hold position in grid mode
       const layer = ensureFloatLayer(canvas);
       // For each placeholder, find its paired window in the layer and reposition
       canvas.querySelectorAll('.retro-window-placeholder').forEach((ph) => {
         const id = ph.dataset[ID_ATTR];
-        const win = id ? layer.querySelector(`.retro-window[data-${ID_ATTR}="${id}"]`) : null;
+        // Correct attribute is data-float-id; include a defensive fallback
+        const win = id ? (layer.querySelector(`.retro-window[data-float-id="${id}"]`) || layer.querySelector(`.retro-window[data-floatId="${id}"]`)) : null;
         if (!win) return;
 
         const canvasRect = canvas.getBoundingClientRect();
@@ -197,6 +203,67 @@ canvasLockObserver.observe(document.body, { childList: true, subtree: true });
       });
     });
   }
+
+  // Expose a manual refloat hook for other scripts (e.g., filters) to call
+  try { window.retroRefloatAll = refloatAll; } catch (_) {}
+
+  // Dock all windows back into their placeholders for tidy grid mode
+  function dockCanvasToGrid(canvas) {
+    if (!canvas) return;
+    canvas.dataset.gridMode = 'true';
+    const layer = ensureFloatLayer(canvas);
+    if (layer) layer.style.display = '';
+
+    canvas.querySelectorAll('.retro-window-placeholder').forEach((ph) => {
+      const id = ph.dataset[ID_ATTR];
+      const win = id ? (layer.querySelector(`.retro-window[data-float-id="${id}"]`) || layer.querySelector(`.retro-window[data-floatId="${id}"]`)) : null;
+      if (!win) return;
+      // Reset inline styles applied during floating
+      win.style.position = '';
+      win.style.left = '';
+      win.style.top = '';
+      win.style.width = '';
+      win.style.pointerEvents = '';
+      delete win.dataset[FLOAT_FLAG];
+      // Clear placeholder size locks so grid can flow naturally
+      ph.style.minWidth = '';
+      ph.style.maxWidth = '';
+      ph.style.minHeight = '';
+      ph.style.maxHeight = '';
+      // Move window back into placeholder
+      if (win.parentElement !== ph) ph.appendChild(win);
+    });
+
+    if (layer) layer.style.display = 'none';
+  }
+
+  function floatCanvasFromGrid(canvas) {
+    if (!canvas) return;
+    delete canvas.dataset.gridMode;
+    const layer = ensureFloatLayer(canvas);
+    if (layer) layer.style.display = '';
+    initCanvas(canvas);
+  }
+
+  function dockAllToGrid() {
+    document.querySelectorAll('.windowcanvas').forEach(dockCanvasToGrid);
+  }
+
+  function floatAllFromGrid() {
+    document.querySelectorAll('.windowcanvas').forEach(floatCanvasFromGrid);
+  }
+
+  // Public API to toggle grid mode
+  try {
+    window.retroSetGridMode = function(on) {
+      if (on) dockAllToGrid();
+      else floatAllFromGrid();
+    };
+    window.retroSetGridModeFor = function(canvas, on) {
+      if (on) dockCanvasToGrid(canvas);
+      else floatCanvasFromGrid(canvas);
+    };
+  } catch (_) {}
 
   // Start after everything renders
   const start = () => setTimeout(initAll, 500);

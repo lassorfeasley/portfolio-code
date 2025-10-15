@@ -15,10 +15,41 @@ function normalize(s) {
 }
 
 function buildItemIndex(itemEl) {
-  const title =
-    itemEl.querySelector('.window-bar .paragraph.wide')?.textContent ||
-    itemEl.querySelector('.paragraph.wide')?.textContent || '';
-  const desc = itemEl.querySelector('.window-content .paragraph')?.textContent || '';
+  // Prefer reading from the floated window (overlay) if the placeholder no longer contains content
+  const placeholder = itemEl;
+  const localWin = placeholder.querySelector('.retro-window');
+  let title = '';
+  let desc = '';
+
+  if (localWin) {
+    title = localWin.querySelector('.window-bar .paragraph.wide')?.textContent ||
+            localWin.querySelector('.paragraph.wide')?.textContent || '';
+    desc = localWin.querySelector('.window-content .paragraph')?.textContent || '';
+  }
+
+  // If the window has been floated out, look it up by data-float-id
+  if (!title) {
+    const floatId = placeholder.dataset.floatId || localWin?.dataset.floatId || localWin?.dataset.floatid;
+    if (floatId) {
+      const floated = document.querySelector(
+        `.window-float-layer .retro-window[data-float-id="${floatId}"], .window-float-layer .retro-window[data-floatId="${floatId}"]`
+      );
+      if (floated) {
+        title = floated.querySelector('.window-bar .paragraph.wide')?.textContent ||
+                floated.querySelector('.paragraph.wide')?.textContent || '';
+        desc = floated.querySelector('.window-content .paragraph')?.textContent || '';
+      }
+    }
+  }
+
+  // Final fallback: any text still present in the placeholder
+  if (!title && placeholder) {
+    title = placeholder.querySelector('.paragraph.wide')?.textContent || '';
+  }
+  if (!desc && placeholder) {
+    desc = placeholder.querySelector('.window-content .paragraph')?.textContent || '';
+  }
+
   return `${normalize(title)} ${normalize(desc)}`;
 }
 
@@ -120,7 +151,15 @@ function setActive(buttonEls, activeBtn) {
     return;
   }
 
-  const items = Array.from(itemsContainer.querySelectorAll('.w-dyn-item'));
+  // Mark the first item as non-filterable if it is a special intro window without a jetboost slug
+  const maybeFirst = itemsContainer.querySelector('.w-dyn-item');
+  if (maybeFirst && !maybeFirst.querySelector('input.jetboost-list-item')) {
+    maybeFirst.classList.add('non-filterable');
+  }
+
+  // Only filter real project items; skip any non-filterable windows (e.g., intro) by class
+  const allItems = Array.from(itemsContainer.querySelectorAll('.w-dyn-item'));
+  const items = allItems.filter((el) => !el.classList.contains('non-filterable'));
   if (!items.length) {
     console.warn('Filter: No items found');
     return;
@@ -192,20 +231,30 @@ function setActive(buttonEls, activeBtn) {
     }
     
     // Also handle floated windows in the overlay
+    // Note: the live ".retro-window" is moved out of the placeholder into
+    // the overlay layer by core-effects. The mapping id is stored as
+    // data-float-id (dataset.floatId) on BOTH the placeholder and the window.
     const windowEl = placeholderEl.querySelector('.retro-window');
-    if (windowEl) {
-      const floatId = windowEl.dataset.floatId || windowEl.dataset.floatid;
-      if (floatId) {
-        const floated = document.querySelector(`.window-float-layer .retro-window[data-floatId="${floatId}"]`);
-        if (floated) {
-          if (show) {
-            floated.classList.remove('filter-hidden');
-            floated.style.removeProperty('display');
-          } else {
-            floated.classList.add('filter-hidden');
-            floated.style.display = 'none';
-          }
+    const floatId =
+      placeholderEl.dataset.floatId ||
+      windowEl?.dataset.floatId ||
+      windowEl?.dataset.floatid;
+    if (floatId) {
+      // dataset.floatId corresponds to the attribute data-float-id in the DOM.
+      // Query both kebab-case (correct) and camelCase (defensive) just in case.
+      const floated = document.querySelector(
+        `.window-float-layer .retro-window[data-float-id="${floatId}"], .window-float-layer .retro-window[data-floatId="${floatId}"]`
+      );
+      if (floated) {
+        if (show) {
+          floated.classList.remove('filter-hidden');
+          floated.style.removeProperty('display');
+        } else {
+          floated.classList.add('filter-hidden');
+          floated.style.display = 'none';
         }
+      } else {
+        console.warn('Filter: Floated window not found for id', floatId);
       }
     }
   }
@@ -214,33 +263,65 @@ function setActive(buttonEls, activeBtn) {
     const t = normalize(term);
     const allowed = activeType ? typeToSlugs[activeType] : null;
     
+    const gridModeShouldBeOn = Boolean(t) || Boolean(activeType);
+    // Enable tidy grid while filtering; disable when cleared
+    if (typeof window.retroSetGridMode === 'function') {
+      window.retroSetGridMode(gridModeShouldBeOn);
+    }
+
     let visibleCount = 0;
     let hiddenCount = 0;
-    items.forEach(item => {
-      const { text, slug } = index.get(item);
-      const matchesTerm = !t || text.includes(t);
+    const visibleEls = [];
+    const hiddenEls = [];
+    // Ensure non-filterable items remain visible in grid mode
+    allItems.forEach(item => {
+      const isNonFilterable = item.classList.contains('non-filterable');
+      const meta = index.get(item);
+      // If index lookup failed (e.g., dynamic DOM shift), rebuild once lazily
+      const { text, slug } = meta || { text: buildItemIndex(item), slug: slugFromItem(item) };
+      if (!meta) index.set(item, { text, slug });
+      const matchesTerm = !t || text.includes(t || '');
       const matchesType = !allowed || (slug && allowed.has(slug));
-      const isVisible = matchesTerm && matchesType;
+      const isVisible = isNonFilterable ? true : (matchesTerm && matchesType);
       setVisible(item, isVisible);
       if (isVisible) {
         visibleCount++;
+        if (!isNonFilterable) visibleEls.push(item);
       } else {
         hiddenCount++;
+        if (!isNonFilterable) hiddenEls.push(item);
       }
     });
     
     console.log(`Filter: Showing ${visibleCount} of ${items.length} items (${hiddenCount} hidden)`);
     
     // Debug: Check if items actually have the filter-hidden class
-    const actuallyHidden = document.querySelectorAll('.retro-window-placeholder.filter-hidden').length;
+    const actuallyHidden = itemsContainer.querySelectorAll('.retro-window-placeholder.filter-hidden').length;
     if (actuallyHidden !== hiddenCount) {
       console.warn(`Filter: Expected ${hiddenCount} hidden items but found ${actuallyHidden} with filter-hidden class`);
+    }
+
+    // Reorder DOM so visible items rise to the top of the grid
+    if (visibleEls.length && (hiddenEls.length || visibleEls[0] !== itemsContainer.firstElementChild)) {
+      const frag = document.createDocumentFragment();
+      visibleEls.forEach(el => frag.appendChild(el));
+      hiddenEls.forEach(el => frag.appendChild(el));
+      itemsContainer.appendChild(frag);
+      // If grid mode is off, trigger a refloat so overlay windows follow their placeholders' new positions
+      if (!gridModeShouldBeOn) {
+        if (typeof window.retroRefloatAll === 'function') {
+          window.retroRefloatAll();
+        } else {
+          window.dispatchEvent(new Event('resize'));
+        }
+      }
     }
   }
 
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
-      term = e.target.value || '';
+      term = (e.target.value || '').toString();
+      term = normalize(term);
       console.log(`Filter: Search term = "${term}"`);
       applyFilters();
     });
