@@ -2039,6 +2039,30 @@ textarea.w-input, textarea.w-select {
   }
 }
 
+@keyframes breathing-shadow {
+  0% {
+    box-shadow: 0 0 14px -3px #00000040, 10px 10px 0 0 rgba(0, 0, 0, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 14px -3px #00000040, 20px 20px 0 0 rgba(0, 0, 0, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 14px -3px #00000040, 10px 10px 0 0 rgba(0, 0, 0, 0.6);
+  }
+}
+
+@keyframes breathing-shadow-regular {
+  0% {
+    box-shadow: 0 0 8px -3px #00000080, 10px 9px 0 -1px rgba(0, 0, 0, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 8px -3px #00000080, 20px 19px 0 -1px rgba(0, 0, 0, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 8px -3px #00000080, 10px 9px 0 -1px rgba(0, 0, 0, 0.6);
+  }
+}
+
 .w-dyn-empty {
   background-color: #ddd;
   padding: 10px;
@@ -3782,7 +3806,7 @@ a {
 }
 
 .retro-window.homepage.breathing-shadow {
-  box-shadow: 0 0 14px -3px #00000040, var(--_breathing-shadow-distance---dropshadow-distance) var(--_breathing-shadow-distance---dropshadow-distance) 0 0 var(--_breathing-shadow-distance---shadow-color-init);
+  animation: breathing-shadow 6s ease-in-out infinite;
 }
 
 .retro-window.doublewide {
@@ -3816,7 +3840,7 @@ a {
 }
 
 .retro-window.breathing-shadow {
-  box-shadow: 0 0 8px -3px #00000080, var(--_breathing-shadow-distance---dropshadow-distance) var(--_breathing-shadow-distance---dropshadow-distance) 0 -1px var(--_breathing-shadow-distance---shadow-color-init);
+  animation: breathing-shadow-regular 6s ease-in-out infinite;
 }
 
 .retro-window.widescreen {
