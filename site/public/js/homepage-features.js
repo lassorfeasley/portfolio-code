@@ -3,7 +3,6 @@
 
 /* === Simple homepage filter (replaces Jetboost) === */
 const TYPE_LABEL_TO_SLUG = {
-  'collections': null,
   'ui & interactive': 'interaction-design',
   'ux & innovation': 'innovation',
   'writing': 'writing',
@@ -107,8 +106,14 @@ function slugFromItem(itemEl) {
 
 function setActive(buttonEls, activeBtn) {
   // Fix: Add the missing implementation to remove 'is-active' from all buttons
-  buttonEls.forEach(btn => btn.classList.remove('is-active'));
-  if (activeBtn) activeBtn.classList.add('is-active');
+  buttonEls.forEach(btn => {
+    btn.classList.remove('is-active');
+    btn.classList.remove('jetboost-filter-active');
+  });
+  if (activeBtn) {
+    activeBtn.classList.add('is-active');
+    activeBtn.classList.add('jetboost-filter-active');
+  }
 }
 
 (async function init() {
@@ -134,7 +139,8 @@ function setActive(buttonEls, activeBtn) {
   window.__homeFiltersInit = true;
 
   const searchInput = document.querySelector('.jetboost-list-search-input-lkmq') || document.querySelector('#Search') || document.querySelector('input.search');
-  const filterButtons = Array.from(document.querySelectorAll('.jetboost-filter-wzyl .button, .jetboost-filter-wzyl a.button'));
+  const filterButtons = Array.from(document.querySelectorAll('.jetboost-filter-wzyl .button, .jetboost-filter-wzyl a.button'))
+    .filter(btn => normalize(btn.textContent) !== 'collections');
   
   if (!searchInput) console.warn('Filter: Search input not found');
   if (!filterButtons.length) console.warn('Filter: Filter buttons not found');
@@ -332,15 +338,21 @@ function setActive(buttonEls, activeBtn) {
     const type = TYPE_LABEL_TO_SLUG[label] ?? null;
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      activeType = type;
-      console.log(`Filter: Active type = ${type || 'all'}`);
-      setActive(filterButtons, btn);
+      
+      // Toggle behavior: if clicking the same button, deselect it
+      if (activeType === type) {
+        activeType = null;
+        console.log(`Filter: Deselected filter, showing all`);
+        setActive(filterButtons, null);
+      } else {
+        activeType = type;
+        console.log(`Filter: Active type = ${type || 'all'}`);
+        setActive(filterButtons, btn);
+      }
+      
       applyFilters();
     });
   });
-
-  const defaultBtn = filterButtons.find(b => normalize(b.textContent) === 'collections');
-  if (defaultBtn) setActive(filterButtons, defaultBtn);
 
   applyFilters();
   
