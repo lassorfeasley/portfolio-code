@@ -4097,10 +4097,16 @@ a {
   font-weight: 400;
 }
 
-.button.jetboost-filter-active {
+.button.jetboost-filter-active,
+.button.is-active {
   border: 1px none var(--stroke);
   background-color: var(--white);
   font-weight: 700;
+}
+
+/* Hide Collections filter button specifically */
+.jetboost-filter-wzyl .collection-item-4:first-child {
+  display: none !important;
 }
 
 .jetboost-filter-wzyl {
@@ -4891,7 +4897,25 @@ a {
   }
 
   .folder-grid {
-    flex: 0 auto;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 100% !important;
+    align-self: stretch !important;
+    grid-column-gap: 15px;
+    grid-row-gap: 15px;
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  
+  .folder-grid .icon-placeholder {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  
+  .folder-grid .draggable-folder {
+    width: 100% !important;
+    max-width: 100% !important;
+    aspect-ratio: 1 / 1.2 !important;
+    height: auto !important;
   }
 
   .align-right {
@@ -4911,6 +4935,136 @@ a {
 
   .cluttered-desktop-container {
     grid-template-columns: 1fr;
+    grid-row-gap: 20px;
+    grid-column-gap: 0;
+    display: grid !important;
+    position: static !important;
+    height: auto !important;
+  }
+  
+  .cluttered-desktop-container .retro-window {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: auto !important;
+    transform: none !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    flex: 1 1 100% !important;
+    margin: 0 !important;
+    z-index: auto !important;
+  }
+  
+  .cluttered-desktop-container .retro-window-placeholder {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+  }
+  
+  /* Additional specificity to override any inline styles */
+  body .cluttered-desktop-container .retro-window {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: auto !important;
+    transform: none !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    flex: 1 1 100% !important;
+    margin: 0 !important;
+    z-index: auto !important;
+  }
+  
+  body .cluttered-desktop-container .retro-window-placeholder {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+  }
+  
+  /* Maximum specificity to override any inline styles */
+  html body .cluttered-desktop-container .retro-window[style*="position"] {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: auto !important;
+    transform: none !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    flex: 1 1 100% !important;
+    margin: 0 !important;
+    z-index: auto !important;
+  }
+  
+  html body .cluttered-desktop-container .retro-window-placeholder[style*="position"] {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+  }
+  
+  /* Force grid layout even if JavaScript tries to override */
+  html body .cluttered-desktop-container[style*="height"] {
+    height: auto !important;
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-row-gap: 20px !important;
+    grid-column-gap: 0 !important;
+  }
+  
+  /* Nuclear option: override any absolute positioning */
+  html body .cluttered-desktop-container *[style*="position: absolute"],
+  html body .cluttered-desktop-container *[style*="position:fixed"] {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+  
+  /* Fix excessive white space from min-height on mobile */
+  html body #desktop[style*="min-height"],
+  html body .windowcanvas[style*="min-height"] {
+    min-height: auto !important;
+    height: auto !important;
+  }
+  
+  /* Ensure proper mobile layout for desktop container */
+  html body #desktop.windowcanvas.twoonegrid {
+    min-height: auto !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
   }
 
   .button {
