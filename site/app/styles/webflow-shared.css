@@ -168,48 +168,7 @@ td, th {
   padding: 0;
 }
 
-@font-face {
-  font-family: webflow-icons;
-  src: url("data:application/x-font-ttf;charset=utf-8;base64,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") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-}
 
-[class^="w-icon-"], [class*=" w-icon-"] {
-  speak: none;
-  font-variant: normal;
-  text-transform: none;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  font-style: normal;
-  font-weight: normal;
-  line-height: 1;
-  font-family: webflow-icons !important;
-}
-
-.w-icon-slider-right:before {
-  content: "";
-}
-
-.w-icon-slider-left:before {
-  content: "";
-}
-
-.w-icon-nav-menu:before {
-  content: "";
-}
-
-.w-icon-arrow-down:before, .w-icon-dropdown-toggle:before {
-  content: "";
-}
-
-.w-icon-file-upload-remove:before {
-  content: "";
-}
-
-.w-icon-file-upload-icon:before {
-  content: "";
-}
 
 * {
   box-sizing: border-box;
@@ -255,7 +214,6 @@ html.w-mod-touch * {
 }
 
 .w-clearfix:before, .w-clearfix:after {
-  content: " ";
   grid-area: 1 / 1 / 2 / 2;
   display: table;
 }
@@ -457,7 +415,6 @@ ul, ol {
 }
 
 .w-embed:before, .w-embed:after {
-  content: " ";
   grid-area: 1 / 1 / 2 / 2;
   display: table;
 }
@@ -574,7 +531,6 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-radio:before, .w-radio:after {
-  content: " ";
   grid-area: 1 / 1 / 2 / 2;
   display: table;
 }
@@ -654,10 +610,6 @@ textarea.w-input, textarea.w-select {
   display: block;
 }
 
-.w-icon-file-upload-remove {
-  margin: auto;
-  font-size: 10px;
-}
 
 .w-file-upload-error-msg {
   color: #ea384c;
@@ -682,15 +634,6 @@ textarea.w-input, textarea.w-select {
   display: inline-block;
 }
 
-.w-icon-file-upload-icon, .w-icon-file-upload-uploading {
-  width: 20px;
-  margin-right: 8px;
-  display: inline-block;
-}
-
-.w-icon-file-upload-uploading {
-  height: 20px;
-}
 
 .w-container {
   max-width: 940px;
@@ -699,7 +642,6 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-container:before, .w-container:after {
-  content: " ";
   grid-area: 1 / 1 / 2 / 2;
   display: table;
 }
@@ -714,7 +656,6 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-row:before, .w-row:after {
-  content: " ";
   grid-area: 1 / 1 / 2 / 2;
   display: table;
 }
@@ -1079,7 +1020,6 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-widget-twitter-count-shim:not(.w--vertical):before, .w-widget-twitter-count-shim:not(.w--vertical):after {
-  content: " ";
   pointer-events: none;
   border: solid #0000;
   width: 0;
@@ -1122,7 +1062,6 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-widget-twitter-count-shim.w--vertical:before, .w-widget-twitter-count-shim.w--vertical:after {
-  content: " ";
   pointer-events: none;
   border: solid #0000;
   width: 0;
@@ -1299,9 +1238,6 @@ textarea.w-input, textarea.w-select {
   overflow: hidden;
 }
 
-.w-slider-arrow-left [class^="w-icon-"], .w-slider-arrow-right [class^="w-icon-"], .w-slider-arrow-left [class*=" w-icon-"], .w-slider-arrow-right [class*=" w-icon-"] {
-  position: absolute;
-}
 
 .w-slider-arrow-left:focus, .w-slider-arrow-right:focus {
   outline: 0;
@@ -1317,12 +1253,6 @@ textarea.w-input, textarea.w-select {
   left: auto;
 }
 
-.w-icon-slider-left, .w-icon-slider-right {
-  width: 1em;
-  height: 1em;
-  margin: auto;
-  inset: 0;
-}
 
 .w-slider-aria-label {
   clip: rect(0 0 0 0);
@@ -1372,7 +1302,6 @@ textarea.w-input, textarea.w-select {
   outline: 0;
 }
 
-.w-icon-dropdown-toggle {
   width: 1em;
   height: 1em;
   margin: auto 20px auto auto;
@@ -1464,7 +1393,6 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-lightbox-view:before {
-  content: "";
   height: 100vh;
 }
 
@@ -1619,7 +1547,6 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-lightbox-spinner:after {
-  content: "";
   border: 3px solid #0000;
   border-bottom-color: #fff;
   border-radius: 50%;
@@ -1678,7 +1605,6 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-richtext:before, .w-richtext:after {
-  content: " ";
   grid-area: 1 / 1 / 2 / 2;
   display: table;
 }
@@ -1700,7 +1626,6 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-richtext figure.w-richtext-figure-type-video > div:after, .w-richtext figure[data-rt-type="video"] > div:after {
-  content: "";
   display: none;
   position: absolute;
   inset: 0;
@@ -1810,7 +1735,6 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-nav:before, .w-nav:after {
-  content: " ";
   grid-area: 1 / 1 / 2 / 2;
   display: table;
 }
@@ -1971,7 +1895,6 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-tabs:before, .w-tabs:after {
-  content: " ";
   grid-area: 1 / 1 / 2 / 2;
   display: table;
 }
@@ -2026,7 +1949,6 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-ix-emptyfix:after {
-  content: "";
 }
 
 @keyframes spin {
@@ -2076,13 +1998,6 @@ textarea.w-input, textarea.w-select {
   display: grid;
 }
 
-@font-face {
-  font-family: "Font awesome 6 pro solid 900";
-  src: url("https://cdn.prod.website-files.com/5e9a6fed9ba599718ff8fdb0/643d64c2cdf26ed6f329c825_Font%20Awesome%206%20Pro-Solid-900.otf") format("opentype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
 
 :root {
   --stroke: #b2bec3;
@@ -2595,7 +2510,7 @@ a {
   text-transform: none;
   align-self: flex-start;
   margin-bottom: 8px;
-  font-family: Oxygen;
+  font-family: Inconsolata, monospace;
   font-size: 24px;
   font-weight: 400;
 }
@@ -2604,7 +2519,7 @@ a {
   opacity: 0;
   color: #fff;
   background-color: #0000;
-  font-family: baskerville-urw;
+  font-family: Inconsolata, monospace;
   font-size: 60px;
   font-style: normal;
   font-weight: 500;
@@ -2723,7 +2638,7 @@ a {
   color: #515151;
   text-align: center;
   margin-top: 12px;
-  font-family: baskerville-urw;
+  font-family: Inconsolata, monospace;
   font-size: 20px;
   font-style: normal;
   font-weight: 500;
@@ -2976,7 +2891,7 @@ a {
 .oxyicon {
   color: #fff;
   text-align: left;
-  font-family: Oxygen;
+  font-family: Inconsolata, monospace;
   font-size: 14px;
   font-weight: 700;
 }
@@ -5067,4 +4982,3 @@ a {
     grid-area: span 1 / span 1 / span 1 / span 1;
     justify-self: auto;
   }
-}
