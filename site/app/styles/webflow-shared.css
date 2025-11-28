@@ -1302,6 +1302,7 @@ textarea.w-input, textarea.w-select {
   outline: 0;
 }
 
+.w-icon-dropdown-toggle {
   width: 1em;
   height: 1em;
   margin: auto 20px auto auto;
