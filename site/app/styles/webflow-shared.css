@@ -3680,7 +3680,11 @@ a {
 }
 
 .retro-window {
-  z-index: 10000;
+  --retro-translate-x: 0px;
+  --retro-translate-y: 0px;
+  --retro-width: auto;
+  --retro-z: 10000;
+  z-index: var(--retro-z, 10000);
   grid-column-gap: 0px;
   grid-row-gap: 0px;
   aspect-ratio: 3 / 2;
@@ -3694,10 +3698,12 @@ a {
   position: relative;
   inset: auto;
   overflow: hidden;
+  width: var(--retro-width, auto);
+  transform: translate(var(--retro-translate-x, 0px), var(--retro-translate-y, 0px));
 }
 
 .retro-window:hover {
-  transform: translate(0);
+  transform: translate(var(--retro-translate-x, 0px), var(--retro-translate-y, 0px));
 }
 
 .retro-window.notabsolute {
@@ -3898,7 +3904,7 @@ a {
 }
 
 .jetboost-list-wrapper-lkmq.jetboost-list-wrapper-wzyl {
-  padding: 25px;
+  padding: 0 25px 25px;
 }
 
 .masonrygrid {

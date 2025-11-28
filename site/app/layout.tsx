@@ -55,6 +55,9 @@ export default function RootLayout({
       <body
         className={`${inconsolata.variable} antialiased body`}
       >
+        {/* Scatter + window state primitives */}
+        <Script src="/js/retro-window-state.js?v=1" strategy="afterInteractive" />
+        <Script src="/js/retro-scatter-engine.js?v=1" strategy="afterInteractive" />
         {/* Core effects - critical functionality */}
         <Script src="/js/core-effects.js?v=2" strategy="afterInteractive" />
         {/* Visual effects - ensure it runs reliably */}

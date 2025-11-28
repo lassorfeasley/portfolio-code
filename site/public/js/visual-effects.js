@@ -742,120 +742,74 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
   document.addEventListener('DOMContentLoaded', initPixelImageLoadEffect);
 }
 
-/* === Causes retro windows to be randomly positioned and  on the screen === */
+/* === Retro window scatter orchestrator === */
+const DESKTOP_SCATTER_QUERY = '(min-width: 1024px)';
+const isDesktopScatterViewport = () =>
+  window.matchMedia(DESKTOP_SCATTER_QUERY).matches && window.innerWidth >= 1024;
+
+const scatterDefaults = {
+  minWidth: 300,
+  maxWidth: 475,
+  scatterX: 125,
+  scatterY: 60,
+  safeSidePadding: 16,
+  safeBottomPadding: 80,
+  allowOverflowX: 100,
+  allowOverflowY: 150,
+  seed: 'retro-scatter',
+};
+
+const scatterDebounce = (fn, wait = 150) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn.apply(null, args), wait);
+  };
+};
+
 function initRandomizer() {
-  // Only run the script if the screen is at least as wide as an iPad in landscape (1024px)
-  if (!window.matchMedia('(min-width: 1024px)').matches) {
+  if (!isDesktopScatterViewport()) return;
+  const store = window.RetroWindowStore;
+  const engine = window.RetroScatterEngine;
+  if (!store || !engine) {
+    console.warn('RetroWindowStore or RetroScatterEngine unavailable');
     return;
   }
-  
-  // Additional safety check - don't randomize if we're on a small viewport
-  if (window.innerWidth < 1024) {
-    return;
-  }
-
-  // Adjustable parameters
-  const MIN_WIDTH = 300;              // Minimum width for each retro window (in pixels)
-  const MAX_WIDTH = 475;              // Maximum width for each retro window (in pixels)
-  const MAX_HORIZONTAL_SCATTER = 125; // Maximum horizontal scatter (in pixels)
-  const MAX_VERTICAL_SCATTER = 50;    // Maximum vertical scatter (in pixels)
-  const SAFE_SIDE_PADDING = 16;       // Keep windows away from viewport edges to avoid horizontal scroll
-  const SAFE_BOTTOM_PADDING = 80;     // Keep windows above bottom navigation area
-  const ALLOW_OVERFLOW_X = 100;       // Allow up to 100px overflow horizontally (clipped by container)
-
-  // Find each container that should have a cluttered desktop effect
-  const clutteredContainers = document.querySelectorAll('.cluttered-desktop-container');
-
-  clutteredContainers.forEach(container => {
-    // Ensure the container stays in place:
-    // 1. Set its position to relative (to serve as positioning context)
-    // 2. Lock in its height so that it won't collapse when children are set to absolute.
-    container.style.position = 'relative';
-    container.style.height = container.offsetHeight + 'px';
-    // Do not clip at the container level; we'll avoid horizontal scroll via body style
-
-    // Select all retro windows inside this container.
-    const windows = container.querySelectorAll('.retro-window');
-
-    // Utility: uniform random within [min, max]
-    const randomBetween = (min, max) => {
-      if (max < min) { const t = min; min = max; max = t; }
-      return min + Math.floor(Math.random() * (max - min + 1));
-    };
-
-    // Choose a value away from hard edges when the range is roomy
-    const randomInterior = (min, max) => {
-      if (max < min) { const t = min; min = max; max = t; }
-      const span = max - min;
-      if (span > 40) {
-        const innerMin = min + 20;
-        const innerMax = max - 20;
-        return randomBetween(innerMin, innerMax);
+  const containers = document.querySelectorAll('.cluttered-desktop-container');
+  if (!containers.length) return;
+  const controllers = Array.from(containers).map((container, index) => {
+    const seed =
+      container.dataset.scatterSeed ||
+      container.dataset.sectionId ||
+      container.id ||
+      `canvas-${index}`;
+    return engine.registerCanvas(container, { ...scatterDefaults, seed });
+  }).filter(Boolean);
+  if (!controllers.length) return;
+  requestAnimationFrame(() => {
+    controllers.forEach((controller) => {
+      try {
+        controller.run();
+      } catch (err) {
+        console.error('Scatter controller failed', err);
       }
-      return randomBetween(min, max);
-    };
-
-    windows.forEach(win => {
-      // Capture the original rendered position from the static layout.
-      const originalLeft = win.offsetLeft;
-      const originalTop  = win.offsetTop;
-
-      // 1. Randomize width between MIN_WIDTH and MAX_WIDTH.
-      const randomWidth = Math.floor(Math.random() * (MAX_WIDTH - MIN_WIDTH + 1)) + MIN_WIDTH;
-      win.style.width = randomWidth + 'px';
-
-      // 2. Randomize the z-index between 1 and 500.
-      const randomZIndex = Math.floor(Math.random() * 500) + 1;
-      win.style.zIndex = randomZIndex;
-
-      // Measure after width change so clamping is accurate
-      const winWidth = Math.min(win.offsetWidth || randomWidth, container.clientWidth);
-      const winHeight = win.offsetHeight;
-
-      // Allowed position ranges (permit slight overflow horizontally; clip by container overflow)
-      const minLeft = -ALLOW_OVERFLOW_X;
-      const maxLeft = container.clientWidth - winWidth + ALLOW_OVERFLOW_X;
-      const ALLOW_OVERFLOW_Y = 150;
-      const minTop = -ALLOW_OVERFLOW_Y; // allow windows above the canvas
-      const maxTop = container.clientHeight - winHeight + Math.max(0, ALLOW_OVERFLOW_Y - SAFE_BOTTOM_PADDING);
-
-      // Choose offsets that avoid clamping to edges (compute feasible delta range)
-      const dxMin = Math.max(-MAX_HORIZONTAL_SCATTER, minLeft - originalLeft);
-      const dxMax = Math.min( MAX_HORIZONTAL_SCATTER, maxLeft - originalLeft);
-      const dyMin = Math.max(-MAX_VERTICAL_SCATTER,   minTop  - originalTop);
-      const dyMax = Math.min( MAX_VERTICAL_SCATTER,   maxTop  - originalTop);
-
-      const deltaLeft = randomInterior(dxMin, dxMax);
-      const deltaTop  = randomInterior(dyMin, dyMax);
-
-      const targetLeft = Math.min(maxLeft, Math.max(minLeft, originalLeft + deltaLeft));
-      const targetTop  = Math.min(maxTop, Math.max(minTop,  originalTop  + deltaTop));
-
-      // 4. Set the window to absolute positioning and apply the adjusted positions.
-      win.style.position = 'absolute';
-      win.style.left = targetLeft + 'px';
-      win.style.top  = targetTop + 'px';
     });
   });
 }
 
 // Clean up inline styles on mobile to ensure proper stacking
 function cleanupMobileStyles() {
-  if (window.matchMedia('(min-width: 1024px)').matches && window.innerWidth >= 1024) {
-    return; // Only clean up on mobile
-  }
-  
-  console.log('Cleaning up mobile styles, current width:', window.innerWidth);
-  
-  // Remove inline styles from specific containers
+  if (isDesktopScatterViewport()) return;
+  const store = window.RetroWindowStore;
+  store?.clearPresentation();
+
   const containers = document.querySelectorAll('.cluttered-desktop-container, .windowcanvas.onetwogrid, .windowcanvas.twoonegrid, .desktopgrid, .onetwogrid, .twoonegrid');
   containers.forEach(container => {
     container.style.position = '';
     container.style.height = '';
     container.style.minHeight = '';
   });
-  
-  // Only clean up windows inside those specific containers
+
   const gridSelectors = [
     '.cluttered-desktop-container > .retro-window',
     '.cluttered-desktop-container > .retro-window-placeholder',
@@ -868,9 +822,8 @@ function cleanupMobileStyles() {
     '.twoonegrid > .retro-window',
     '.twoonegrid > .retro-window-placeholder'
   ];
-  
+
   const windows = document.querySelectorAll(gridSelectors.join(', '));
-  console.log('Found windows to clean:', windows.length);
   windows.forEach(win => {
     win.style.position = '';
     win.style.left = '';
@@ -883,63 +836,45 @@ function cleanupMobileStyles() {
     win.style.transform = '';
     win.style.margin = '';
     win.style.zIndex = '';
+    win.style.removeProperty('--retro-translate-x');
+    win.style.removeProperty('--retro-translate-y');
+    win.style.removeProperty('--retro-width');
+    win.style.removeProperty('--retro-z');
   });
 }
+
+const handleScatterForViewport = () => {
+  if (isDesktopScatterViewport()) {
+    initRandomizer();
+  } else {
+    cleanupMobileStyles();
+  }
+};
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  // Only run randomizer on desktop
-  if (window.innerWidth >= 1024) {
-    try { initRandomizer(); } catch (e) { console.error(e); }
-  }
-  // Always clean up mobile styles to ensure proper layout
-  try { cleanupMobileStyles(); } catch (e) { console.error(e); }
+  handleScatterForViewport();
 } else {
-  window.addEventListener('load', () => {
-    if (window.innerWidth >= 1024) {
-      initRandomizer();
-    }
-    cleanupMobileStyles();
-  });
+  window.addEventListener('load', handleScatterForViewport);
 }
 
-  // Listen for resize events to clean up on mobile
-  let resizeTimeout;
-  let initRandomizerHasRun = false;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-      if (window.matchMedia('(max-width: 1023px)').matches || window.innerWidth < 1024) {
-        cleanupMobileStyles();
-      } else if (!initRandomizerHasRun) {
-        initRandomizer();
-        initRandomizerHasRun = true;
-      }
-    }, 150);
-  });
-  
-  // Mark that randomizer has run if we're on desktop
-  if (window.innerWidth >= 1024) {
-    initRandomizerHasRun = true;
-  }
+window.addEventListener('resize', scatterDebounce(handleScatterForViewport, 200));
 
-// Fallback: if markup arrives later, trigger once the clutter container exists
 (function ensureRandomizerRuns() {
   let started = false;
-  const tryRun = () => {
-    if (!started && document.querySelector('.cluttered-desktop-container')) {
+  const observer = new MutationObserver(() => {
+    if (started) return;
+    if (document.querySelector('.cluttered-desktop-container')) {
       started = true;
-      // Only run randomizer on desktop
-      if (window.innerWidth >= 1024) {
-        try { initRandomizer(); } catch (_) {}
-      }
-      // Always clean up mobile styles
-      try { cleanupMobileStyles(); } catch (_) {}
+      handleScatterForViewport();
       observer.disconnect();
     }
-  };
-  const observer = new MutationObserver(tryRun);
+  });
   observer.observe(document.documentElement, { childList: true, subtree: true });
-  tryRun();
+  if (document.querySelector('.cluttered-desktop-container')) {
+    started = true;
+    handleScatterForViewport();
+    observer.disconnect();
+  }
 })();
 
 /* === Makes draggable folders mimic GUI folders === */

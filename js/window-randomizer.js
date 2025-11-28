@@ -27,18 +27,20 @@
       // Utility function to generate a random offset in the range [-max, max]
       const randomOffset = (max) => (Math.random() < 0.5 ? -1 : 1) * Math.floor(Math.random() * (max + 1));
 
-      windows.forEach(win => {
-        // Capture the original rendered position from the static layout.
-        const originalLeft = win.offsetLeft;
-        const originalTop  = win.offsetTop;
+      const initialPositions = Array.from(windows).map(win => ({
+        element: win,
+        left: win.offsetLeft,
+        top: win.offsetTop,
+        width: win.offsetWidth,
+        height: win.offsetHeight
+      }));
 
+      initialPositions.forEach(({ element: win, left: originalLeft, top: originalTop }) => {
         // 1. Randomize width between MIN_WIDTH and MAX_WIDTH.
         const randomWidth = Math.floor(Math.random() * (MAX_WIDTH - MIN_WIDTH + 1)) + MIN_WIDTH;
-        win.style.width = randomWidth + 'px';
 
         // 2. Randomize the z-index between 1 and 500.
         const randomZIndex = Math.floor(Math.random() * 500) + 1;
-        win.style.zIndex = randomZIndex;
 
         // 3. Calculate random horizontal and vertical offsets.
         const deltaLeft = randomOffset(MAX_HORIZONTAL_SCATTER);
@@ -46,6 +48,8 @@
 
         // 4. Set the window to absolute positioning and apply the adjusted positions.
         win.style.position = 'absolute';
+        win.style.width = randomWidth + 'px';
+        win.style.zIndex = randomZIndex;
         win.style.left = (originalLeft + deltaLeft) + 'px';
         win.style.top  = (originalTop + deltaTop) + 'px';
       });
