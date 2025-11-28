@@ -2841,7 +2841,9 @@ a {
 
 .fa-icon {
   color: #757575;
-  font-family: "Font awesome 6 pro solid 900", sans-serif;
+  font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro", "Font awesome 6 pro solid 900", sans-serif;
+  font-weight: 900;
+  font-style: normal;
   font-size: 25px;
 }
 
@@ -2910,7 +2912,9 @@ a {
 
 .icon {
   color: var(--stroke);
-  font-family: "Font awesome 6 pro solid 900", sans-serif;
+  font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro", "Font awesome 6 pro solid 900", sans-serif;
+  font-weight: 900;
+  font-style: normal;
   font-size: 20px;
   text-decoration: none;
 }
@@ -3835,7 +3839,9 @@ a {
 .folder {
   text-align: center;
   align-self: center;
-  font-family: "Font awesome 6 pro solid 900", sans-serif;
+  font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro", "Font awesome 6 pro solid 900", sans-serif;
+  font-weight: 900;
+  font-style: normal;
   font-size: 40px;
   line-height: 40px;
   display: block;
@@ -4224,7 +4230,9 @@ a {
 .iconlogo {
   text-align: center;
   align-self: flex-start;
-  font-family: "Font awesome 6 pro solid 900", sans-serif;
+  font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro", "Font awesome 6 pro solid 900", sans-serif;
+  font-weight: 900;
+  font-style: normal;
   font-size: 40px;
   line-height: 40px;
   display: block;
