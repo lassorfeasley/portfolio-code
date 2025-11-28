@@ -748,6 +748,11 @@ function initRandomizer() {
   if (!window.matchMedia('(min-width: 1024px)').matches) {
     return;
   }
+  
+  // Additional safety check - don't randomize if we're on a small viewport
+  if (window.innerWidth < 1024) {
+    return;
+  }
 
   // Adjustable parameters
   const MIN_WIDTH = 300;              // Minimum width for each retro window (in pixels)
@@ -834,11 +839,88 @@ function initRandomizer() {
   });
 }
 
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  try { initRandomizer(); } catch (e) { console.error(e); }
-} else {
-  window.addEventListener('load', initRandomizer);
+// Clean up inline styles on mobile to ensure proper stacking
+function cleanupMobileStyles() {
+  if (window.matchMedia('(min-width: 1024px)').matches && window.innerWidth >= 1024) {
+    return; // Only clean up on mobile
+  }
+  
+  console.log('Cleaning up mobile styles, current width:', window.innerWidth);
+  
+  // Remove inline styles from specific containers
+  const containers = document.querySelectorAll('.cluttered-desktop-container, .windowcanvas.onetwogrid, .windowcanvas.twoonegrid, .desktopgrid, .onetwogrid, .twoonegrid');
+  containers.forEach(container => {
+    container.style.position = '';
+    container.style.height = '';
+    container.style.minHeight = '';
+  });
+  
+  // Only clean up windows inside those specific containers
+  const gridSelectors = [
+    '.cluttered-desktop-container > .retro-window',
+    '.cluttered-desktop-container > .retro-window-placeholder',
+    '.windowcanvas > .retro-window',
+    '.windowcanvas > .retro-window-placeholder',
+    '.desktopgrid > .retro-window',
+    '.desktopgrid > .retro-window-placeholder',
+    '.onetwogrid > .retro-window',
+    '.onetwogrid > .retro-window-placeholder',
+    '.twoonegrid > .retro-window',
+    '.twoonegrid > .retro-window-placeholder'
+  ];
+  
+  const windows = document.querySelectorAll(gridSelectors.join(', '));
+  console.log('Found windows to clean:', windows.length);
+  windows.forEach(win => {
+    win.style.position = '';
+    win.style.left = '';
+    win.style.top = '';
+    win.style.right = '';
+    win.style.bottom = '';
+    win.style.width = '';
+    win.style.maxWidth = '';
+    win.style.height = '';
+    win.style.transform = '';
+    win.style.margin = '';
+    win.style.zIndex = '';
+  });
 }
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  // Only run randomizer on desktop
+  if (window.innerWidth >= 1024) {
+    try { initRandomizer(); } catch (e) { console.error(e); }
+  }
+  // Always clean up mobile styles to ensure proper layout
+  try { cleanupMobileStyles(); } catch (e) { console.error(e); }
+} else {
+  window.addEventListener('load', () => {
+    if (window.innerWidth >= 1024) {
+      initRandomizer();
+    }
+    cleanupMobileStyles();
+  });
+}
+
+  // Listen for resize events to clean up on mobile
+  let resizeTimeout;
+  let initRandomizerHasRun = false;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      if (window.matchMedia('(max-width: 1023px)').matches || window.innerWidth < 1024) {
+        cleanupMobileStyles();
+      } else if (!initRandomizerHasRun) {
+        initRandomizer();
+        initRandomizerHasRun = true;
+      }
+    }, 150);
+  });
+  
+  // Mark that randomizer has run if we're on desktop
+  if (window.innerWidth >= 1024) {
+    initRandomizerHasRun = true;
+  }
 
 // Fallback: if markup arrives later, trigger once the clutter container exists
 (function ensureRandomizerRuns() {
@@ -846,7 +928,12 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
   const tryRun = () => {
     if (!started && document.querySelector('.cluttered-desktop-container')) {
       started = true;
-      try { initRandomizer(); } catch (_) {}
+      // Only run randomizer on desktop
+      if (window.innerWidth >= 1024) {
+        try { initRandomizer(); } catch (_) {}
+      }
+      // Always clean up mobile styles
+      try { cleanupMobileStyles(); } catch (_) {}
       observer.disconnect();
     }
   };

@@ -4712,6 +4712,11 @@ a {
     overflow: visible;
   }
 
+  /* Override the inline padding from layout.tsx on mobile */
+  .globalmargin {
+    padding: 40px 20px 80px !important;
+  }
+
   .text-block {
     flex-direction: column;
     align-items: flex-start;
@@ -5066,6 +5071,17 @@ a {
     flex-direction: column !important;
     align-items: stretch !important;
   }
+  
+  /* Most aggressive override for any inline min-height on desktop container */
+  #desktop,
+  #desktop.windowcanvas,
+  #desktop.windowcanvas.twoonegrid,
+  div#desktop.windowcanvas.twoonegrid {
+    min-height: auto !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
 
   .button {
     height: auto;
@@ -5074,15 +5090,19 @@ a {
   }
 
   .windowcanvas {
+    grid-row-gap: 20px;
+    grid-column-gap: 0;
     flex-flow: column;
-    justify-content: center;
-    align-items: center;
+    justify-content: flex-start;
+    align-items: stretch;
+    width: 100%;
   }
 
   .windowcanvas.twoonegrid {
-    grid-column-gap: 40px;
-    grid-row-gap: 40px;
+    grid-column-gap: 0;
+    grid-row-gap: 20px;
     display: flex;
+    grid-template-columns: 1fr;
   }
 
   .windowcanvas.onetwogrid.alert {
@@ -5091,8 +5111,73 @@ a {
   }
 
   .desktopgrid {
+    grid-row-gap: 20px;
+    grid-column-gap: 0;
     flex-flow: column;
     display: flex;
+  }
+
+  /* Reset the negative margin overlap for twoonegrid.moveup */
+  .twoonegrid.moveup {
+    margin-top: 0 !important;
+    grid-template-columns: 1fr;
+    grid-row-gap: 20px;
+    grid-column-gap: 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  /* Stack onetwogrid to single column with 20px gap */
+  .onetwogrid {
+    grid-template-columns: 1fr;
+    grid-row-gap: 20px;
+    grid-column-gap: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Only override windows within specific grid containers */
+  .windowcanvas > .retro-window,
+  .windowcanvas > .retro-window-placeholder,
+  .desktopgrid > .retro-window,
+  .desktopgrid > .retro-window-placeholder,
+  .onetwogrid > .retro-window,
+  .onetwogrid > .retro-window-placeholder,
+  .twoonegrid > .retro-window,
+  .twoonegrid > .retro-window-placeholder,
+  .twoonegrid.moveup > .retro-window,
+  .twoonegrid.moveup > .retro-window-placeholder {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    transform: none !important;
+    margin: 0 !important;
+    z-index: auto !important;
+  }
+
+  /* Ensure grid containers themselves don't have fixed heights from JS */
+  .windowcanvas.onetwogrid,
+  .windowcanvas.twoonegrid,
+  .desktopgrid,
+  .onetwogrid,
+  .twoonegrid,
+  .twoonegrid.moveup {
+    position: static !important;
+    height: auto !important;
+    min-height: auto !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Ensure #desktop top container is full width */
+  #desktop.windowcanvas.twoonegrid > * {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .text-block-6 {

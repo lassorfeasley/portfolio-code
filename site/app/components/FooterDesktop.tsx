@@ -29,7 +29,7 @@ export default function FooterDesktop() {
               </div>
               <div className="icon-placeholder">
                 <div className="draggable-folder">
-                  <Link href="/work/walking-forward" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Walking forward</div></Link>
+                  <a href="https://walking.lassor.com" target="_blank" rel="noreferrer" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Walking forward</div></a>
                 </div>
               </div>
               <div className="icon-placeholder">
