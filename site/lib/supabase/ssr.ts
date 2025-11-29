@@ -8,7 +8,7 @@ if (!url || !anonKey) {
   throw new Error('Missing Supabase env vars for SSR client');
 }
 
-type CookieStore = ReturnType<typeof cookies>;
+type CookieStore = Awaited<ReturnType<typeof cookies>>;
 
 function wrapCookieStore(target: CookieStore) {
   return {
@@ -24,8 +24,8 @@ function wrapCookieStore(target: CookieStore) {
   };
 }
 
-export function supabaseServerAuth() {
-  const store = cookies();
+export async function supabaseServerAuth() {
+  const store = await cookies();
   return createServerClient(url, anonKey, { cookies: wrapCookieStore(store) });
 }
 

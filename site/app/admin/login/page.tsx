@@ -1,13 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabaseBrowser } from '@/lib/supabase/client';
 
+export const dynamic = 'force-dynamic';
+
 type AuthState = 'idle' | 'submitting' | 'success' | 'error';
 
-export default function AdminLoginPage() {
+function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -110,6 +112,40 @@ export default function AdminLoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="retro-root">
+        <div className="globalmargin">
+          <div className="topbar">
+            <Link href="/" className="h _5 link w-inline-block">
+              <div>Lassor.com</div>
+              <div>→</div>
+            </Link>
+            <div className="h _5 link"><div>Admin login</div></div>
+          </div>
+          <div className="windowcanvas">
+            <div className="retro-window-placeholder">
+              <div className="retro-window">
+                <div className="window-bar">
+                  <div className="x-out" />
+                  <div className="window-title">Loading…</div>
+                </div>
+                <div className="window-content">
+                  <p className="paragraph">Loading login form…</p>
+                </div>
+                <div className="resize-corner" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    }>
+      <AdminLoginForm />
+    </Suspense>
   );
 }
 

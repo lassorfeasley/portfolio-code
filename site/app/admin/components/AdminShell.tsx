@@ -35,8 +35,8 @@ export function AdminShell({ userEmail, children }: AdminShellProps) {
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[240px_1fr]">
-      <aside className="border-b border-r bg-card lg:min-h-screen">
+    <div className="grid min-h-screen w-full lg:grid-cols-[260px_minmax(0,1fr)]">
+      <aside className="border-b border-r bg-card">
         <div className="flex items-center gap-2 border-b px-6 py-4">
           <PanelsTopLeft className="h-5 w-5 text-primary" />
           <div>
@@ -68,7 +68,9 @@ export function AdminShell({ userEmail, children }: AdminShellProps) {
           </Button>
         </div>
       </aside>
-      <main className="flex flex-col gap-6 bg-muted/10 px-4 py-6 lg:px-8">{children}</main>
+      <main className="flex w-full flex-col bg-muted/5 py-8">
+        <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-10">{children}</div>
+      </main>
     </div>
   );
 }

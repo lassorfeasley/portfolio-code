@@ -1,7 +1,6 @@
-import type { Metadata, Viewport } from "next";
-import Script from "next/script";
-import { Inconsolata } from "next/font/google";
-import "./globals.css";
+import type { Metadata, Viewport } from 'next';
+import { Inconsolata } from 'next/font/google';
+import './globals.css';
 
 const inconsolata = Inconsolata({
   variable: "--font-inconsolata",
@@ -47,34 +46,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="w-mod-js">
-      <head>
-        {/* Font Awesome Free CSS to render icon glyphs used in Webflow HTML */}
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-          crossOrigin="anonymous"
-          referrerPolicy="no-referrer"
-        />
-      </head>
-      <body
-        className={`${inconsolata.variable} antialiased body`}
-      >
-        {/* Scatter + window state primitives */}
-        <Script src="/js/retro-window-state.js?v=1" strategy="afterInteractive" />
-        <Script src="/js/retro-scatter-engine.js?v=1" strategy="afterInteractive" />
-        {/* Core effects - critical functionality */}
-        <Script src="/js/core-effects.js?v=2" strategy="afterInteractive" />
-        {/* Visual effects - ensure it runs reliably */}
-        <Script src="/js/visual-effects.js?v=2" strategy="afterInteractive" />
-        {/* Guard for layout width early in head/body to prevent width jump */}
-        <style
-          // Using a plain style tag because this is a Server Component
-          dangerouslySetInnerHTML={{
-            __html:
-              '.globalmargin{max-width:1500px!important;margin:0 auto!important;padding:40px 40px 80px!important;} body{overflow-x:hidden;}',
-          }}
-        />
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inconsolata.variable} antialiased`}>
         {children}
       </body>
     </html>

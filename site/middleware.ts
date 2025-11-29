@@ -36,22 +36,22 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-const {
-  data: { session },
-} = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-const { pathname } = req.nextUrl;
+  const { pathname } = req.nextUrl;
 const isAdminRoute = pathname.startsWith('/admin');
-const isLoginRoute = pathname.startsWith('/admin/login');
-const isApiRoute = pathname.startsWith('/api/admin');
+  const isLoginRoute = pathname.startsWith('/admin/login');
+  const isApiRoute = pathname.startsWith('/api/admin');
 const isAuthLoginRoute = pathname.startsWith('/auth/login');
 const isAuthCreateRoute = pathname.startsWith('/auth/create-account');
-const userEmail = session?.user?.email?.toLowerCase() ?? null;
+  const userEmail = session?.user?.email?.toLowerCase() ?? null;
 const isAllowedUser = session
   ? !hasAllowList || (userEmail ? allowedEmails.includes(userEmail) : false)
   : false;
 
-if (isApiRoute && !isAllowedUser) {
+  if (isApiRoute && !isAllowedUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -82,7 +82,7 @@ if (session && (isAuthLoginRoute || isAuthCreateRoute)) {
   homeUrl.pathname = '/';
   homeUrl.searchParams.delete('redirect');
   return NextResponse.redirect(homeUrl);
-}
+  }
 
   return res;
 }

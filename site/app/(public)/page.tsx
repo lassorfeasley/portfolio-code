@@ -42,9 +42,6 @@ let webflowBody = stripWebflowFormRuntime(rewriteHomepageLinks(originalBody));
 // Do not strip content; only strip inline scripts to avoid hydration drift
 webflowBody = webflowBody.replace(/<script[\s\S]*?<\/script>/gi, '');
 
-// CSS guard to avoid any late-applied class causing a width jump
-const guardCss = '<style id="guard-globalmargin">.globalmargin{max-width:1500px!important;margin:0 auto!important;padding:40px 40px 80px!important;}</style>';
-
 export default function Home() {
   return (
     <main className="retro-root" suppressHydrationWarning>
@@ -54,3 +51,5 @@ export default function Home() {
     </main>
   );
 }
+
+

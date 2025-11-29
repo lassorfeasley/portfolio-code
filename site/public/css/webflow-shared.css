@@ -2507,7 +2507,7 @@ a {
   overflow: visible;
 }
 
-.body {
+.public-body {
   background-color: #fff;
   flex-flow: column;
   justify-content: center;
@@ -2522,11 +2522,11 @@ a {
   display: block;
 }
 
-.body.beig {
+.public-body.beig {
   background-color: var(--offwhite);
 }
 
-.body.grey {
+.public-body.grey {
   background-color: var(--offwhite);
   display: flex;
 }
@@ -4448,7 +4448,7 @@ a {
     width: 75vh;
   }
 
-  .body {
+  .public-body {
     flex-flow: column;
     display: block;
     overflow: visible;
@@ -4744,7 +4744,7 @@ a {
     align-self: center;
   }
 
-  .body {
+  .public-body {
     justify-content: flex-start;
     align-items: center;
     height: 100vh;

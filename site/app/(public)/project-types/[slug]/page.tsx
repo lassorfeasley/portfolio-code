@@ -83,13 +83,11 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
   return (
     <main className="retro-root">
       <div className="globalmargin">
-        {/* Top navigation bar (breadcrumb-style) */}
         <div className="topbar">
           <Link href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></Link>
           <Link href={`/project-types/${typeData.slug}`} className="h _5 link w-inline-block w-condition-invisible w--current"><div>Collections</div><div>→</div></Link>
           <div className="h _5 link"><div className="text-block-5">{typeData.name}</div></div>
         </div>
-        {/* Intro + alert windows in one windowcanvas to match Webflow positioning */}
         <div className="windowcanvas onetwogrid alert">
           <div className="retro-window-placeholder">
             <div className="retro-window">
@@ -115,8 +113,6 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
               <div className="resize-corner" />
             </div>
           </div>
-
-          {/* Alert popup */}
           <div className="retro-window-placeholder alertmover">
             <div className="retro-window noratio popup">
               <div className="window-bar">
@@ -141,8 +137,6 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
             </div>
           </div>
         </div>
-      
-        {/* Projects list matching Webflow grid classes */}
         <div className="windowcanvas w-dyn-list">
           <div role="list" className="desktopgrid w-dyn-items">
             {filtered.map((p) => (

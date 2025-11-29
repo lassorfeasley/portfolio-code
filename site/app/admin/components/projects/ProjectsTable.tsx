@@ -42,7 +42,7 @@ export function ProjectsTable({
 
   const typeMap = useMemo(() => {
     return projectTypes.reduce<Record<string, string>>((acc, type) => {
-      acc[type.id] = type.name;
+      acc[type.id] = type.name ?? type.slug ?? 'Unnamed';
       return acc;
     }, {});
   }, [projectTypes]);

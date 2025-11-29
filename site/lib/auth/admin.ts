@@ -13,7 +13,7 @@ function isAllowed(email: string | null | undefined): boolean {
 }
 
 export async function requireAdminSession() {
-  const supabase = supabaseServerAuth();
+  const supabase = await supabaseServerAuth();
   const {
     data: { session },
   } = await supabase.auth.getSession();

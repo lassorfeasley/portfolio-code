@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { ProjectPayload, ProjectRecord, ProjectTypeRecord } from '@/types/projects';
@@ -10,12 +11,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import AssetUploader, { type UploadTarget } from '@/app/admin/components/AssetUploader';
+import AssetUploader from '@/app/admin/components/AssetUploader';
 import ProjectPreview from '@/app/admin/components/ProjectPreview';
-import { UrlListEditor } from './UrlListEditor';
+
+const RichTextEditor = dynamic(() => import('@/app/admin/components/RichTextEditor').then((mod) => ({ default: mod.RichTextEditor })), {
+  ssr: false,
+  loading: () => (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Process & context</p>
+      <div className="h-40 rounded-lg border bg-muted/30" />
+    </div>
+  ),
+});
 
 type Props = {
   project: ProjectPayload | null;
@@ -137,21 +146,6 @@ export function ProjectEditor({ project, projectTypes, isCreating, onSaved, onDe
     setFormState((current) => ({ ...current, [field]: value }));
   };
 
-  const handleAttach = (url: string, target: UploadTarget) => {
-    if (!url) return;
-    if (target === 'featured') {
-      updateField('featured_image_url', url);
-      return;
-    }
-    if (target === 'final') {
-      const next = [...(formState.images_urls ?? []), url];
-      updateField('images_urls', next);
-      return;
-    }
-    const nextProcess = [...(formState.process_image_urls ?? []), url];
-    updateField('process_image_urls', nextProcess);
-  };
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!formState.slug.trim()) {
@@ -231,14 +225,12 @@ export function ProjectEditor({ project, projectTypes, isCreating, onSaved, onDe
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <Tabs defaultValue="overview">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="media">Media</TabsTrigger>
-              <TabsTrigger value="links">Links & context</TabsTrigger>
-            </TabsList>
-            <TabsContent value="overview" className="space-y-4 pt-4">
+        <CardContent className="space-y-10">
+          <section className="space-y-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium text-muted-foreground">Overview</p>
+              <p className="text-sm text-muted-foreground">Core metadata for the project card.</p>
+            </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="project-name">Name</Label>
@@ -320,29 +312,48 @@ export function ProjectEditor({ project, projectTypes, isCreating, onSaved, onDe
                   </div>
                 </div>
               </div>
-            </TabsContent>
-            <TabsContent value="media" className="space-y-6 pt-4">
               <div className="space-y-2">
-                <Label>Featured image URL</Label>
+                <Label>Video URL / embed</Label>
                 <Input
                   type="url"
-                  value={formState.featured_image_url ?? ''}
-                  onChange={(event) => updateField('featured_image_url', event.target.value)}
-                  placeholder="https://..."
+                  value={formState.video_url ?? ''}
+                  placeholder="https://player..."
+                  onChange={(event) => updateField('video_url', event.target.value)}
                 />
+                <p className="text-sm text-muted-foreground">
+                  Provide a direct video link or embed code. When present, the video replaces the featured image on detail pages.
+                </p>
               </div>
-              <UrlListEditor
-                label="Final image URLs"
-                values={formState.images_urls ?? []}
-                placeholder="https://storage..."
-                onChange={(urls) => updateField('images_urls', urls)}
+          </section>
+          <section className="space-y-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium text-muted-foreground">Media</p>
+              <p className="text-sm text-muted-foreground">Upload imagery and supporting assets.</p>
+            </div>
+              <AssetUploader
+                slug={formState.slug ?? 'new-project'}
+                label="Featured image"
+                description="Primary hero image used on detail pages and cards."
+                folder="featured"
+                files={formState.featured_image_url ? [formState.featured_image_url] : []}
+                maxFiles={1}
+                onFilesChange={(urls) => updateField('featured_image_url', urls[0] ?? '')}
               />
-              <AssetUploader slug={formState.slug ?? 'new-project'} onAttach={handleAttach} />
-              <UrlListEditor
-                label="Process image URLs"
-                values={formState.process_image_urls ?? []}
-                placeholder="https://storage..."
-                onChange={(urls) => updateField('process_image_urls', urls)}
+              <AssetUploader
+                slug={formState.slug ?? 'new-project'}
+                label="Final gallery"
+                description="Drop full-bleed images that appear in the project gallery."
+                folder="gallery"
+                files={formState.images_urls ?? []}
+                onFilesChange={(urls) => updateField('images_urls', urls)}
+              />
+              <AssetUploader
+                slug={formState.slug ?? 'new-project'}
+                label="Process gallery"
+                description="Upload sketches or behind-the-scenes shots."
+                folder="process"
+                files={formState.process_image_urls ?? []}
+                onFilesChange={(urls) => updateField('process_image_urls', urls)}
               />
               <div className="space-y-2">
                 <Label>Process images label</Label>
@@ -351,26 +362,20 @@ export function ProjectEditor({ project, projectTypes, isCreating, onSaved, onDe
                   onChange={(event) => updateField('process_images_label', event.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Process & context HTML</Label>
-                <Textarea
-                  value={formState.process_and_context_html ?? ''}
-                  onChange={(event) => updateField('process_and_context_html', event.target.value)}
-                  rows={6}
-                  placeholder="<p>Rich text…</p>"
-                />
-              </div>
-            </TabsContent>
-            <TabsContent value="links" className="space-y-4 pt-4">
+              <RichTextEditor
+                label="Process & context"
+                description="Rich text shown in the process section of the public case study."
+                value={formState.process_and_context_html ?? ''}
+                onChange={(html) => updateField('process_and_context_html', html)}
+                placeholder="Share steps, insights, or milestones…"
+              />
+          </section>
+          <section className="space-y-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium text-muted-foreground">Links & context</p>
+              <p className="text-sm text-muted-foreground">Optional embeds and external references.</p>
+            </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Video URL / embed</Label>
-                  <Input
-                    type="url"
-                    value={formState.video_url ?? ''}
-                    onChange={(event) => updateField('video_url', event.target.value)}
-                  />
-                </div>
                 <div className="space-y-2">
                   <Label>Linked document URL</Label>
                   <Input
@@ -388,8 +393,7 @@ export function ProjectEditor({ project, projectTypes, isCreating, onSaved, onDe
                   onChange={(event) => updateField('fallback_writing_url', event.target.value)}
                 />
               </div>
-            </TabsContent>
-          </Tabs>
+          </section>
         </CardContent>
         <CardFooter className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm text-muted-foreground">

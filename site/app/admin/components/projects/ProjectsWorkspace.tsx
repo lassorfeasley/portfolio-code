@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import type { ProjectPayload, ProjectRecord, ProjectTypeRecord } from '@/types/projects';
+import { Button } from '@/components/ui/button';
 import { ProjectsTable } from './ProjectsTable';
 import { ProjectEditor } from './ProjectEditor';
 
@@ -50,17 +52,20 @@ export function ProjectsWorkspace({ initialProjects, projectTypes }: ProjectsWor
   const [selectedId, setSelectedId] = useState<string | null>(initialProjects[0]?.id ?? null);
   const [isCreating, setIsCreating] = useState(initialProjects.length === 0);
   const [draftTemplate, setDraftTemplate] = useState<ProjectPayload | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'editor'>(initialProjects.length === 0 ? 'editor' : 'list');
 
   const handleSelect = (projectId: string) => {
     setSelectedId(projectId);
     setIsCreating(false);
     setDraftTemplate(null);
+    setViewMode('editor');
   };
 
   const handleCreateNew = () => {
     setSelectedId(null);
     setIsCreating(true);
     setDraftTemplate(emptyProject);
+    setViewMode('editor');
   };
 
   const handleDuplicate = (project: ProjectRecord) => {
@@ -72,6 +77,12 @@ export function ProjectsWorkspace({ initialProjects, projectTypes }: ProjectsWor
     setDraftTemplate(duplicated);
     setSelectedId(null);
     setIsCreating(true);
+  };
+
+  const handleBackToList = () => {
+    setViewMode('list');
+    setIsCreating(false);
+    setDraftTemplate(null);
   };
 
   const handleSaved = (updated: ProjectRecord) => {
@@ -104,24 +115,37 @@ export function ProjectsWorkspace({ initialProjects, projectTypes }: ProjectsWor
     return toPayload(project ?? null);
   }, [draftTemplate, isCreating, projects, selectedId]);
 
+  const showBackButton = projects.length > 0;
+
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
-      <ProjectsTable
-        projects={projects}
-        projectTypes={projectTypes}
-        selectedId={isCreating ? null : selectedId}
-        onSelect={handleSelect}
-        onCreateNew={handleCreateNew}
-        onDuplicate={handleDuplicate}
-      />
-      <ProjectEditor
-        key={selectedProject.id ?? (isCreating ? 'new-project' : 'empty-state')}
-        project={selectedProject}
-        projectTypes={projectTypes}
-        isCreating={isCreating}
-        onSaved={handleSaved}
-        onDeleted={handleDeletedProject}
-      />
+    <div className="space-y-6">
+      {viewMode === 'list' ? (
+        <ProjectsTable
+          projects={projects}
+          projectTypes={projectTypes}
+          selectedId={isCreating ? null : selectedId}
+          onSelect={handleSelect}
+          onCreateNew={handleCreateNew}
+          onDuplicate={handleDuplicate}
+        />
+      ) : (
+        <div className="space-y-4">
+          {showBackButton ? (
+            <Button variant="ghost" className="w-fit gap-2" onClick={handleBackToList}>
+              <ArrowLeft className="h-4 w-4" />
+              Back to projects
+            </Button>
+          ) : null}
+          <ProjectEditor
+            key={selectedProject.id ?? (isCreating ? 'new-project' : 'empty-state')}
+            project={selectedProject}
+            projectTypes={projectTypes}
+            isCreating={isCreating}
+            onSaved={handleSaved}
+            onDeleted={handleDeletedProject}
+          />
+        </div>
+      )}
     </div>
   );
 }
