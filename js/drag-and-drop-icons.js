@@ -1,66 +1,99 @@
 /* === Makes draggable folders mimic GUI folders === */
-document.addEventListener('DOMContentLoaded', function () {
-  const container = document.querySelector('.folder-grid');
-  if (!container) return;
+function initFolderDrag() {
+  const containers = document.querySelectorAll('.folder-grid');
+  if (!containers.length) return;
 
-  const draggableFolders = container.querySelectorAll('.draggable-folder');
+  containers.forEach((container) => {
+    const draggableFolders = container.querySelectorAll('.draggable-folder');
 
-  draggableFolders.forEach(folder => {
-    const link = folder.querySelector('a, .link-block');
-    let isDragging = false;
-    let startX, startY;
+    draggableFolders.forEach(folder => {
+      if (!folder || folder.dataset.folderDragAttached === 'true') return;
+      folder.dataset.folderDragAttached = 'true';
+      const link = folder.querySelector('a, .link-block');
+      let isDragging = false;
+      let startX, startY;
 
-    folder.addEventListener('mousedown', function (e) {
-      e.preventDefault();
-      isDragging = false;
-      startX = e.clientX;
-      startY = e.clientY;
+      // Use click capture to prevent navigation if we just dragged
+      if (link) {
+        link.addEventListener('click', (e) => {
+          if (isDragging) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, true);
+      }
 
-      const containerRect = container.getBoundingClientRect();
-      const folderRect = folder.getBoundingClientRect();
+      folder.addEventListener('mousedown', function (e) {
+        // Only start drag on left click
+        if (e.button !== 0) return;
+        
+        e.preventDefault();
+        isDragging = false;
+        startX = e.clientX;
+        startY = e.clientY;
 
-      const offsetX = startX - folderRect.left;
-      const offsetY = startY - folderRect.top;
-
-      folder.style.position = 'absolute';
-      folder.style.left = (folderRect.left - containerRect.left) + 'px';
-      folder.style.top = (folderRect.top - containerRect.top) + 'px';
-      folder.style.width = folderRect.width + 'px';
-      folder.style.height = folderRect.height + 'px';
-      folder.style.zIndex = '9999';
-
-      const onMouseMove = (moveEvent) => {
-        const dx = moveEvent.clientX - startX;
-        const dy = moveEvent.clientY - startY;
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-          isDragging = true;
+        if (getComputedStyle(container).position === 'static') {
+          container.style.position = 'relative';
         }
 
-        const left = moveEvent.clientX - containerRect.left - offsetX;
-        const top = moveEvent.clientY - containerRect.top - offsetY;
-        folder.style.left = `${left}px`;
-        folder.style.top = `${top}px`;
-      };
+        const containerRect = container.getBoundingClientRect();
+        const folderRect = folder.getBoundingClientRect();
 
-      const onMouseUp = (upEvent) => {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-        folder.style.zIndex = '';
+        const offsetX = startX - folderRect.left;
+        const offsetY = startY - folderRect.top;
 
-        if (isDragging) {
-          const preventClick = (clickEvent) => {
-            clickEvent.preventDefault();
-            clickEvent.stopPropagation();
-            if (link) link.removeEventListener('click', preventClick, true);
-          };
-          if (link) link.addEventListener('click', preventClick, true);
-        }
-      };
+        // Promote to absolute ONLY when we actually start dragging
+        // But for now, mimic old behavior: immediately absolute on mousedown
+        folder.style.position = 'absolute';
+        folder.style.left = (folderRect.left - containerRect.left) + 'px';
+        folder.style.top = (folderRect.top - containerRect.top) + 'px';
+        folder.style.width = folderRect.width + 'px';
+        folder.style.height = folderRect.height + 'px';
+        folder.style.zIndex = '9999';
 
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp, { once: true });
+        const onMouseMove = (moveEvent) => {
+          const dx = moveEvent.clientX - startX;
+          const dy = moveEvent.clientY - startY;
+          if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+            isDragging = true;
+          }
+
+          // Clamp to container bounds? Or allow free drag?
+          // For now, match old logic: free drag relative to container
+          const left = moveEvent.clientX - containerRect.left - offsetX;
+          const top = moveEvent.clientY - containerRect.top - offsetY;
+          folder.style.left = `${left}px`;
+          folder.style.top = `${top}px`;
+        };
+
+        const onMouseUp = () => {
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+          folder.style.zIndex = '';
+          
+          // Note: We don't reset position to static/relative, 
+          // so it stays dropped where the user left it.
+          
+          // Reset drag state slightly later to let click handler fire first if needed
+          setTimeout(() => {
+             isDragging = false;
+          }, 50);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp, { once: true });
+      });
+
+      folder.ondragstart = () => false;
     });
-
-    folder.ondragstart = () => false;
   });
-});
+}
+
+// Run on load and also expose for re-running if needed (e.g. client nav)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initFolderDrag);
+} else {
+  initFolderDrag();
+}
+// Also try window load to be safe
+window.addEventListener('load', initFolderDrag);

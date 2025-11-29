@@ -21,17 +21,24 @@ function createEcho(el) {
   echo.style.position = 'absolute';
   echo.style.pointerEvents = 'none';
   echo.style.margin = '0';
+  // Use getBoundingClientRect for more accurate position relative to viewport,
+  // but we need it relative to offset parent.
+  // For simplicty, stick to style.left/top if available, otherwise offsetLeft/Top
   echo.style.left = el.style.left;
   echo.style.top = el.style.top;
   echo.style.width = style.width;
   echo.style.height = style.height;
   echo.style.opacity = ECHO_OPACITY;
   echo.style.filter = `blur(${ECHO_BLUR})`;
-  echo.style.zIndex = parseInt(style.zIndex || 0, 10) - 1; // behind original
+  // Ensure echo is behind
+  const z = parseInt(style.zIndex || 0, 10);
+  echo.style.zIndex = isNaN(z) ? -1 : z - 1;
 
   // Add echo to DOM
-  el.parentElement.appendChild(echo);
-  echos.push(echo);
+  if (el.parentElement) {
+      el.parentElement.appendChild(echo);
+      echos.push(echo);
+  }
 
   // Remove echo after specified duration without dissolve
   setTimeout(() => {
@@ -48,23 +55,43 @@ function createEcho(el) {
 
 // Setup echo effect on draggable elements
 function setupEchoEffect(draggableSelector) {
-  document.querySelectorAll(draggableSelector).forEach(draggable => {
+  const elements = document.querySelectorAll(draggableSelector);
+  
+  elements.forEach(draggable => {
+    // Avoid double-binding if run multiple times
+    if (draggable.dataset.echoAttached === 'true') return;
+    draggable.dataset.echoAttached = 'true';
+
     let lastX = null;
     let lastY = null;
 
-    draggable.addEventListener('mousedown', () => {
+    draggable.addEventListener('mousedown', (e) => {
+      // Only left click
+      if (e.button !== 0) return;
+
       // Remove breathing shadow and static shadow when dragging starts
       draggable.classList.remove('breathing-shadow');
       draggable.classList.add('no-static-shadow');
       
+      // Capture initial position
       lastX = parseInt(draggable.style.left, 10) || draggable.offsetLeft;
       lastY = parseInt(draggable.style.top, 10) || draggable.offsetTop;
 
-      const mouseMoveHandler = () => {
-        const currentX = parseInt(draggable.style.left, 10);
-        const currentY = parseInt(draggable.style.top, 10);
+      const mouseMoveHandler = (moveEvent) => {
+        // For Safari/React interop, we might be reading values before the style updates.
+        // We can use the mouse position delta if the element style isn't updating fast enough,
+        // but ideally we read the element's actual position.
+        
+        // Use getBoundingClientRect for truth, then convert to offset-relative if possible?
+        // Actually, checking style.left is usually fine if the drag handler is updating it.
+        // But if it's a transform drag (unlikely here), we need to check transform.
+        
+        const currentX = parseInt(draggable.style.left, 10) || draggable.offsetLeft;
+        const currentY = parseInt(draggable.style.top, 10) || draggable.offsetTop;
 
-        const distanceMoved = Math.sqrt(Math.pow(currentX - lastX, 2) + Math.pow(currentY - lastY, 2));
+        const dx = currentX - lastX;
+        const dy = currentY - lastY;
+        const distanceMoved = Math.sqrt(dx*dx + dy*dy);
 
         if (distanceMoved >= PIXEL_DISTANCE_FOR_ECHO) {
           createEcho(draggable);
@@ -82,12 +109,11 @@ function setupEchoEffect(draggableSelector) {
         draggable.classList.remove('no-static-shadow');
         
         // Restore breathing shadow by calling updateBreathingShadow if available
-        // This ensures the correct window (highest z-index) gets the breathing shadow
-        if (typeof updateBreathingShadow === 'function') {
+        if (typeof window.updateBreathingShadow === 'function') {
           try {
-            updateBreathingShadow();
+            window.updateBreathingShadow();
           } catch (e) {
-            // Silently fail if updateBreathingShadow has issues
+            // Silently fail
           }
         }
       }, { once: true });
@@ -96,7 +122,14 @@ function setupEchoEffect(draggableSelector) {
 }
 
 // Initialize on page load
-window.addEventListener('load', () => {
-  // Adjust selectors to match your draggable elements (e.g., '.retro-window', '.draggable-folder')
-  setupEchoEffect('.retro-window, .draggable-folder');
-});
+function initEcho() {
+    // Adjust selectors to match your draggable elements
+    setupEchoEffect('.retro-window, .draggable-folder');
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initEcho);
+} else {
+    initEcho();
+}
+window.addEventListener('load', initEcho);

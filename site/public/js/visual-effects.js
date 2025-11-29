@@ -67,17 +67,24 @@ function createEcho(el) {
   echo.style.position = 'absolute';
   echo.style.pointerEvents = 'none';
   echo.style.margin = '0';
+  // Use getBoundingClientRect for more accurate position relative to viewport,
+  // but we need it relative to offset parent.
+  // For simplicty, stick to style.left/top if available, otherwise offsetLeft/Top
   echo.style.left = el.style.left;
   echo.style.top = el.style.top;
   echo.style.width = style.width;
   echo.style.height = style.height;
   echo.style.opacity = ECHO_OPACITY;
   echo.style.filter = `blur(${ECHO_BLUR})`;
-  echo.style.zIndex = parseInt(style.zIndex || 0, 10) - 1; // behind original
+  // Ensure echo is behind
+  const z = parseInt(style.zIndex || 0, 10);
+  echo.style.zIndex = isNaN(z) ? -1 : z - 1;
 
   // Add echo to DOM
-  el.parentElement.appendChild(echo);
-  echos.push(echo);
+  if (el.parentElement) {
+      el.parentElement.appendChild(echo);
+      echos.push(echo);
+  }
 
   // Remove echo after specified duration without dissolve
   setTimeout(() => {
@@ -94,23 +101,43 @@ function createEcho(el) {
 
 // Setup echo effect on draggable elements
 function setupEchoEffect(draggableSelector) {
-  document.querySelectorAll(draggableSelector).forEach(draggable => {
+  const elements = document.querySelectorAll(draggableSelector);
+  
+  elements.forEach(draggable => {
+    // Avoid double-binding if run multiple times
+    if (draggable.dataset.echoAttached === 'true') return;
+    draggable.dataset.echoAttached = 'true';
+
     let lastX = null;
     let lastY = null;
 
-    draggable.addEventListener('mousedown', () => {
+    draggable.addEventListener('mousedown', (e) => {
+      // Only left click
+      if (e.button !== 0) return;
+
       // Remove breathing shadow and static shadow when dragging starts
       draggable.classList.remove('breathing-shadow');
       draggable.classList.add('no-static-shadow');
       
+      // Capture initial position
       lastX = parseInt(draggable.style.left, 10) || draggable.offsetLeft;
       lastY = parseInt(draggable.style.top, 10) || draggable.offsetTop;
 
-      const mouseMoveHandler = () => {
-        const currentX = parseInt(draggable.style.left, 10);
-        const currentY = parseInt(draggable.style.top, 10);
+      const mouseMoveHandler = (moveEvent) => {
+        // For Safari/React interop, we might be reading values before the style updates.
+        // We can use the mouse position delta if the element style isn't updating fast enough,
+        // but ideally we read the element's actual position.
+        
+        // Use getBoundingClientRect for truth, then convert to offset-relative if possible?
+        // Actually, checking style.left is usually fine if the drag handler is updating it.
+        // But if it's a transform drag (unlikely here), we need to check transform.
+        
+        const currentX = parseInt(draggable.style.left, 10) || draggable.offsetLeft;
+        const currentY = parseInt(draggable.style.top, 10) || draggable.offsetTop;
 
-        const distanceMoved = Math.sqrt(Math.pow(currentX - lastX, 2) + Math.pow(currentY - lastY, 2));
+        const dx = currentX - lastX;
+        const dy = currentY - lastY;
+        const distanceMoved = Math.sqrt(dx*dx + dy*dy);
 
         if (distanceMoved >= PIXEL_DISTANCE_FOR_ECHO) {
           createEcho(draggable);
@@ -128,12 +155,11 @@ function setupEchoEffect(draggableSelector) {
         draggable.classList.remove('no-static-shadow');
         
         // Restore breathing shadow by calling updateBreathingShadow if available
-        // This ensures the correct window (highest z-index) gets the breathing shadow
-        if (typeof updateBreathingShadow === 'function') {
+        if (typeof window.updateBreathingShadow === 'function') {
           try {
-            updateBreathingShadow();
+            window.updateBreathingShadow();
           } catch (e) {
-            // Silently fail if updateBreathingShadow has issues
+            // Silently fail
           }
         }
       }, { once: true });
@@ -142,10 +168,18 @@ function setupEchoEffect(draggableSelector) {
 }
 
 // Initialize on page load
-window.addEventListener('load', () => {
-  // Adjust selectors to match your draggable elements (e.g., '.retro-window', '.draggable-folder')
-  setupEchoEffect('.retro-window, .draggable-folder');
-});
+function initEcho() {
+    // Adjust selectors to match your draggable elements
+    setupEchoEffect('.retro-window, .draggable-folder');
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initEcho);
+} else {
+    initEcho();
+}
+window.addEventListener('load', initEcho);
+
 
 /* === Makes images load in a pixelated effect === */
 
@@ -346,127 +380,201 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* === Causes retro windows to be randomly positioned and  on the screen === */
-  window.addEventListener('load', () => {
-    // Only run the script if the screen is at least as wide as an iPad in landscape (1024px)
-    if (!window.matchMedia('(min-width: 1024px)').matches) {
-      return;
+window.addEventListener('load', () => {
+  // Only run the script if the screen is at least as wide as an iPad in landscape (1024px)
+  if (!window.matchMedia('(min-width: 1024px)').matches) {
+    return;
+  }
+
+  // Adjustable parameters
+  const MIN_WIDTH = 300;              // Minimum width for each retro window (in pixels)
+  const MAX_WIDTH = 475;              // Maximum width for each retro window (in pixels)
+  const MAX_HORIZONTAL_SCATTER = 125; // Maximum horizontal scatter (in pixels)
+  const MAX_VERTICAL_SCATTER = 50;   // Maximum vertical scatter (in pixels)
+
+  // Find each container that should have a cluttered desktop effect
+  const clutteredContainers = document.querySelectorAll('.cluttered-desktop-container');
+  const affectedCanvases = new Set();
+
+  clutteredContainers.forEach(container => {
+    // Ensure the container stays in place:
+    // 1. Set its position to relative (to serve as positioning context)
+    // 2. Lock in its height so that it won't collapse when children are set to absolute.
+    container.style.position = 'relative';
+    // Only lock height if not already locked, to avoid re-locking on re-runs
+    if (!container.style.height) {
+       container.style.height = container.offsetHeight + 'px';
     }
 
-    // Adjustable parameters
-    const MIN_WIDTH = 300;              // Minimum width for each retro window (in pixels)
-    const MAX_WIDTH = 475;              // Maximum width for each retro window (in pixels)
-    const MAX_HORIZONTAL_SCATTER = 125; // Maximum horizontal scatter (in pixels)
-    const MAX_VERTICAL_SCATTER = 50;   // Maximum vertical scatter (in pixels)
+    // Select all retro windows that belong to this container.
+    // They might be inside placeholders (docked) or in the float layer (floated).
+    const placeholders = container.querySelectorAll('.retro-window-placeholder');
+    const windows = [];
 
-    // Find each container that should have a cluttered desktop effect
-    const clutteredContainers = document.querySelectorAll('.cluttered-desktop-container');
+    placeholders.forEach(ph => {
+      // 1. Try to find window inside placeholder (not floated yet)
+      let win = ph.querySelector('.retro-window');
+      
+      // 2. If not found, check if it's floated
+      if (!win && ph.dataset.floatId) {
+        const canvas = ph.closest('.windowcanvas');
+        if (canvas) {
+          const layer = canvas.querySelector('.window-float-layer');
+          if (layer) {
+             win = layer.querySelector(`.retro-window[data-float-id="${ph.dataset.floatId}"], .retro-window[data-floatId="${ph.dataset.floatId}"]`);
+          }
+        }
+      }
+      
+      if (win) windows.push(win);
+    });
+    
+    // Fallback: if no placeholders found (legacy structure?), try direct query
+    if (placeholders.length === 0) {
+       const directWindows = container.querySelectorAll('.retro-window');
+       directWindows.forEach(w => windows.push(w));
+    }
 
-    clutteredContainers.forEach(container => {
-      // Ensure the container stays in place:
-      // 1. Set its position to relative (to serve as positioning context)
-      // 2. Lock in its height so that it won't collapse when children are set to absolute.
-      container.style.position = 'relative';
-      container.style.height = container.offsetHeight + 'px';
+    // Utility function to generate a random offset in the range [-max, max]
+    const randomOffset = (max) => (Math.random() < 0.5 ? -1 : 1) * Math.floor(Math.random() * (max + 1));
 
-      // Select all retro windows inside this container.
-      const windows = container.querySelectorAll('.retro-window');
+    // Filter out windows that have already been randomized to prevent re-jumping
+    const newWindows = windows.filter(win => win.dataset.scatterRandomized !== 'true');
 
-      // Utility function to generate a random offset in the range [-max, max]
-      const randomOffset = (max) => (Math.random() < 0.5 ? -1 : 1) * Math.floor(Math.random() * (max + 1));
+    newWindows.forEach(win => {
+      // Mark as randomized so we don't move it again
+      win.dataset.scatterRandomized = 'true';
 
-      const initialPositions = Array.from(windows).map(win => ({
-        element: win,
-        left: win.offsetLeft,
-        top: win.offsetTop,
-        width: win.offsetWidth,
-        height: win.offsetHeight
-      }));
+      // 1. Randomize width between MIN_WIDTH and MAX_WIDTH.
+      const randomWidth = Math.floor(Math.random() * (MAX_WIDTH - MIN_WIDTH + 1)) + MIN_WIDTH;
 
-      initialPositions.forEach(({ element: win, left: originalLeft, top: originalTop }) => {
-        // 1. Randomize width between MIN_WIDTH and MAX_WIDTH.
-        const randomWidth = Math.floor(Math.random() * (MAX_WIDTH - MIN_WIDTH + 1)) + MIN_WIDTH;
+      // 2. Randomize the z-index between 1 and 500.
+      const randomZIndex = Math.floor(Math.random() * 500) + 1;
 
-        // 2. Randomize the z-index between 1 and 500.
-        const randomZIndex = Math.floor(Math.random() * 500) + 1;
+      // 3. Calculate random horizontal and vertical offsets.
+      const deltaLeft = randomOffset(MAX_HORIZONTAL_SCATTER);
+      const deltaTop  = randomOffset(MAX_VERTICAL_SCATTER);
 
-        // 3. Calculate random horizontal and vertical offsets.
-        const deltaLeft = randomOffset(MAX_HORIZONTAL_SCATTER);
-        const deltaTop  = randomOffset(MAX_VERTICAL_SCATTER);
+      // 4. Apply scatter values to dataset for core-effects.js to pick up
+      win.dataset.scatterX = deltaLeft;
+      win.dataset.scatterY = deltaTop;
+      win.dataset.scatterWidth = randomWidth;
+      win.dataset.scatterZ = randomZIndex;
 
-        // 4. Set the window to absolute positioning and apply the adjusted positions.
-        win.style.position = 'absolute';
-        win.style.width = randomWidth + 'px';
-        win.style.zIndex = randomZIndex;
-        win.style.left = (originalLeft + deltaLeft) + 'px';
-        win.style.top  = (originalTop + deltaTop) + 'px';
-      });
+      const canvas = win.closest('.windowcanvas');
+      if (canvas) affectedCanvases.add(canvas);
     });
   });
+
+  // Trigger grid mode update to apply the scatter effects
+  if (typeof window.retroSetGridModeFor === 'function') {
+    affectedCanvases.forEach(canvas => {
+      window.retroSetGridModeFor(canvas, false);
+    });
+  } else if (typeof window.retroSetGridMode === 'function') {
+     window.retroSetGridMode(false);
+  }
+});
+
 
 /* === Makes draggable folders mimic GUI folders === */
-document.addEventListener('DOMContentLoaded', function () {
-  const container = document.querySelector('.folder-grid');
-  if (!container) return;
+function initFolderDrag() {
+  const containers = document.querySelectorAll('.folder-grid');
+  if (!containers.length) return;
 
-  const draggableFolders = container.querySelectorAll('.draggable-folder');
+  containers.forEach((container) => {
+    const draggableFolders = container.querySelectorAll('.draggable-folder');
 
-  draggableFolders.forEach(folder => {
-    const link = folder.querySelector('a, .link-block');
-    let isDragging = false;
-    let startX, startY;
+    draggableFolders.forEach(folder => {
+      if (!folder || folder.dataset.folderDragAttached === 'true') return;
+      folder.dataset.folderDragAttached = 'true';
+      const link = folder.querySelector('a, .link-block');
+      let isDragging = false;
+      let startX, startY;
 
-    folder.addEventListener('mousedown', function (e) {
-      e.preventDefault();
-      isDragging = false;
-      startX = e.clientX;
-      startY = e.clientY;
+      // Use click capture to prevent navigation if we just dragged
+      if (link) {
+        link.addEventListener('click', (e) => {
+          if (isDragging) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, true);
+      }
 
-      const containerRect = container.getBoundingClientRect();
-      const folderRect = folder.getBoundingClientRect();
+      folder.addEventListener('mousedown', function (e) {
+        // Only start drag on left click
+        if (e.button !== 0) return;
+        
+        e.preventDefault();
+        isDragging = false;
+        startX = e.clientX;
+        startY = e.clientY;
 
-      const offsetX = startX - folderRect.left;
-      const offsetY = startY - folderRect.top;
-
-      folder.style.position = 'absolute';
-      folder.style.left = (folderRect.left - containerRect.left) + 'px';
-      folder.style.top = (folderRect.top - containerRect.top) + 'px';
-      folder.style.width = folderRect.width + 'px';
-      folder.style.height = folderRect.height + 'px';
-      folder.style.zIndex = '9999';
-
-      const onMouseMove = (moveEvent) => {
-        const dx = moveEvent.clientX - startX;
-        const dy = moveEvent.clientY - startY;
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-          isDragging = true;
+        if (getComputedStyle(container).position === 'static') {
+          container.style.position = 'relative';
         }
 
-        const left = moveEvent.clientX - containerRect.left - offsetX;
-        const top = moveEvent.clientY - containerRect.top - offsetY;
-        folder.style.left = `${left}px`;
-        folder.style.top = `${top}px`;
-      };
+        const containerRect = container.getBoundingClientRect();
+        const folderRect = folder.getBoundingClientRect();
 
-      const onMouseUp = (upEvent) => {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-        folder.style.zIndex = '';
+        const offsetX = startX - folderRect.left;
+        const offsetY = startY - folderRect.top;
 
-        if (isDragging) {
-          const preventClick = (clickEvent) => {
-            clickEvent.preventDefault();
-            clickEvent.stopPropagation();
-            if (link) link.removeEventListener('click', preventClick, true);
-          };
-          if (link) link.addEventListener('click', preventClick, true);
-        }
-      };
+        // Promote to absolute ONLY when we actually start dragging
+        // But for now, mimic old behavior: immediately absolute on mousedown
+        folder.style.position = 'absolute';
+        folder.style.left = (folderRect.left - containerRect.left) + 'px';
+        folder.style.top = (folderRect.top - containerRect.top) + 'px';
+        folder.style.width = folderRect.width + 'px';
+        folder.style.height = folderRect.height + 'px';
+        folder.style.zIndex = '9999';
 
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp, { once: true });
+        const onMouseMove = (moveEvent) => {
+          const dx = moveEvent.clientX - startX;
+          const dy = moveEvent.clientY - startY;
+          if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+            isDragging = true;
+          }
+
+          // Clamp to container bounds? Or allow free drag?
+          // For now, match old logic: free drag relative to container
+          const left = moveEvent.clientX - containerRect.left - offsetX;
+          const top = moveEvent.clientY - containerRect.top - offsetY;
+          folder.style.left = `${left}px`;
+          folder.style.top = `${top}px`;
+        };
+
+        const onMouseUp = () => {
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+          folder.style.zIndex = '';
+          
+          // Note: We don't reset position to static/relative, 
+          // so it stays dropped where the user left it.
+          
+          // Reset drag state slightly later to let click handler fire first if needed
+          setTimeout(() => {
+             isDragging = false;
+          }, 50);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp, { once: true });
+      });
+
+      folder.ondragstart = () => false;
     });
-
-    folder.ondragstart = () => false;
   });
-});
+}
+
+// Run on load and also expose for re-running if needed (e.g. client nav)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initFolderDrag);
+} else {
+  initFolderDrag();
+}
+// Also try window load to be safe
+window.addEventListener('load', initFolderDrag);
+
 

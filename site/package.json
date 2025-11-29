@@ -3,10 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run watch-js\" \"next dev --turbopack\"",
-    "watch-js": "node scripts/bundle-js.js --watch",
-    "build-js": "node scripts/bundle-js.js",
-    "build": "npm run build-js && next build --turbopack",
+    "dev": "next dev --turbopack",
+    "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run"
@@ -47,8 +45,6 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.20",
-    "chokidar": "^5.0.0",
-    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
     "postcss": "^8.4.49",

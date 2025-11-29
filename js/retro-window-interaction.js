@@ -1,5 +1,6 @@
 /* === Makes retro windows interactive, with a close button, resizer, and link click handler === */
 function initRetroWindowInteractions() {
+  const legacySelector = '.retro-window:not([data-react-managed="true"])';
   // Treat touch/coarse pointers as mobile; disable drag/resize on mobile
   const isMobile = () => window.matchMedia('(pointer:coarse), (max-width: 767px)').matches;
   const setupWindow = (windowEl) => {
@@ -114,11 +115,16 @@ function initRetroWindowInteractions() {
         windowEl.style.cursor = 'default';
         windowEl.classList.remove('no-static-shadow');
         // Clear width/height constraints after dragging ends (remove important flag)
-        // For width, we must restore the pixel width because the floated element needs it to maintain layout
-        windowEl.style.width = `${lockedWidth}px`;
+        windowEl.style.removeProperty('width');
         windowEl.style.removeProperty('max-width');
         windowEl.style.removeProperty('height');
         windowEl.style.removeProperty('max-height');
+        
+        // Set dimensions explicitly as normal inline styles to prevent snap-back
+        // This preserves the size captured at the start of the drag
+        windowEl.style.width = `${lockedWidth}px`;
+        windowEl.style.height = `${lockedHeight}px`;
+
         // Restore breathing shadow by calling updateBreathingShadow if available
         if (typeof updateBreathingShadow === 'function') {
           try {
@@ -203,18 +209,18 @@ function initRetroWindowInteractions() {
   };
 
   // Initialize currently present windows (including those inside project-type lists)
-  document.querySelectorAll('.retro-window, .w-dyn-item .retro-window').forEach(setupWindow);
+  document.querySelectorAll(legacySelector).forEach(setupWindow);
 
   // Observe for windows added after client-side navigation
   const windowInteractionObserver = new MutationObserver((mutations) => {
     for (const m of mutations) {
       m.addedNodes.forEach((n) => {
         if (!(n instanceof HTMLElement)) return;
-        if (n.classList && n.classList.contains('retro-window')) {
+        if (n.matches?.(legacySelector)) {
           setupWindow(n);
         }
         // Also search within subtree
-        n.querySelectorAll && n.querySelectorAll('.retro-window').forEach(setupWindow);
+        n.querySelectorAll && n.querySelectorAll(legacySelector).forEach(setupWindow);
       });
     }
   });
