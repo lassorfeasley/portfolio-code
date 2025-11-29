@@ -13,6 +13,11 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.lassor.com'),
   title: { default: 'Lassor Feasley', template: '%s · Lassor Feasley' },
   description: 'Portfolio of Lassor Feasley: interaction, UX and industrial design, and writing.',
+  icons: {
+    icon: '/favicon-32x32.png',
+    shortcut: '/favicon-32x32.png',
+    apple: '/apple-touch-icon.png',
+  },
   openGraph: {
     type: 'website',
     url: '/',

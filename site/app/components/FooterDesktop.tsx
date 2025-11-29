@@ -47,6 +47,11 @@ export default function FooterDesktop() {
                   <Link href="/work/seatback-safety" className="iconlink w-inline-block"><div className="folder"></div><p className="navlink foldericon">Seatback Safety</p></Link>
                 </div>
               </div>
+              <div className="icon-placeholder">
+                <div className="draggable-folder">
+                  <Link href="/auth/login" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Account</div></Link>
+                </div>
+              </div>
             </div>
           </div>
         </div>

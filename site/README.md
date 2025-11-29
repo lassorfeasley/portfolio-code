@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lassor.com
 
-## Getting Started
+Next.js 15 app that hydrates Lassor’s Webflow export, fetches live content from Supabase, and now ships with a fully authenticated `/admin` dashboard for managing projects (CRUD + uploads + preview).
 
-First, run the development server:
+## Admin dashboard
+
+- Navigate to `/admin/login` and sign in with a Supabase Auth email/password account.
+- Only addresses listed in `ADMIN_ALLOWED_EMAILS` can access admin routes; middleware automatically signs out unapproved users.
+- Once signed in you can:
+  - Browse/search existing projects (draft + archived states visible).
+  - Create or edit projects with live form validation, toggle draft/archived flags, and view an embedded preview.
+  - Upload assets directly to Supabase Storage via drag-and-drop; uploaded URLs are injected into the relevant fields.
+  - Delete projects (with confirmation) and trigger automatic ISR revalidation so public pages refresh immediately.
+
+## Environment variables
+
+Set these in `.env.local` (and in your deployment provider):
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL (used by browser + middleware). |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key for client-side auth. |
+| `SUPABASE_URL` | ✅ | Server-side URL (falls back to `NEXT_PUBLIC_SUPABASE_URL`). |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Service-role key for admin CRUD/storage. Never expose client-side. |
+| `ADMIN_ALLOWED_EMAILS` | ✅ | Comma-separated list of email addresses allowed into `/admin`. |
+| `ADMIN_UPLOAD_BUCKETS` | ➖ | Comma-separated allowlist of storage buckets (default `projects`). |
+| `ADMIN_UPLOAD_BUCKET` | ➖ | Default bucket name when client omits one (default `projects`). |
+| `ADMIN_UPLOAD_MAX_BYTES` | ➖ | Optional upload size ceiling in bytes (default 25MB). |
+| `NEXT_PUBLIC_ADMIN_UPLOAD_BUCKET` | ➖ | Client-side default bucket label for uploader controls. |
+
+## Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # start Next.js locally
+npm run lint       # eslint over the repo
+npm run test       # vitest unit tests (validators, etc.)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Media uploads
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Uploads are proxied through `/api/admin/uploads` so the service-role key never hits the browser. Files are written to the bucket/prefix specified by the uploader UI (default `projects/<slug>`), and the endpoint returns the public URL that the form then attaches to featured/final/process image lists.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Testing
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run test` runs Vitest (currently covering validator logic; extend as you add more modules).
+- Add new test files under `lib/**/*.{test,spec}.ts` to keep them automatically included.
