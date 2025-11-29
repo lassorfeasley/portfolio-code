@@ -1,12 +1,10 @@
-/* === BUNDLE: Visual Effects (Non-Critical) === */
+/* === BUNDLE: visual-effects.js === */
 /* Combined: breathing-shadow-apply.js, drag-echo-effect.js, pixel-image-load-effect.js, window-randomizer.js, drag-and-drop-icons.js */
 
 /* === Causes active window to have a breathing shadow effect (the effect is stored in webflow) === */
-let cachedTopWindow = null;
-let windows = [];
 
 // Function: Find window with highest z-index
-function findTopWindow() {
+function findTopWindow(windows) {
   let topWindow = null;
   let highestZIndex = -Infinity;
 
@@ -23,63 +21,31 @@ function findTopWindow() {
 
 // Function: Update breathing shadow animation
 function updateBreathingShadow() {
-  // Only update if windows exist
-  if (windows.length === 0) {
-    windows = Array.from(document.querySelectorAll('.retro-window'));
-  }
+  const windows = document.querySelectorAll('.retro-window');
+  const topWindow = findTopWindow(windows);
 
-  const topWindow = findTopWindow();
-
-  // Only update DOM if the top window changed
-  if (topWindow !== cachedTopWindow) {
-    windows.forEach(win => {
-      if (win === topWindow) {
-        if (!win.classList.contains('breathing-shadow')) {
-          win.classList.add('breathing-shadow');
-        }
-      } else {
-        if (win.classList.contains('breathing-shadow')) {
-          win.classList.remove('breathing-shadow');
-        }
-      }
-    });
-    cachedTopWindow = topWindow;
-  }
+  windows.forEach(win => {
+    win.classList.toggle('breathing-shadow', win === topWindow);
+  });
 }
 
 // Initialize on page load
-function initBreathingShadow() {
-  windows = Array.from(document.querySelectorAll('.retro-window'));
+window.addEventListener('load', () => {
   updateBreathingShadow();
-  
-  // Less frequent polling - only check every 2 seconds as a fallback
-  setInterval(() => {
-    // Refresh windows list periodically
-    const currentWindows = document.querySelectorAll('.retro-window');
-    if (currentWindows.length !== windows.length) {
-      windows = Array.from(currentWindows);
-    }
-    updateBreathingShadow();
-  }, 2000);
-}
 
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  try { initBreathingShadow(); } catch (e) { console.error(e); }
-} else {
-  window.addEventListener('load', initBreathingShadow);
-}
+  // Re-check frequently in case z-index changes dynamically
+  setInterval(updateBreathingShadow, 500);
+});
 
-// Event delegation for better performance
-document.addEventListener('mousedown', (e) => {
-  const win = e.target.closest('.retro-window');
-  if (win) {
-    // Refresh windows list if needed
-    windows = Array.from(document.querySelectorAll('.retro-window'));
+// Optional: Immediate update when window is clicked
+document.querySelectorAll('.retro-window').forEach(win => {
+  win.addEventListener('mousedown', () => {
     setTimeout(updateBreathingShadow, 10);
-  }
-}, true);
+  });
+});
 
 /* === Causes a 'drag echo' effect when dragging elements === */
+
 // === Easy-to-configure variables ===
 const PIXEL_DISTANCE_FOR_ECHO = 10;   // How many pixels movement before leaving an echo
 const ECHO_DURATION_MS = 2000;        // How long each echo lasts (milliseconds)
@@ -89,18 +55,6 @@ const ECHO_BLUR = '0px';              // Blur applied to echoes (CSS blur)
 
 // Echo management
 let echos = [];
-
-// Throttle helper - limits how often a function can be called
-function throttle(func, limit) {
-  let inThrottle;
-  return function(...args) {
-    if (!inThrottle) {
-      func.apply(this, args);
-      inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
-    }
-  };
-}
 
 function createEcho(el) {
   // Clone the original element
@@ -140,28 +94,19 @@ function createEcho(el) {
 
 // Setup echo effect on draggable elements
 function setupEchoEffect(draggableSelector) {
-  const draggables = document.querySelectorAll(draggableSelector);
-  
-  draggables.forEach(draggable => {
-    // Skip if already initialized to prevent duplicate listeners
-    if (draggable.dataset.echoInitialized === 'true') return;
-    draggable.dataset.echoInitialized = 'true';
-    
+  document.querySelectorAll(draggableSelector).forEach(draggable => {
     let lastX = null;
     let lastY = null;
-    let mouseMoveHandler = null;
 
     draggable.addEventListener('mousedown', () => {
-      // Mark element as echo-active to disable expensive breathing shadow
-      draggable.dataset.echoActive = 'true';
       // Remove breathing shadow and static shadow when dragging starts
       draggable.classList.remove('breathing-shadow');
       draggable.classList.add('no-static-shadow');
+      
       lastX = parseInt(draggable.style.left, 10) || draggable.offsetLeft;
       lastY = parseInt(draggable.style.top, 10) || draggable.offsetTop;
 
-      // Throttled handler to reduce calls - max ~20 echoes per second
-      const checkAndCreateEcho = throttle(() => {
+      const mouseMoveHandler = () => {
         const currentX = parseInt(draggable.style.left, 10);
         const currentY = parseInt(draggable.style.top, 10);
 
@@ -172,124 +117,44 @@ function setupEchoEffect(draggableSelector) {
           lastX = currentX;
           lastY = currentY;
         }
-      }, 50);
+      };
 
-      mouseMoveHandler = checkAndCreateEcho;
       document.addEventListener('mousemove', mouseMoveHandler);
 
-      const mouseUpHandler = () => {
-        // Clean up event listener
+      document.addEventListener('mouseup', () => {
         document.removeEventListener('mousemove', mouseMoveHandler);
-        // Clear echo-active mark and request shadow recompute
-        delete draggable.dataset.echoActive;
+        
+        // Restore shadows when dragging ends
         draggable.classList.remove('no-static-shadow');
-        try { if (typeof updateBreathingShadow === 'function') updateBreathingShadow(); } catch (_) {}
-      };
-      
-      document.addEventListener('mouseup', mouseUpHandler, { once: true });
+        
+        // Restore breathing shadow by calling updateBreathingShadow if available
+        // This ensures the correct window (highest z-index) gets the breathing shadow
+        if (typeof updateBreathingShadow === 'function') {
+          try {
+            updateBreathingShadow();
+          } catch (e) {
+            // Silently fail if updateBreathingShadow has issues
+          }
+        }
+      }, { once: true });
     });
   });
 }
 
 // Initialize on page load
-function initEcho() {
-  // Initial attach
+window.addEventListener('load', () => {
+  // Adjust selectors to match your draggable elements (e.g., '.retro-window', '.draggable-folder')
   setupEchoEffect('.retro-window, .draggable-folder');
-
-  // Debounced observer to batch DOM changes and reduce overhead
-  let debounceTimer;
-  const echoObserver = new MutationObserver(() => {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      setupEchoEffect('.retro-window, .draggable-folder');
-    }, 200);
-  });
-  echoObserver.observe(document.body, { childList: true, subtree: true });
-}
-
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  try { initEcho(); } catch (e) { console.error(e); }
-} else {
-  window.addEventListener('load', initEcho);
-}
+});
 
 /* === Makes images load in a pixelated effect === */
-function initPixelImageLoadEffect() {
-  // Slightly faster steps for thumbnails to reduce time looking blocky
-  const steps = 5;
-  const totalTargetDuration = 3000;
-  const minStepDelay = 200;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const steps = 6;
+  const totalTargetDuration = 5000;
+  const minStepDelay = 250;
   const maxStepDelay = Math.max(0, (totalTargetDuration - steps * minStepDelay) / steps);
 
-  // CORS-safe draw sources for each prepared image (keyed by canvasId)
-  const drawSources = new Map();
-
-  // ---- Concurrency control (limit simultaneous animations) ----
-  const MAX_CONCURRENT = 3;
-  const running = new Set(); // canvasId set
-  const pending = [];
-  function enqueue(img, start) {
-    const id = img.dataset.canvasId;
-    if (!id) return start();
-    if (running.size < MAX_CONCURRENT) {
-      running.add(id);
-      start();
-    } else {
-      pending.push({ img, start, id });
-    }
-  }
-  function finish(id) {
-    if (id) running.delete(id);
-    while (running.size < MAX_CONCURRENT && pending.length) {
-      const item = pending.shift();
-      if (!item) break;
-      if (!item.img.isConnected || item.img.dataset.animationFinished === 'true') continue;
-      running.add(item.id);
-      item.start();
-    }
-  }
-
-  // Decide if an image should be pixelated (skip lightbox and explicit opt-outs)
-  function shouldPixelate(img) {
-    if (!(img instanceof HTMLImageElement)) return false;
-    if (img.classList && img.classList.contains('no-pixelate')) return false;
-    if (img.closest && img.closest('.lf-lightbox-backdrop')) return false;
-    return true;
-  }
-
-  function getDisplayedSize(img) {
-    const rect = img.getBoundingClientRect();
-    let w = rect.width;
-    let h = rect.height;
-    
-    // If dimensions are zero or not set, calculate from natural size
-    if (!w || !h) {
-      if (img.naturalWidth && img.naturalHeight) {
-        w = img.naturalWidth;
-        h = img.naturalHeight;
-      } else if (img.parentElement) {
-        const pr = img.parentElement.getBoundingClientRect();
-        w = pr.width || 1;
-        h = pr.height || 1;
-      } else {
-        w = 1; h = 1;
-      }
-    }
-    
-    // Constrain to parent container width if the image would overflow
-    if (img.parentElement) {
-      const parentWidth = img.parentElement.getBoundingClientRect().width;
-      if (parentWidth > 0 && w > parentWidth) {
-        const aspectRatio = h / w;
-        w = parentWidth;
-        h = w * aspectRatio;
-      }
-    }
-    
-    return { width: Math.max(1, Math.round(w)), height: Math.max(1, Math.round(h)) };
-  }
-
-  // Window-level IO: trigger all images in a window when the window nears viewport
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -298,8 +163,7 @@ function initPixelImageLoadEffect() {
       }
     });
   }, {
-    threshold: 0,            // trigger even if tiny area intersects
-    rootMargin: '400px 0px'  // start well before entering viewport
+    threshold: 0.1
   });
 
   const retroWindows = document.querySelectorAll(".retro-window");
@@ -307,11 +171,10 @@ function initPixelImageLoadEffect() {
   retroWindows.forEach(windowEl => {
     const images = windowEl.querySelectorAll("img");
     images.forEach(img => {
-      if (!shouldPixelate(img)) return;
       if (img.complete) {
         prepareInitialPixel(img);
       } else {
-        img.addEventListener("load", () => { if (shouldPixelate(img)) prepareInitialPixel(img); });
+        img.addEventListener("load", () => prepareInitialPixel(img));
       }
     });
     
@@ -337,76 +200,10 @@ function initPixelImageLoadEffect() {
     });
   });
 
-  // Observe dynamically-added windows so their images pixelate
-  // Scoped & debounced observers per windowcanvas to avoid global churn
-  document.querySelectorAll('.windowcanvas').forEach((target) => {
-    let t;
-    const mo = new MutationObserver(() => {
-      clearTimeout(t);
-      t = setTimeout(() => {
-        // Skip anything inside the lightbox
-        target.querySelectorAll('img').forEach((img) => {
-          if (!shouldPixelate(img) || img.dataset.canvasId) return;
-          if (img.complete) {
-            prepareInitialPixel(img);
-            if (isInViewport(img)) pixelate(img); else imgObserver.observe(img);
-          } else {
-            img.addEventListener('load', () => {
-              if (!shouldPixelate(img) || img.dataset.canvasId) return;
-              prepareInitialPixel(img);
-              if (isInViewport(img)) pixelate(img); else imgObserver.observe(img);
-            });
-          }
-        });
-      }, 200);
-    });
-    mo.observe(target, { childList: true, subtree: true });
-  });
-
-  // Fallback: pixelate images that are not inside .retro-window across all pages
-  // Image-level IO: robustly trigger even for tiny/late-sized images
-  const imgObserver = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return;
-      const img = entry.target;
-      imgObserver.unobserve(img);
-      // ensure prepared
-      if (!img.dataset.canvasId) prepareInitialPixel(img);
-      pixelate(img);
-    });
-  }, { threshold: 0, rootMargin: '200px 0px' });
-
-  // Exclude lightbox full-size images from pixelation using a do-not-pixelate class
-  const allImages = Array.from(document.querySelectorAll('img')).filter(shouldPixelate);
-  allImages.forEach((img) => {
-    if (img.dataset.canvasId) return;
-    if (img.complete) {
-      prepareInitialPixel(img);
-      if (isInViewport(img)) pixelate(img); else imgObserver.observe(img);
-    } else {
-      img.addEventListener('load', () => {
-        if (img.dataset.canvasId) return;
-        prepareInitialPixel(img);
-        if (isInViewport(img)) pixelate(img); else imgObserver.observe(img);
-      });
-    }
-  });
-
-  // Safety net: after first paint, ensure any visible, unanimated images are triggered
-  setTimeout(() => {
-    document.querySelectorAll('img').forEach((img) => {
-      if (img.dataset.animationFinished === 'true' || img.dataset.animationStarted === 'true') return;
-      if (!isInViewport(img)) return;
-      if (!img.dataset.canvasId) prepareInitialPixel(img);
-      pixelate(img);
-    });
-  }, 1200);
-
   function triggerImagesInWindow(windowEl) {
     windowEl.dataset.animationTriggerActivated = "true"; // Mark the window as ready for animations
     const images = windowEl.querySelectorAll("img");
     images.forEach(img => {
-      if (!shouldPixelate(img)) return;
       // Only attempt to pixelate if the image has been prepared (canvasId exists)
       // and its parent window is now marked as activated.
       // pixelate() itself has guards against re-animating.
@@ -419,72 +216,38 @@ function initPixelImageLoadEffect() {
   }
 
   function prepareInitialPixel(img) {
-    // Get actual displayed size before any manipulation
-    const size = getDisplayedSize(img);
-    
-    // Store computed display value to preserve inline vs block behavior
-    const computedDisplay = window.getComputedStyle(img).display;
-    
-    // Store original styles AND the actual displayed dimensions
+    // Store original styles
     const originalStyles = {
       width: img.style.width,
       height: img.style.height,
       position: img.style.position,
-      display: img.style.display,
-      verticalAlign: img.style.verticalAlign
+      display: img.style.display
     };
     img.dataset.originalStyles = JSON.stringify(originalStyles);
-    // Store the actual dimensions to lock them in after animation
-    img.dataset.displayWidth = size.width;
-    img.dataset.displayHeight = size.height;
-    img.dataset.computedDisplay = computedDisplay;
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    // Set canvas size to match displayed image size (robust on mobile)
-    canvas.width = size.width;
-    canvas.height = size.height;
+    // Set canvas size to match displayed image size
+    const rect = img.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
     
     canvas.style.position = "absolute";
     canvas.style.top = "0";
     canvas.style.left = "0";
     canvas.style.width = "100%";
     canvas.style.height = "100%";
-    canvas.style.objectFit = 'cover';
     canvas.style.zIndex = "2";
     canvas.style.pointerEvents = "none";
-    
-    // Store the original aspect ratio to maintain it during animation
-    const aspectRatio = size.width / size.height;
-    canvas.dataset.aspectRatio = aspectRatio;
 
     // Create wrapper
     const wrapper = document.createElement("div");
     wrapper.classList.add("pixel-loading-wrapper");
     wrapper.style.position = "relative";
     wrapper.style.display = "inline-block";
-
-    // If this image lives in a fixed-aspect thumbnail frame, let wrapper fill its parent
-    const inThumb = !!img.closest('.thumb-frame');
-    if (inThumb) {
-      wrapper.style.width = '100%';
-      wrapper.style.height = '100%';
-      img.dataset.isThumb = 'true';
-      
-      // For thumbnails, the canvas should fill the wrapper completely (like object-fit: cover)
-      // The wrapper will be constrained by the parent .thumb-frame's aspect-ratio: 4/3
-      const parentRect = img.closest('.thumb-frame').getBoundingClientRect();
-      if (parentRect.width > 0 && parentRect.height > 0) {
-        // Canvas should match the wrapper's dimensions exactly
-        canvas.width = parentRect.width;
-        canvas.height = parentRect.height;
-      }
-    } else {
-      wrapper.style.width = size.width + "px";
-      wrapper.style.height = size.height + "px";
-    }
-    wrapper.style.maxWidth = "100%";
+    wrapper.style.width = rect.width + "px";
+    wrapper.style.height = rect.height + "px";
 
     // Position image
     img.style.position = "absolute";
@@ -492,7 +255,6 @@ function initPixelImageLoadEffect() {
     img.style.left = "0";
     img.style.width = "100%";
     img.style.height = "100%";
-    img.style.objectFit = 'cover';
     img.style.visibility = "hidden";
 
     // Set up DOM structure
@@ -501,59 +263,14 @@ function initPixelImageLoadEffect() {
     wrapper.appendChild(canvas);
 
     img.dataset.canvasId = canvas.id = "canvas-" + Math.random().toString(36).slice(2);
+    drawPixelStep(img, canvas, ctx, steps); // Draw initial highly pixelated state
 
-    // Prepare a CORS-enabled draw source so canvas drawImage is allowed
-    const srcImg = new Image();
-    srcImg.crossOrigin = 'anonymous';
-    srcImg.decoding = 'async';
-    srcImg.src = img.currentSrc || img.src;
-    const doInitialDraw = () => {
-      drawSources.set(canvas.id, srcImg);
-      try { drawPixelStep(img, canvas, ctx, steps); } catch (_) {}
-      const parentWindow = img.closest('.retro-window');
-      if (parentWindow && parentWindow.dataset.animationTriggerActivated === "true") {
-        pixelate(img);
-      }
-    };
-    const handleError = () => {
-      try {
-        // If transformer URL failed, swap both the DOM img and draw source to original object URL
-        const toOriginal = (url) => {
-          try {
-            const u = new URL(url, window.location.href);
-            if (/\/storage\/v1\/render\/image\//.test(u.pathname)) {
-              u.pathname = u.pathname.replace('/storage/v1/render/image/', '/storage/v1/object/');
-              u.search = '';
-              return u.toString();
-            }
-            return url;
-          } catch { return url; }
-        };
-        const fallbackUrl = toOriginal(img.currentSrc || img.src);
-        if (fallbackUrl && fallbackUrl !== (img.currentSrc || img.src)) {
-          img.crossOrigin = '';
-          img.src = fallbackUrl;
-        }
-        const drawFallback = toOriginal(srcImg.src);
-        if (drawFallback && drawFallback !== srcImg.src) {
-          srcImg.crossOrigin = '';
-          srcImg.onload = doInitialDraw;
-          srcImg.onerror = () => { /* if this also fails, reveal img via finalize safety */ };
-          srcImg.src = drawFallback;
-          return;
-        }
-        // As an ultimate fallback, reveal image and remove canvas
-        const wrapper = canvas.parentElement;
-        if (wrapper) {
-          img.style.visibility = 'visible';
-          canvas.remove();
-        }
-      } catch (_) {}
-    };
-    if (srcImg.complete && srcImg.naturalWidth > 0) doInitialDraw();
-    else {
-      srcImg.onload = doInitialDraw;
-      srcImg.onerror = handleError;
+    // Check if the parent window is already activated for animations
+    const parentWindow = img.closest('.retro-window');
+    if (parentWindow && parentWindow.dataset.animationTriggerActivated === "true") {
+      // If so, and the canvas is ready (which it is at this point), trigger animation for this image.
+      // pixelate() has its own guards to prevent re-animation if already started/finished.
+      pixelate(img);
     }
   }
 
@@ -576,322 +293,124 @@ function initPixelImageLoadEffect() {
     }
     img.dataset.animationStarted = "true";
 
-    const ctx = canvas.getContext("2d", { alpha: false });
+    const ctx = canvas.getContext("2d");
 
-    // Ensure we have a CORS-safe draw source before starting
-    const src = drawSources.get(img.dataset.canvasId);
-    if (!src || !src.complete || src.naturalWidth === 0) {
-      const tmp = new Image();
-      tmp.crossOrigin = 'anonymous';
-      tmp.decoding = 'async';
-      tmp.src = img.currentSrc || img.src;
-      tmp.onload = () => { drawSources.set(img.dataset.canvasId, tmp); /* will start in enqueue below */ };
-      tmp.onerror = () => { /* fallback to finalize via safety timeout */ };
-    }
+    let currentStep = 0;
 
-    const isThumb = img.dataset.isThumb === 'true';
-    const localSteps = isThumb ? 3 : steps;
-    const durationMs = isThumb ? 1500 : 3000;
+    function doStep() {
+      if (currentStep > steps) {
+        const wrapper = canvas.parentElement;
 
-    // Idempotent finalizer to ensure we always reveal the image
-    function finalize() {
-      if (img.dataset.animationFinished === "true") return;
-      const canvas = document.getElementById(img.dataset.canvasId || "");
-      const wrapper = canvas ? canvas.parentElement : img.closest('.pixel-loading-wrapper');
-      if (!wrapper) return;
+        // Restore original styles
+        const originalStyles = JSON.parse(img.dataset.originalStyles || '{}');
+        Object.entries(originalStyles).forEach(([prop, value]) => {
+          img.style[prop] = value;
+        });
 
-      // Reveal image and restore natural positioning inside wrapper
-      img.style.position = "";
-      img.style.top = "";
-      img.style.left = "";
-      img.style.visibility = "visible";
+        img.style.visibility = "visible";
+        // img.style.position = "static"; // This line is removed as originalStyles should handle position restoration.
 
-      // If this was a thumbnail inside a fixed-aspect frame, keep wrapper fluid
-      const isThumb = img.dataset.isThumb === 'true' || (img.closest && img.closest('.thumb-frame'));
-      if (isThumb) {
-        wrapper.style.width = '100%';
-        wrapper.style.height = '100%';
-        img.style.width = "100%";
-        img.style.height = "100%";
-        img.style.maxWidth = "none";
-        img.style.maxHeight = "none";
-        try { img.style.objectFit = 'cover'; } catch (_) {}
-      } else {
-        // For non-thumbnail images, lock wrapper to measured px to avoid reflow/jumps
-        const displayWidth = parseInt(img.dataset.displayWidth || '0', 10);
-        const displayHeight = parseInt(img.dataset.displayHeight || '0', 10);
-        if (displayWidth && displayHeight) {
-          wrapper.style.width = displayWidth + "px";
-          wrapper.style.height = displayHeight + "px";
-        }
-        img.style.width = "100%";
-        img.style.height = "100%";
-        img.style.maxWidth = "none";
-        img.style.maxHeight = "none";
+        // Move image back to original position
+        wrapper.parentNode.insertBefore(img, wrapper);
+        wrapper.remove();
+
+        delete img.dataset.animationStarted;
+        img.dataset.animationFinished = "true";
+        return;
       }
 
-      // Remove the canvas overlay if present
-      if (canvas && canvas.parentElement) canvas.remove();
-
-      delete img.dataset.animationStarted;
-      img.dataset.animationFinished = "true";
-      drawSources.delete(img.dataset.canvasId);
-      finish(img.dataset.canvasId);
+      drawPixelStep(img, canvas, ctx, steps - currentStep);
+      currentStep++;
+      const randomDelay = minStepDelay + Math.floor(Math.random() * maxStepDelay);
+      setTimeout(doStep, randomDelay);
     }
-    // Safety net: force completion if timers are throttled or interrupted
-    setTimeout(finalize, durationMs + 2000);
 
-    // rAF-driven animation using a reusable downCanvas
-    const downCanvas = (function() {
-      if ('OffscreenCanvas' in window) return new OffscreenCanvas(1, 1);
-      const c = document.createElement('canvas');
-      c.width = c.height = 1; return c;
-    })();
-
-    const source = drawSources.get(img.dataset.canvasId) || img;
-    let startTime = 0;
-    let lastStep = -1;
-
-    enqueue(img, () => {
-      function frame(ts) {
-        if (img.dataset.animationFinished === 'true') return;
-        if (!startTime) startTime = ts;
-        const t = Math.min(1, (ts - startTime) / durationMs);
-        const step = Math.max(0, Math.round((1 - t) * localSteps));
-        if (step !== lastStep) {
-          lastStep = step;
-          // Draw current step
-          const pixelSize = Math.max(1, Math.pow(2, step));
-          const dc = downCanvas;
-          dc.width = Math.max(1, Math.round(canvas.width / pixelSize));
-          dc.height = Math.max(1, Math.round(canvas.height / pixelSize));
-          const dctx = dc.getContext('2d', { alpha: false });
-          dctx.imageSmoothingEnabled = false;
-          try {
-            dctx.clearRect(0, 0, dc.width, dc.height);
-            
-            // For thumbnails, we need to crop the image to fit the canvas (like object-fit: cover)
-            if (img.dataset.isThumb === 'true') {
-              // Calculate source and destination rectangles for object-fit: cover behavior
-              const sourceAspectRatio = source.width / source.height;
-              const canvasAspectRatio = dc.width / dc.height;
-              
-              let sourceX = 0, sourceY = 0, sourceWidth = source.width, sourceHeight = source.height;
-              
-              if (sourceAspectRatio > canvasAspectRatio) {
-                // Source is wider - crop width
-                sourceWidth = source.height * canvasAspectRatio;
-                sourceX = (source.width - sourceWidth) / 2;
-              } else {
-                // Source is taller - crop height
-                sourceHeight = source.width / canvasAspectRatio;
-                sourceY = (source.height - sourceHeight) / 2;
-              }
-              
-              dctx.drawImage(source, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, dc.width, dc.height);
-            } else {
-              // For non-thumbnails, draw normally
-              dctx.drawImage(source, 0, 0, dc.width, dc.height);
-            }
-            
-            ctx.imageSmoothingEnabled = false;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(dc, 0, 0, canvas.width, canvas.height);
-          } catch {}
-        }
-        if (t < 1) {
-          requestAnimationFrame(frame);
-        } else {
-          finalize();
-        }
-      }
-      requestAnimationFrame(frame);
-    });
+    doStep();
   }
 
   function drawPixelStep(img, canvas, ctx, exponent) {
+    const rect = img.getBoundingClientRect();
     const pixelSize = Math.pow(2, exponent);
-    const source = (img && img.dataset && drawSources.get(img.dataset.canvasId)) || img;
+
     const downCanvas = document.createElement("canvas");
-    downCanvas.width = Math.max(1, Math.round(canvas.width / pixelSize));
-    downCanvas.height = Math.max(1, Math.round(canvas.height / pixelSize));
+    downCanvas.width = rect.width / pixelSize;
+    downCanvas.height = rect.height / pixelSize;
     const downCtx = downCanvas.getContext("2d");
     downCtx.imageSmoothingEnabled = false;
-    try {
-      downCtx.drawImage(source, 0, 0, downCanvas.width, downCanvas.height);
-    } catch (_) {
-      // If draw fails (e.g., broken image), skip this step silently
-      return;
-    }
+    downCtx.drawImage(img, 0, 0, downCanvas.width, downCanvas.height);
 
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    try {
-      ctx.drawImage(downCanvas, 0, 0, canvas.width, canvas.height);
-    } catch (_) { /* ignore */ }
+    ctx.drawImage(downCanvas, 0, 0, canvas.width, canvas.height);
   }
+});
 
-  function isInViewport(el) {
-    const r = el.getBoundingClientRect();
-    return r.top < window.innerHeight && r.bottom > 0 && r.left < window.innerWidth && r.right > 0;
-  }
-}
+/* === Causes retro windows to be randomly positioned and  on the screen === */
+  window.addEventListener('load', () => {
+    // Only run the script if the screen is at least as wide as an iPad in landscape (1024px)
+    if (!window.matchMedia('(min-width: 1024px)').matches) {
+      return;
+    }
 
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  try { initPixelImageLoadEffect(); } catch (e) { console.error(e); }
-} else {
-  document.addEventListener('DOMContentLoaded', initPixelImageLoadEffect);
-}
+    // Adjustable parameters
+    const MIN_WIDTH = 300;              // Minimum width for each retro window (in pixels)
+    const MAX_WIDTH = 475;              // Maximum width for each retro window (in pixels)
+    const MAX_HORIZONTAL_SCATTER = 125; // Maximum horizontal scatter (in pixels)
+    const MAX_VERTICAL_SCATTER = 50;   // Maximum vertical scatter (in pixels)
 
-/* === Retro window scatter orchestrator === */
-const DESKTOP_SCATTER_QUERY = '(min-width: 1024px)';
-const isDesktopScatterViewport = () =>
-  window.matchMedia(DESKTOP_SCATTER_QUERY).matches && window.innerWidth >= 1024;
+    // Find each container that should have a cluttered desktop effect
+    const clutteredContainers = document.querySelectorAll('.cluttered-desktop-container');
 
-const scatterDefaults = {
-  minWidth: 300,
-  maxWidth: 475,
-  scatterX: 125,
-  scatterY: 60,
-  safeSidePadding: 16,
-  safeBottomPadding: 80,
-  allowOverflowX: 100,
-  allowOverflowY: 150,
-  seed: 'retro-scatter',
-};
+    clutteredContainers.forEach(container => {
+      // Ensure the container stays in place:
+      // 1. Set its position to relative (to serve as positioning context)
+      // 2. Lock in its height so that it won't collapse when children are set to absolute.
+      container.style.position = 'relative';
+      container.style.height = container.offsetHeight + 'px';
 
-const scatterDebounce = (fn, wait = 150) => {
-  let timeoutId;
-  return (...args) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn.apply(null, args), wait);
-  };
-};
+      // Select all retro windows inside this container.
+      const windows = container.querySelectorAll('.retro-window');
 
-function initRandomizer() {
-  if (!isDesktopScatterViewport()) return;
-  const store = window.RetroWindowStore;
-  const engine = window.RetroScatterEngine;
-  if (!store || !engine) {
-    console.warn('RetroWindowStore or RetroScatterEngine unavailable');
-    return;
-  }
-  const containers = document.querySelectorAll('.cluttered-desktop-container');
-  if (!containers.length) return;
-  const controllers = Array.from(containers).map((container, index) => {
-    const seed =
-      container.dataset.scatterSeed ||
-      container.dataset.sectionId ||
-      container.id ||
-      `canvas-${index}`;
-    return engine.registerCanvas(container, { ...scatterDefaults, seed });
-  }).filter(Boolean);
-  if (!controllers.length) return;
-  requestAnimationFrame(() => {
-    controllers.forEach((controller) => {
-      try {
-        controller.run();
-      } catch (err) {
-        console.error('Scatter controller failed', err);
-      }
+      // Utility function to generate a random offset in the range [-max, max]
+      const randomOffset = (max) => (Math.random() < 0.5 ? -1 : 1) * Math.floor(Math.random() * (max + 1));
+
+      const initialPositions = Array.from(windows).map(win => ({
+        element: win,
+        left: win.offsetLeft,
+        top: win.offsetTop,
+        width: win.offsetWidth,
+        height: win.offsetHeight
+      }));
+
+      initialPositions.forEach(({ element: win, left: originalLeft, top: originalTop }) => {
+        // 1. Randomize width between MIN_WIDTH and MAX_WIDTH.
+        const randomWidth = Math.floor(Math.random() * (MAX_WIDTH - MIN_WIDTH + 1)) + MIN_WIDTH;
+
+        // 2. Randomize the z-index between 1 and 500.
+        const randomZIndex = Math.floor(Math.random() * 500) + 1;
+
+        // 3. Calculate random horizontal and vertical offsets.
+        const deltaLeft = randomOffset(MAX_HORIZONTAL_SCATTER);
+        const deltaTop  = randomOffset(MAX_VERTICAL_SCATTER);
+
+        // 4. Set the window to absolute positioning and apply the adjusted positions.
+        win.style.position = 'absolute';
+        win.style.width = randomWidth + 'px';
+        win.style.zIndex = randomZIndex;
+        win.style.left = (originalLeft + deltaLeft) + 'px';
+        win.style.top  = (originalTop + deltaTop) + 'px';
+      });
     });
   });
-}
-
-// Clean up inline styles on mobile to ensure proper stacking
-function cleanupMobileStyles() {
-  if (isDesktopScatterViewport()) return;
-  const store = window.RetroWindowStore;
-  store?.clearPresentation();
-
-  const containers = document.querySelectorAll('.cluttered-desktop-container, .windowcanvas.onetwogrid, .windowcanvas.twoonegrid, .desktopgrid, .onetwogrid, .twoonegrid');
-  containers.forEach(container => {
-    container.style.position = '';
-    container.style.height = '';
-    container.style.minHeight = '';
-  });
-
-  const gridSelectors = [
-    '.cluttered-desktop-container > .retro-window',
-    '.cluttered-desktop-container > .retro-window-placeholder',
-    '.windowcanvas > .retro-window',
-    '.windowcanvas > .retro-window-placeholder',
-    '.desktopgrid > .retro-window',
-    '.desktopgrid > .retro-window-placeholder',
-    '.onetwogrid > .retro-window',
-    '.onetwogrid > .retro-window-placeholder',
-    '.twoonegrid > .retro-window',
-    '.twoonegrid > .retro-window-placeholder'
-  ];
-
-  const windows = document.querySelectorAll(gridSelectors.join(', '));
-  windows.forEach(win => {
-    win.style.position = '';
-    win.style.left = '';
-    win.style.top = '';
-    win.style.right = '';
-    win.style.bottom = '';
-    win.style.width = '';
-    win.style.maxWidth = '';
-    win.style.height = '';
-    win.style.transform = '';
-    win.style.margin = '';
-    win.style.zIndex = '';
-    win.style.removeProperty('--retro-translate-x');
-    win.style.removeProperty('--retro-translate-y');
-    win.style.removeProperty('--retro-width');
-    win.style.removeProperty('--retro-z');
-  });
-}
-
-const handleScatterForViewport = () => {
-  if (isDesktopScatterViewport()) {
-    initRandomizer();
-  } else {
-    cleanupMobileStyles();
-  }
-};
-
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  handleScatterForViewport();
-} else {
-  window.addEventListener('load', handleScatterForViewport);
-}
-
-window.addEventListener('resize', scatterDebounce(handleScatterForViewport, 200));
-
-(function ensureRandomizerRuns() {
-  let started = false;
-  const observer = new MutationObserver(() => {
-    if (started) return;
-    if (document.querySelector('.cluttered-desktop-container')) {
-      started = true;
-      handleScatterForViewport();
-      observer.disconnect();
-    }
-  });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-  if (document.querySelector('.cluttered-desktop-container')) {
-    started = true;
-    handleScatterForViewport();
-    observer.disconnect();
-  }
-})();
 
 /* === Makes draggable folders mimic GUI folders === */
-function initFolderDrags(root) {
-  const isMobile = () => window.matchMedia('(pointer:coarse), (max-width: 767px)').matches;
-  const containers = (root ? Array.from(root.querySelectorAll('.folder-grid')) : Array.from(document.querySelectorAll('.folder-grid')));
-  if (!root && document.querySelector('.folder-grid')) {
-    // also include top-level if root is not provided
-    containers.unshift(document.querySelector('.folder-grid'));
-  }
+document.addEventListener('DOMContentLoaded', function () {
+  const container = document.querySelector('.folder-grid');
+  if (!container) return;
 
-  containers.filter(Boolean).forEach((container) => {
-    const draggableFolders = container.querySelectorAll('.draggable-folder');
+  const draggableFolders = container.querySelectorAll('.draggable-folder');
 
-    draggableFolders.forEach(folder => {
-    if (isMobile()) return; // disable folder dragging on mobile
+  draggableFolders.forEach(folder => {
     const link = folder.querySelector('a, .link-block');
     let isDragging = false;
     let startX, startY;
@@ -947,29 +466,7 @@ function initFolderDrags(root) {
       document.addEventListener('mouseup', onMouseUp, { once: true });
     });
 
-      folder.ondragstart = () => false;
-    });
+    folder.ondragstart = () => false;
   });
-}
-
-// Run now if DOM is ready, otherwise wait
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => initFolderDrags());
-} else {
-  initFolderDrags();
-}
-
-// Observe for dynamically added folder grids
-const folderObserver = new MutationObserver((mutations) => {
-  for (const m of mutations) {
-    m.addedNodes.forEach((n) => {
-      if (!(n instanceof HTMLElement)) return;
-      if (n.matches && n.matches('.folder-grid')) initFolderDrags(n);
-      else if (n.querySelectorAll) {
-        const grids = n.querySelectorAll('.folder-grid');
-        if (grids.length) initFolderDrags(n);
-      }
-    });
-  }
 });
-folderObserver.observe(document.body, { childList: true, subtree: true });
+

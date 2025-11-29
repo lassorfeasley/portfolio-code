@@ -4,3 +4,6 @@ import './drag-echo-effect.js';
 import './pixel-image-load-effect.js';
 import './retro-window-interaction.js';
 import './window-randomizer.js';
+import './windowcanvas-lock.js';
+import './window-float-layer.js';
+import './supabase-image-fallback.js';
