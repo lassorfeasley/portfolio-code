@@ -21,7 +21,7 @@ export default async function AdminDashboardPage() {
         'id,name,slug,description,featured_image_url,images_urls,process_image_urls,process_images_label,process_and_context_html,year,linked_document_url,video_url,fallback_writing_url,project_type_id,draft,archived,created_at,updated_at'
       )
       .order('updated_at', { ascending: false, nullsFirst: false }),
-    adminClient.from('project_types').select('id,name,slug').order('name', { ascending: true }),
+    adminClient.from('project_types').select('id,name,slug,category,draft,archived').order('name', { ascending: true }),
   ]);
 
   if (projectsError || projectTypesError) {

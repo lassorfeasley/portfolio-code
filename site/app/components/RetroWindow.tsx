@@ -101,9 +101,11 @@ export default function RetroWindow({
         el.style.removeProperty('height');
         el.style.removeProperty('max-height');
         // Restore breathing shadow by calling updateBreathingShadow if available
-        if (typeof updateBreathingShadow === 'function') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (typeof (window as any).updateBreathingShadow === 'function') {
           try {
-            updateBreathingShadow();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (window as any).updateBreathingShadow();
           } catch (e) {
             // Silently fail if updateBreathingShadow has issues
           }

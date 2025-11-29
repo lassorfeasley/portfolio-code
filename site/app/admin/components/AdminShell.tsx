@@ -49,9 +49,8 @@ export function AdminShell({ userEmail, children }: AdminShellProps) {
             <Button
               key={item.href}
               asChild
-              disabled={item.disabled}
               variant={pathname === item.href ? 'secondary' : 'ghost'}
-              className={cn('justify-start', item.disabled && 'cursor-not-allowed opacity-60')}
+              className="justify-start"
             >
               <Link href={item.href}>{item.label}</Link>
             </Button>
