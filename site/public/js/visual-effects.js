@@ -154,7 +154,8 @@ function setupEchoEffect(draggableSelector) {
     draggable.addEventListener('mousedown', () => {
       // Mark element as echo-active to disable expensive breathing shadow
       draggable.dataset.echoActive = 'true';
-      // Also remove heavy static blur shadow while echoing
+      // Remove breathing shadow and static shadow when dragging starts
+      draggable.classList.remove('breathing-shadow');
       draggable.classList.add('no-static-shadow');
       lastX = parseInt(draggable.style.left, 10) || draggable.offsetLeft;
       lastY = parseInt(draggable.style.top, 10) || draggable.offsetTop;

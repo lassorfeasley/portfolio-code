@@ -5231,10 +5231,10 @@ a {
   }
 }
 
-/* Disable only the blurred drop shadow when echo effect is active on a window.
-   Preserve offset stroke shadow and keep breathing-shadow unaffected. */
-.retro-window.no-static-shadow:not(.breathing-shadow) {
-  box-shadow: 10px 10px 0 -1px var(--stroke) !important;
+/* Disable all shadows when echo effect is active on a window (during drag).
+   Remove both blurred drop shadow and offset stroke shadow. */
+.retro-window.no-static-shadow {
+  box-shadow: none !important;
 }
 
 #w-node-_38ebf15a-819b-09f4-cd49-03e45cf325e1-54a3410e {

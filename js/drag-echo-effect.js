@@ -53,6 +53,10 @@ function setupEchoEffect(draggableSelector) {
     let lastY = null;
 
     draggable.addEventListener('mousedown', () => {
+      // Remove breathing shadow and static shadow when dragging starts
+      draggable.classList.remove('breathing-shadow');
+      draggable.classList.add('no-static-shadow');
+      
       lastX = parseInt(draggable.style.left, 10) || draggable.offsetLeft;
       lastY = parseInt(draggable.style.top, 10) || draggable.offsetTop;
 
@@ -73,6 +77,19 @@ function setupEchoEffect(draggableSelector) {
 
       document.addEventListener('mouseup', () => {
         document.removeEventListener('mousemove', mouseMoveHandler);
+        
+        // Restore shadows when dragging ends
+        draggable.classList.remove('no-static-shadow');
+        
+        // Restore breathing shadow by calling updateBreathingShadow if available
+        // This ensures the correct window (highest z-index) gets the breathing shadow
+        if (typeof updateBreathingShadow === 'function') {
+          try {
+            updateBreathingShadow();
+          } catch (e) {
+            // Silently fail if updateBreathingShadow has issues
+          }
+        }
       }, { once: true });
     });
   });

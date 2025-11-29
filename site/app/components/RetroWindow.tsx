@@ -57,7 +57,8 @@ export default function RetroWindow({
     const onHeaderDown = (e: MouseEvent) => {
       if (disableDrag || isMobile()) return;
       e.preventDefault();
-      // During active dragging, drop expensive static shadow
+      // During active dragging, remove breathing shadow and drop expensive static shadow
+      el.classList.remove('breathing-shadow');
       el.classList.add('no-static-shadow');
       dragging = true; bringToFront();
       // Lock size before taking out of normal flow to prevent resize while dragging
@@ -74,7 +75,21 @@ export default function RetroWindow({
       el.style.left = `${e.pageX - ox}px`;
       el.style.top  = `${e.pageY - oy}px`;
     };
-    const onUp = () => { if (dragging) { dragging = false; el.style.cursor = 'default'; el.classList.remove('no-static-shadow'); } };
+    const onUp = () => { 
+      if (dragging) { 
+        dragging = false; 
+        el.style.cursor = 'default'; 
+        el.classList.remove('no-static-shadow');
+        // Restore breathing shadow by calling updateBreathingShadow if available
+        if (typeof updateBreathingShadow === 'function') {
+          try {
+            updateBreathingShadow();
+          } catch (e) {
+            // Silently fail if updateBreathingShadow has issues
+          }
+        }
+      } 
+    };
     header?.addEventListener('mousedown', onHeaderDown);
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);

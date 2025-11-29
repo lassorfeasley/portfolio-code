@@ -435,6 +435,8 @@ function initRetroWindowInteractions() {
       e.preventDefault();
       try { if (typeof window.retroFloatWindow === 'function') window.retroFloatWindow(windowEl); } catch (_) {}
       isDragging = true;
+      // Remove breathing shadow and static shadow when dragging starts
+      windowEl.classList.remove('breathing-shadow');
       windowEl.classList.add('no-static-shadow');
       bringToFront();
 
@@ -479,6 +481,14 @@ function initRetroWindowInteractions() {
         isDragging = false;
         windowEl.style.cursor = 'default';
         windowEl.classList.remove('no-static-shadow');
+        // Restore breathing shadow by calling updateBreathingShadow if available
+        if (typeof updateBreathingShadow === 'function') {
+          try {
+            updateBreathingShadow();
+          } catch (e) {
+            // Silently fail if updateBreathingShadow has issues
+          }
+        }
       }
     });
 
