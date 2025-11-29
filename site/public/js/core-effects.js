@@ -430,6 +430,8 @@ function initRetroWindowInteractions() {
     // ---------------------------------------------------
     let isDragging = false;
     let offsetX = 0, offsetY = 0;
+    let lockedWidth = 0;
+    let lockedHeight = 0;
     header.addEventListener('mousedown', (e) => {
       if (isMobile()) return; // disable header drag on mobile
       e.preventDefault();
@@ -442,8 +444,17 @@ function initRetroWindowInteractions() {
 
       // Lock current size before taking the element out of normal flow
       const rect = windowEl.getBoundingClientRect();
-      windowEl.style.width = `${rect.width}px`;
-      windowEl.style.height = `${rect.height}px`;
+      lockedWidth = rect.width;
+      lockedHeight = rect.height;
+      
+      // Set position first, then enforce width with !important to override CSS rules
+      windowEl.style.position = 'absolute';
+      // Use setProperty with important flag to override CSS !important rules
+      windowEl.style.setProperty('width', `${lockedWidth}px`, 'important');
+      windowEl.style.setProperty('max-width', `${lockedWidth}px`, 'important');
+      windowEl.style.setProperty('height', `${lockedHeight}px`, 'important');
+      windowEl.style.setProperty('max-height', `${lockedHeight}px`, 'important');
+      
       const currentLeft = parseInt(windowEl.style.left, 10) || windowEl.offsetLeft;
       const currentTop  = parseInt(windowEl.style.top, 10) || windowEl.offsetTop;
       const canvas = windowEl.closest('.windowcanvas');
@@ -452,23 +463,25 @@ function initRetroWindowInteractions() {
       offsetX = (e.pageX - canvasRect.left) - currentLeft;
       offsetY = (e.pageY - canvasRect.top)  - currentTop;
       windowEl.style.cursor = 'grabbing';
-      windowEl.style.position = 'absolute';
     });
     document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
+      // Re-enforce width/height during drag to prevent CSS from overriding
+      windowEl.style.setProperty('width', `${lockedWidth}px`, 'important');
+      windowEl.style.setProperty('max-width', `${lockedWidth}px`, 'important');
+      windowEl.style.setProperty('height', `${lockedHeight}px`, 'important');
+      windowEl.style.setProperty('max-height', `${lockedHeight}px`, 'important');
       // Clamp drag within its canvas using layer-relative coordinates
       const canvas = windowEl.closest('.windowcanvas');
       const canvasRect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-      const width = parseInt(window.getComputedStyle(windowEl).width, 10);
-      const height = parseInt(window.getComputedStyle(windowEl).height, 10);
       const SAFE_SIDE_PADDING = 16;
       const SAFE_BOTTOM_PADDING = 80;
       const ALLOW_OVERFLOW_X = 100;
       const ALLOW_OVERFLOW_Y = 150;
       const minLeft = -ALLOW_OVERFLOW_X;
-      const maxLeft = canvasRect.width - width + ALLOW_OVERFLOW_X;
+      const maxLeft = canvasRect.width - lockedWidth + ALLOW_OVERFLOW_X;
       const minTop = -ALLOW_OVERFLOW_Y;
-      const maxTop = canvasRect.height - height + Math.max(0, ALLOW_OVERFLOW_Y - SAFE_BOTTOM_PADDING);
+      const maxTop = canvasRect.height - lockedHeight + Math.max(0, ALLOW_OVERFLOW_Y - SAFE_BOTTOM_PADDING);
       const pointerX = e.pageX - canvasRect.left;
       const pointerY = e.pageY - canvasRect.top;
       const targetLeft = Math.min(maxLeft, Math.max(minLeft, pointerX - offsetX));
@@ -481,6 +494,11 @@ function initRetroWindowInteractions() {
         isDragging = false;
         windowEl.style.cursor = 'default';
         windowEl.classList.remove('no-static-shadow');
+        // Clear width/height constraints after dragging ends (remove important flag)
+        windowEl.style.removeProperty('width');
+        windowEl.style.removeProperty('max-width');
+        windowEl.style.removeProperty('height');
+        windowEl.style.removeProperty('max-height');
         // Restore breathing shadow by calling updateBreathingShadow if available
         if (typeof updateBreathingShadow === 'function') {
           try {

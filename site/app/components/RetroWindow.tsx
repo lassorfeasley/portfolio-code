@@ -54,6 +54,8 @@ export default function RetroWindow({
 
     // Drag
     let dragging = false; let ox = 0; let oy = 0;
+    let lockedWidth = 0;
+    let lockedHeight = 0;
     const onHeaderDown = (e: MouseEvent) => {
       if (disableDrag || isMobile()) return;
       e.preventDefault();
@@ -63,15 +65,28 @@ export default function RetroWindow({
       dragging = true; bringToFront();
       // Lock size before taking out of normal flow to prevent resize while dragging
       const rect = el.getBoundingClientRect();
-      el.style.width = `${rect.width}px`;
-      el.style.height = `${rect.height}px`;
+      lockedWidth = rect.width;
+      lockedHeight = rect.height;
+      
+      // Set position first, then enforce width with !important to override CSS rules
+      el.style.position = 'absolute';
+      // Use setProperty with important flag to override CSS !important rules
+      el.style.setProperty('width', `${lockedWidth}px`, 'important');
+      el.style.setProperty('max-width', `${lockedWidth}px`, 'important');
+      el.style.setProperty('height', `${lockedHeight}px`, 'important');
+      el.style.setProperty('max-height', `${lockedHeight}px`, 'important');
+      
       const left = parseInt(el.style.left || String(el.offsetLeft), 10) || el.offsetLeft;
       const top  = parseInt(el.style.top  || String(el.offsetTop),  10) || el.offsetTop;
       ox = e.pageX - left; oy = e.pageY - top; el.style.cursor = 'grabbing';
-      el.style.position = 'absolute';
     };
     const onMove = (e: MouseEvent) => {
       if (!dragging) return;
+      // Re-enforce width/height during drag to prevent CSS from overriding
+      el.style.setProperty('width', `${lockedWidth}px`, 'important');
+      el.style.setProperty('max-width', `${lockedWidth}px`, 'important');
+      el.style.setProperty('height', `${lockedHeight}px`, 'important');
+      el.style.setProperty('max-height', `${lockedHeight}px`, 'important');
       el.style.left = `${e.pageX - ox}px`;
       el.style.top  = `${e.pageY - oy}px`;
     };
@@ -80,6 +95,11 @@ export default function RetroWindow({
         dragging = false; 
         el.style.cursor = 'default'; 
         el.classList.remove('no-static-shadow');
+        // Clear width/height constraints after dragging ends (remove important flag)
+        el.style.removeProperty('width');
+        el.style.removeProperty('max-width');
+        el.style.removeProperty('height');
+        el.style.removeProperty('max-height');
         // Restore breathing shadow by calling updateBreathingShadow if available
         if (typeof updateBreathingShadow === 'function') {
           try {
@@ -101,7 +121,7 @@ export default function RetroWindow({
     // Resize
     let resizing = false; let sx = 0; let sy = 0; let sw = 0; let sh = 0;
     const onResizeDown = (e: MouseEvent) => {
-      if (disableResize || isMobile()) return;
+      if (disableResize || isMobile() || dragging) return; // Prevent resize while dragging
       e.preventDefault(); bringToFront();
       resizing = true; sx = e.pageX; sy = e.pageY;
       const cs = window.getComputedStyle(el);
@@ -110,7 +130,7 @@ export default function RetroWindow({
       document.addEventListener('mouseup', onResizeUp);
     };
     const onResizing = (e: MouseEvent) => {
-      if (!resizing) return;
+      if (!resizing || dragging) return; // Prevent resize while dragging
       const w = Math.max(200, sw + (e.pageX - sx));
       const h = Math.max(100, sh + (e.pageY - sy));
       el.style.width = `${w}px`; el.style.height = `${h}px`;
