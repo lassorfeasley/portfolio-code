@@ -45,7 +45,7 @@ webflowBody = webflowBody.replace(/<script[\s\S]*?<\/script>/gi, '');
 export default function Home() {
   return (
     <main className="retro-root" suppressHydrationWarning>
-      <div dangerouslySetInnerHTML={{ __html: webflowBody }} />
+      <div className="globalmargin" dangerouslySetInnerHTML={{ __html: webflowBody }} />
       {/* Homepage-specific features - load after markup is in the DOM */}
       <Script src="/js/homepage-features.js" strategy="afterInteractive" />
     </main>

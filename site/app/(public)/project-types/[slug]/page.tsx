@@ -33,49 +33,59 @@ export async function generateMetadata(
 }
 
 export default async function ProjectTypePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
-  if (!hasEnv) {
-    return (
-      <main className="retro-root">
-        <div className="globalmargin">
-          <div className="topbar">
-            <Link href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></Link>
-            <Link href={`/project-types/${slug}`} className="h _5 link w-inline-block"><div>Collections</div><div>→</div></Link>
-            <div className="h _5 link"><div className="text-block-5">{slug}</div></div>
-          </div>
-          <div className="windowcanvas">
-            <div className="retro-window-placeholder">
-              <div className="retro-window">
-                <div className="window-bar"><div className="paragraph">This collection is unavailable in local dev</div><div className="x-out">×</div></div>
-                <div className="window-content-wrapper"><div className="window-content"><div className="paragraph">Supabase env vars are not set.</div></div></div>
-                <div className="resize-corner" />
+  try {
+    const { slug } = await params;
+    const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
+    if (!hasEnv) {
+      return (
+        <main className="retro-root">
+          <div className="globalmargin">
+            <div className="topbar">
+              <Link href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></Link>
+              <Link href={`/project-types/${slug}`} className="h _5 link w-inline-block"><div>Collections</div><div>→</div></Link>
+              <div className="h _5 link"><div className="text-block-5">{slug}</div></div>
+            </div>
+            <div className="windowcanvas">
+              <div className="retro-window-placeholder">
+                <div className="retro-window">
+                  <div className="window-bar"><div className="paragraph">This collection is unavailable in local dev</div><div className="x-out">×</div></div>
+                  <div className="window-content-wrapper"><div className="window-content"><div className="paragraph">Supabase env vars are not set.</div></div></div>
+                  <div className="resize-corner" />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <FooterDesktop />
-      </main>
-    );
-  }
-  const supabase = supabaseServer();
+          <FooterDesktop />
+        </main>
+      );
+    }
+    const supabase = supabaseServer();
 
-  const [{ data: typeData }, { data: projects }] = await Promise.all([
-    supabase
-      .from('project_types')
-      .select('id,name,slug,category,landing_page_credentials,font_awesome_icon')
-      .eq('slug', slug)
-      .eq('draft', false)
-      .eq('archived', false)
-      .single(),
-    supabase
-      .from('projects')
-      .select('id,name,slug,featured_image_url,year,description,project_type_id')
-      .eq('draft', false)
-      .eq('archived', false),
-  ]);
+    const [{ data: typeData, error: typeError }, { data: projects, error: projectsError }] = await Promise.all([
+      supabase
+        .from('project_types')
+        .select('id,name,slug,category,landing_page_credentials,font_awesome_icon')
+        .eq('slug', slug)
+        .eq('draft', false)
+        .eq('archived', false)
+        .single(),
+      supabase
+        .from('projects')
+        .select('id,name,slug,featured_image_url,year,description,project_type_id')
+        .eq('draft', false)
+        .eq('archived', false),
+    ]);
 
-  if (!typeData) return notFound();
+    if (typeError) {
+      console.error('Error fetching project type:', typeError);
+      return notFound();
+    }
+
+    if (projectsError) {
+      console.error('Error fetching projects:', projectsError);
+    }
+
+    if (!typeData) return notFound();
 
   const filtered = (projects ?? []).filter((p) => p.project_type_id === typeData.id);
   const article = /^[aeiou]/i.test(typeData.name ?? '') ? 'an' : 'a';
@@ -168,6 +178,35 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
       <FooterDesktop />
     </main>
   );
+  } catch (error) {
+    console.error('Error in ProjectTypePage:', error);
+    return (
+      <main className="retro-root">
+        <div className="globalmargin">
+          <div className="topbar">
+            <Link href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></Link>
+            <div className="h _5 link"><div>Error</div></div>
+          </div>
+          <div className="windowcanvas">
+            <div className="retro-window-placeholder">
+              <div className="retro-window">
+                <div className="window-bar"><div className="paragraph">Error</div><div className="x-out">×</div></div>
+                <div className="window-content-wrapper">
+                  <div className="window-content">
+                    <div className="paragraph">
+                      {error instanceof Error ? error.message : 'An error occurred loading this page.'}
+                    </div>
+                  </div>
+                </div>
+                <div className="resize-corner" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <FooterDesktop />
+      </main>
+    );
+  }
 }
 
 
