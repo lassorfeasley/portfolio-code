@@ -3,7 +3,13 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { PanelsTopLeft } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,92 +64,89 @@ function AdminLoginForm() {
   );
 
   return (
-    <main className="retro-root">
-      <div className="globalmargin">
-        <div className="topbar">
-          <Link href="/" className="h _5 link w-inline-block">
-            <div>Lassor.com</div>
-            <div>→</div>
-          </Link>
-          <div className="h _5 link"><div>Admin login</div></div>
-        </div>
-        <div className="windowcanvas">
-          <div className="retro-window-placeholder">
-            <div className="retro-window">
-              <div className="window-bar">
-                <div className="x-out" />
-                <div className="window-title">Admin access</div>
-              </div>
-              <div className="window-content">
-                <form className="v _20" onSubmit={handleSubmit}>
-                  <label className="v _5">
-                    <span>Email</span>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      required
-                      className="text-field w-input"
-                    />
-                  </label>
-                  <label className="v _5">
-                    <span>Password</span>
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      required
-                      className="text-field w-input"
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    className="button w-button"
-                    disabled={status === 'submitting'}
-                  >
-                    {status === 'submitting' ? 'Signing in…' : 'Sign in'}
-                  </button>
-                  {message ? <p className="paragraph">{message}</p> : null}
-                </form>
-              </div>
-              <div className="resize-corner" />
-            </div>
+    <div className="flex min-h-screen w-full items-center justify-center bg-muted/30 p-4">
+      <div className="w-full max-w-xs space-y-6">
+        <div className="flex items-center gap-2 justify-center">
+          <PanelsTopLeft className="h-6 w-6 text-primary" />
+          <div>
+            <p className="text-lg font-semibold leading-tight">Lassor Admin</p>
+            <p className="text-xs text-muted-foreground">Sign in to manage your portfolio</p>
           </div>
         </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Admin access</CardTitle>
+            <CardDescription>Enter your credentials to access the admin dashboard</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@example.com"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  disabled={status === 'submitting'}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  disabled={status === 'submitting'}
+                />
+              </div>
+              {message && (
+                <p
+                  className={cn(
+                    'text-sm',
+                    status === 'error' ? 'text-destructive' : 'text-muted-foreground'
+                  )}
+                >
+                  {message}
+                </p>
+              )}
+              <Button type="submit" className="w-full" disabled={status === 'submitting'}>
+                {status === 'submitting' ? 'Signing in…' : 'Sign in'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+        <div className="text-center">
+          <Link
+            href="/"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← Return to Lassor.com
+          </Link>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
 
 export default function AdminLoginPage() {
   return (
-    <Suspense fallback={
-      <main className="retro-root">
-        <div className="globalmargin">
-          <div className="topbar">
-            <Link href="/" className="h _5 link w-inline-block">
-              <div>Lassor.com</div>
-              <div>→</div>
-            </Link>
-            <div className="h _5 link"><div>Admin login</div></div>
-          </div>
-          <div className="windowcanvas">
-            <div className="retro-window-placeholder">
-              <div className="retro-window">
-                <div className="window-bar">
-                  <div className="x-out" />
-                  <div className="window-title">Loading…</div>
-                </div>
-                <div className="window-content">
-                  <p className="paragraph">Loading login form…</p>
-                </div>
-                <div className="resize-corner" />
-              </div>
-            </div>
-          </div>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen w-full items-center justify-center bg-muted/30 p-4">
+          <Card className="w-full max-w-xs">
+            <CardHeader>
+              <CardTitle>Loading…</CardTitle>
+              <CardDescription>Loading login form…</CardDescription>
+            </CardHeader>
+          </Card>
         </div>
-      </main>
-    }>
+      }
+    >
       <AdminLoginForm />
     </Suspense>
   );

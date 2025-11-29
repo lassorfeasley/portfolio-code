@@ -15,7 +15,7 @@ type AdminShellProps = {
 
 const navigation = [
   { href: '/admin', label: 'Projects' },
-  { href: '/admin/uploads', label: 'Uploads', disabled: true },
+  { href: '/admin/project-types', label: 'Project Types' },
 ];
 
 export function AdminShell({ userEmail, children }: AdminShellProps) {

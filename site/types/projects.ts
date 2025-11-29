@@ -23,6 +23,15 @@ export type ProjectTypeRecord = {
   id: string;
   name: string | null;
   slug: string;
+  category: string | null;
+  draft: boolean;
+  archived: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type ProjectTypePayload = Omit<ProjectTypeRecord, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string;
 };
 
 export type ProjectPayload = Omit<ProjectRecord, 'id' | 'created_at' | 'updated_at'> & {
