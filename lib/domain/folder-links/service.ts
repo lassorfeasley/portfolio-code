@@ -36,18 +36,16 @@ export async function updateFolderLink(
   id: string,
   payload: FolderLinkPayload
 ): Promise<FolderLinkRow> {
-  const updateData: FolderLinkUpdate = {
-    label: payload.label,
-    icon: payload.icon,
-    href: payload.href,
-    external: payload.external,
-    display_order: payload.displayOrder,
-    updated_at: new Date().toISOString(),
-  };
-
   const { data, error } = await client
     .from('folder_links')
-    .update(updateData)
+    .update({
+      label: payload.label,
+      icon: payload.icon,
+      href: payload.href,
+      external: payload.external,
+      display_order: payload.displayOrder,
+      updated_at: new Date().toISOString(),
+    } as FolderLinkUpdate)
     .eq('id', id)
     .select()
     .single();
@@ -63,17 +61,15 @@ export async function createFolderLink(
   client: TypedSupabaseClient,
   payload: FolderLinkPayload
 ): Promise<FolderLinkRow> {
-  const insertData: FolderLinkInsert = {
-    label: payload.label,
-    icon: payload.icon,
-    href: payload.href,
-    external: payload.external,
-    display_order: payload.displayOrder,
-  };
-
   const { data, error } = await client
     .from('folder_links')
-    .insert(insertData)
+    .insert({
+      label: payload.label,
+      icon: payload.icon,
+      href: payload.href,
+      external: payload.external,
+      display_order: payload.displayOrder,
+    } as FolderLinkInsert)
     .select()
     .single();
 
