@@ -110,23 +110,39 @@ export default function HomeDesktop({ projects, projectTypes, statusMessage }: H
     if (filteredProjects.length === 0) return;
     if (typeof window === 'undefined') return;
 
+    let attempts = 0;
+    const maxAttempts = 50; // Try for up to ~10 seconds (50 * 200ms)
+    let intervalId: NodeJS.Timeout;
+
     const triggerPixelEffect = () => {
+      // Check if the specific function from visual-effects.js is available
       if (typeof window.__pixelImageEffectReinit === 'function') {
         window.__pixelImageEffectReinit();
-      } else if (typeof window.dispatchEvent === 'function') {
-        // Fallback event for scripts that listen for reinit requests
-        window.dispatchEvent(new CustomEvent('retroPixelEffectReinitRequest'));
+        // Once successfully called, we can stop polling
+        if (intervalId) clearInterval(intervalId);
+      } else {
+        // If not ready, dispatch the event as a fallback (in case script is listening but didn't expose global yet)
+        // But mainly we rely on the polling
+        if (typeof window.dispatchEvent === 'function') {
+          window.dispatchEvent(new CustomEvent('retroPixelEffectReinitRequest'));
+        }
+
+        attempts++;
+        if (attempts >= maxAttempts) {
+          if (intervalId) clearInterval(intervalId);
+          console.warn('[HomeDesktop] Gave up waiting for pixel effect script after 10s');
+        }
       }
     };
 
-    const timers = [
-      setTimeout(triggerPixelEffect, 300),
-      setTimeout(triggerPixelEffect, 1200),
-      setTimeout(triggerPixelEffect, 3000),
-    ];
+    // Start polling every 200ms
+    intervalId = setInterval(triggerPixelEffect, 200);
+
+    // Try immediately once just in case
+    triggerPixelEffect();
 
     return () => {
-      timers.forEach((timerId) => clearTimeout(timerId));
+      if (intervalId) clearInterval(intervalId);
     };
   }, [filteredProjects.length]);
 
