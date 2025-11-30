@@ -35,7 +35,7 @@ export function HomepageEditor({ initialHeroContent, initialFolderLinks }: Homep
       if (!response.ok) throw new Error('Failed to save');
       
       toast.success('Hero content saved');
-    } catch (error) {
+    } catch {
       toast.error('Failed to save hero content');
     } finally {
       setSaving(false);
@@ -54,7 +54,7 @@ export function HomepageEditor({ initialHeroContent, initialFolderLinks }: Homep
       if (!response.ok) throw new Error('Failed to save');
       
       toast.success('Folder links saved');
-    } catch (error) {
+    } catch {
       toast.error('Failed to save folder links');
     } finally {
       setSaving(false);

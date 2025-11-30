@@ -2,18 +2,21 @@ import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/auth/admin';
 import { supabaseServiceRole } from '@/lib/supabase/admin';
 import { updateFolderLink, createFolderLink, deleteFolderLink, listFolderLinks } from '@/lib/domain/folder-links/service';
+import type { FolderLinkPayload } from '@/lib/domain/folder-links/types';
 import { revalidatePath } from 'next/cache';
+
+type FolderLinkInput = FolderLinkPayload & { id: string };
 
 export async function PUT(request: Request) {
   try {
     await requireAdminSession();
-    const links = await request.json();
+    const links = (await request.json()) as FolderLinkInput[];
     
     const adminClient = supabaseServiceRole();
     
     // Get existing links to determine which to delete
     const existingLinks = await listFolderLinks(adminClient);
-    const incomingIds = links.map((link: any) => link.id).filter((id: string) => !id.startsWith('temp-'));
+    const incomingIds = links.map((link) => link.id).filter((id) => !id.startsWith('temp-'));
     
     // Delete links that are no longer in the incoming list
     const toDelete = existingLinks.filter(existing => !incomingIds.includes(existing.id));
@@ -21,7 +24,7 @@ export async function PUT(request: Request) {
     
     // Update or create each link
     const results = await Promise.all(
-      links.map((link: any) => {
+      links.map((link) => {
         if (link.id.startsWith('temp-')) {
           // New link
           return createFolderLink(adminClient, {

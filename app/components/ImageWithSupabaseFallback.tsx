@@ -43,13 +43,6 @@ export default function ImageWithSupabaseFallback({
   const isPixelEffectEnabledRef = useRef<boolean>(false);
   const [, forceUpdate] = useState({});
   
-  // Synchronous check function that doesn't rely on state
-  const checkIfPixelEffectEnabled = useCallback(() => {
-    if (!containerRef.current) return false;
-    const retroWindow = containerRef.current.closest('[data-pixel-effect-enabled="true"]');
-    return retroWindow !== null;
-  }, []);
-  
   useEffect(() => {
     console.log('[Pixel Effect] Component mounted for image:', src.substring(src.lastIndexOf('/') + 1, src.lastIndexOf('/') + 30));
     
