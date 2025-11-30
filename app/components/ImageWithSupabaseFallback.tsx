@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { CSSProperties, useMemo, useState, useRef, useEffect } from 'react';
 import { isSupabaseTransformedUrl, toOriginalObjectUrl } from '@/lib/supabase/image';
 import { usePixelImageEffect } from '@/app/hooks/usePixelImageEffect';
+import { usePixelEffectEnabled } from '@/app/contexts/PixelEffectContext';
 
 type Props = {
   src: string;
@@ -38,30 +39,9 @@ export default function ImageWithSupabaseFallback({
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Check if we're inside a retro-window to enable pixel effect
-  const [isInsideRetroWindow, setIsInsideRetroWindow] = useState(false);
+  // Use context to determine if pixel effect should be enabled
+  const isPixelEffectEnabled = usePixelEffectEnabled();
   
-  useEffect(() => {
-    if (containerRef.current) {
-      const checkRetroWindow = () => {
-        const isInside = containerRef.current?.closest('.retro-window') !== null;
-        setIsInsideRetroWindow(isInside);
-      };
-      checkRetroWindow();
-      
-      // Use MutationObserver to detect when parent changes
-      const observer = new MutationObserver(checkRetroWindow);
-      if (containerRef.current.parentElement) {
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true,
-        });
-      }
-      
-      return () => observer.disconnect();
-    }
-  }, []);
-
   // Find the actual img element after Next.js Image renders it
   useEffect(() => {
     if (!containerRef.current) return;
@@ -92,8 +72,8 @@ export default function ImageWithSupabaseFallback({
     return () => observer.disconnect();
   }, []);
 
-  // Only enable pixel effect if inside retro-window and not opted out
-  const shouldPixelate = isInsideRetroWindow && !className?.includes('no-pixelate');
+  // Only enable pixel effect if context allows and not opted out
+  const shouldPixelate = isPixelEffectEnabled && !className?.includes('no-pixelate');
   const { canvasRef } = usePixelImageEffect(imageRef, { enabled: shouldPixelate });
 
   return (
@@ -116,7 +96,7 @@ export default function ImageWithSupabaseFallback({
           }
         }}
       />
-      {shouldPixelate && <canvas ref={canvasRef} style={{ display: 'none' }} />}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
     </div>
   );
 }

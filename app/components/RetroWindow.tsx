@@ -2,6 +2,7 @@
 
 import { useRetroWindowInteraction } from '@/app/hooks/useRetroWindowInteraction';
 import { useMemo } from 'react';
+import PixelEffectContext from '@/app/contexts/PixelEffectContext';
 
 type RetroWindowProps = {
   title?: string;
@@ -80,7 +81,9 @@ export default function RetroWindow({
       </div>
       <div className="window-content-wrapper">
         <div className="window-content">
-          {children}
+          <PixelEffectContext.Provider value={true}>
+            {children}
+          </PixelEffectContext.Provider>
         </div>
       </div>
       <div className="resize-corner" onMouseDown={handleResizeStart} />
