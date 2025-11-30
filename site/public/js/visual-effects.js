@@ -227,45 +227,113 @@ window.addEventListener('load', initEcho);
       images.forEach((img) => {
         // Skip if already processed
         if (img.dataset.canvasId) return;
-        // Skip if image has no dimensions yet (not rendered)
-        if (img.offsetWidth === 0 && img.offsetHeight === 0) {
-          // Wait for image to get dimensions
-          const checkDimensions = () => {
-            if (img.offsetWidth > 0 || img.offsetHeight > 0) {
+        
+        // Skip images with no-pixelate class (e.g., lightbox images)
+        if (img.classList && img.classList.contains('no-pixelate')) return;
+        
+        // Try to prepare immediately, but also set up fallbacks
+        const tryPrepare = () => {
+          try {
+            // Use naturalWidth/Height as fallback if offset dimensions are 0
+            const hasDimensions = img.offsetWidth > 0 || img.offsetHeight > 0 || 
+                                 img.naturalWidth > 0 || img.naturalHeight > 0;
+            
+            if (hasDimensions) {
               prepareInitialPixel(img);
             } else {
-              requestAnimationFrame(checkDimensions);
+              // Wait a bit and try again
+              setTimeout(() => {
+                if (!img.dataset.canvasId) {
+                  const retryHasDimensions = img.offsetWidth > 0 || img.offsetHeight > 0 || 
+                                            img.naturalWidth > 0 || img.naturalHeight > 0;
+                  if (retryHasDimensions) {
+                    prepareInitialPixel(img);
+                  }
+                }
+              }, 100);
             }
-          };
-          requestAnimationFrame(checkDimensions);
-          return;
-        }
-        if (img.complete) {
-          prepareInitialPixel(img);
+          } catch (e) {
+            // Silently continue if one image fails
+          }
+        };
+        
+        if (img.complete && img.naturalWidth > 0) {
+          tryPrepare();
         } else {
-          img.addEventListener('load', () => prepareInitialPixel(img), { once: true });
+          // Set up load listener
+          img.addEventListener('load', () => {
+            setTimeout(tryPrepare, 10);
+          }, { once: true });
+          // Also try immediately in case it's already loaded but event fired
+          if (img.complete) {
+            setTimeout(tryPrepare, 10);
+          }
         }
       });
     }
 
-    const retroWindows = document.querySelectorAll('.retro-window');
+    // Function to find and process all retro windows (including newly added ones)
+    function findAndProcessWindows() {
+      const retroWindows = document.querySelectorAll('.retro-window');
+      retroWindows.forEach((windowEl) => {
+        // Skip if already processed
+        if (windowEl.dataset.pixelEffectObserved === 'true') return;
+        windowEl.dataset.pixelEffectObserved = 'true';
+        
+        processWindowImages(windowEl);
 
-    retroWindows.forEach((windowEl) => {
-      processWindowImages(windowEl);
+        // Check if window is already in viewport immediately
+        const rect = windowEl.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+          setTimeout(() => {
+            triggerImagesInWindow(windowEl);
+            observer.unobserve(windowEl);
+          }, 50);
+        }
 
-      // Check if window is already in viewport immediately
-      const rect = windowEl.getBoundingClientRect();
-      if (rect.top < window.innerHeight && rect.bottom > 0) {
-        setTimeout(() => {
-          triggerImagesInWindow(windowEl);
-          observer.unobserve(windowEl);
-        }, 50);
+        observer.observe(windowEl);
+      });
+    }
+
+    // Initial processing
+    findAndProcessWindows();
+
+    // Watch for new windows/images being added (for React hydration, lazy loading, etc.)
+    const domObserver = new MutationObserver((mutations) => {
+      let shouldReprocess = false;
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) { // Element node
+            // Check if a retro-window was added
+            if (node.classList && node.classList.contains('retro-window')) {
+              shouldReprocess = true;
+            }
+            // Check if an img was added inside a retro-window
+            if (node.tagName === 'IMG' && node.closest('.retro-window')) {
+              shouldReprocess = true;
+            }
+            // Check if any retro-windows exist in the subtree
+            if (node.querySelectorAll && node.querySelectorAll('.retro-window').length > 0) {
+              shouldReprocess = true;
+            }
+          }
+        });
+      });
+      if (shouldReprocess) {
+        findAndProcessWindows();
       }
+    });
 
-      observer.observe(windowEl);
+    // Observe the entire document for new retro windows and images
+    domObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
     });
 
     window.addEventListener('load', () => {
+      // Re-process on window load to catch any late-loading images
+      findAndProcessWindows();
+      const retroWindows = document.querySelectorAll('.retro-window');
       retroWindows.forEach((windowEl) => {
         const rect = windowEl.getBoundingClientRect();
         if (rect.top < window.innerHeight && rect.bottom > 0) {
@@ -287,23 +355,30 @@ window.addEventListener('load', initEcho);
 
     async function prepareInitialPixel(img) {
       if (img.dataset.canvasId) return;
-
-      // Attempt to ensure image is ready, but don't block endlessly
-      if ('decode' in img) {
-        try {
-          await img.decode();
-        } catch (e) {
-          // console.warn("Image decode failed or not needed", e);
+      
+      try {
+        // Attempt to ensure image is ready, but don't block endlessly
+        if ('decode' in img && img.naturalWidth === 0) {
+          try {
+            await Promise.race([
+              img.decode(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000))
+            ]);
+          } catch (e) {
+            // Decode failed or timed out, continue anyway
+          }
         }
-      }
-      if (img.dataset.canvasId) return;
+        if (img.dataset.canvasId) return;
 
       // Setup Canvas as a Sibling Overlay
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
+      if (!ctx) return; // Canvas not supported
 
       // Ensure parent is positioned so we can place canvas relative to it
       const parent = img.parentElement;
+      if (!parent) return; // Image has no parent (shouldn't happen, but be safe)
+      
       const parentStyle = window.getComputedStyle(parent);
       if (parentStyle.position === 'static') {
         parent.style.position = 'relative';
@@ -359,20 +434,32 @@ window.addEventListener('load', initEcho);
             pixelate(img);
         }
       });
+      } catch (e) {
+        // If anything fails during setup, silently continue
+        // This prevents one broken image from breaking the entire effect
+      }
     }
 
     function updateCanvasPosition(img, canvas) {
+        // Use getBoundingClientRect for more accurate positioning, but fallback to offset
+        const rect = img.getBoundingClientRect();
+        const parentRect = img.parentElement ? img.parentElement.getBoundingClientRect() : { left: 0, top: 0 };
+        
+        const left = img.offsetLeft || (rect.left - parentRect.left);
+        const top = img.offsetTop || (rect.top - parentRect.top);
+        const width = Math.max(1, img.offsetWidth || rect.width || img.naturalWidth || 100);
+        const height = Math.max(1, img.offsetHeight || rect.height || img.naturalHeight || 100);
+        
         // Match image position/size
-        canvas.style.left = `${img.offsetLeft}px`;
-        canvas.style.top = `${img.offsetTop}px`;
-        canvas.style.width = `${img.offsetWidth}px`;
-        canvas.style.height = `${img.offsetHeight}px`;
+        canvas.style.left = `${left}px`;
+        canvas.style.top = `${top}px`;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
         
         // Update buffer size if needed (resolution)
-        if (canvas.width !== img.offsetWidth || canvas.height !== img.offsetHeight) {
-             // Prevent 0x0 canvas
-             canvas.width = Math.max(1, img.offsetWidth);
-             canvas.height = Math.max(1, img.offsetHeight);
+        if (canvas.width !== width || canvas.height !== height) {
+             canvas.width = width;
+             canvas.height = height;
         }
     }
 
