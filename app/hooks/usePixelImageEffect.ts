@@ -299,6 +299,12 @@ export function usePixelImageEffect(
 
   // Setup canvas when image loads
   useEffect(() => {
+    console.log('[Pixel Hook] Setup effect running:', {
+      enabled,
+      hasImage: !!imageRef.current,
+      hasCanvas: !!canvasRef.current
+    });
+    
     if (!enabled || !imageRef.current || !canvasRef.current) return;
 
     const img = imageRef.current;

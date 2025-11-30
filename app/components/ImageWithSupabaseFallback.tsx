@@ -48,15 +48,42 @@ export default function ImageWithSupabaseFallback({
     // This works even if the element has been moved by float system
     const checkPixelEffect = () => {
       const retroWindow = containerRef.current?.closest('[data-pixel-effect-enabled="true"]');
-      setIsPixelEffectEnabled(retroWindow !== null);
+      const isEnabled = retroWindow !== null;
+      console.log('[Pixel Effect] Detection check:', {
+        isEnabled,
+        hasContainer: !!containerRef.current,
+        foundWindow: !!retroWindow,
+        dataAttr: retroWindow?.getAttribute('data-pixel-effect-enabled')
+      });
+      setIsPixelEffectEnabled(isEnabled);
+      return isEnabled;
     };
     
-    checkPixelEffect();
+    // Check immediately
+    const immediate = checkPixelEffect();
     
-    // Recheck after a delay to catch floated windows
-    const timeoutId = setTimeout(checkPixelEffect, 100);
-    
-    return () => clearTimeout(timeoutId);
+    // If not found, recheck after delays to catch floated windows
+    // The float system runs 500ms after page load, so check at 200ms, 600ms, and 1000ms
+    if (!immediate) {
+      const timeout1 = setTimeout(() => {
+        console.log('[Pixel Effect] Recheck at 200ms');
+        checkPixelEffect();
+      }, 200);
+      const timeout2 = setTimeout(() => {
+        console.log('[Pixel Effect] Recheck at 600ms');
+        checkPixelEffect();
+      }, 600);
+      const timeout3 = setTimeout(() => {
+        console.log('[Pixel Effect] Recheck at 1000ms');
+        checkPixelEffect();
+      }, 1000);
+      
+      return () => {
+        clearTimeout(timeout1);
+        clearTimeout(timeout2);
+        clearTimeout(timeout3);
+      };
+    }
   }, []);
   
   // Find the actual img element after Next.js Image renders it
