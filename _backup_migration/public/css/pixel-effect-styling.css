@@ -13,12 +13,10 @@
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;  /* ensure canvas covers wrapper to match crop */
+  object-fit: contain;  /* Changed from cover to contain */
   pointer-events: none;
   z-index: 2;
   display: block;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
 }
 
 .pixel-loading-wrapper img {
@@ -27,6 +25,6 @@
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;  /* Changed from cover to contain */
   z-index: 1;
 }
