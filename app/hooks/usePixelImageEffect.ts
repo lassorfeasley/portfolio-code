@@ -157,6 +157,13 @@ export function usePixelImageEffect(
           resizeObserverRef.current.disconnect();
           resizeObserverRef.current = null;
         }
+        
+        // Show the actual image now that animation is complete
+        if (imageRef.current) {
+          imageRef.current.style.opacity = '1';
+          imageRef.current.style.visibility = 'visible';
+        }
+        
         if (canvas.parentNode) {
           canvas.parentNode.removeChild(canvas);
         }
@@ -200,6 +207,10 @@ export function usePixelImageEffect(
 
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Hide the actual image immediately to prevent flash
+    img.style.opacity = '0';
+    img.style.visibility = 'hidden';
 
     // Ensure parent is positioned
     const parent = img.parentElement;
