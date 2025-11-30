@@ -1,6 +1,9 @@
 import { ApiError } from '@/lib/api/errors';
-import type { TypedSupabaseClient } from '@/lib/supabase/types';
+import type { TypedSupabaseClient, Database } from '@/lib/supabase/types';
 import type { FolderLink, FolderLinkRow, FolderLinkPayload } from './types';
+
+type FolderLinkUpdate = Database['public']['Tables']['folder_links']['Update'];
+type FolderLinkInsert = Database['public']['Tables']['folder_links']['Insert'];
 
 function toFolderLink(row: FolderLinkRow): FolderLink {
   return {
@@ -33,16 +36,18 @@ export async function updateFolderLink(
   id: string,
   payload: FolderLinkPayload
 ): Promise<FolderLinkRow> {
+  const updateData: FolderLinkUpdate = {
+    label: payload.label,
+    icon: payload.icon,
+    href: payload.href,
+    external: payload.external,
+    display_order: payload.displayOrder,
+    updated_at: new Date().toISOString(),
+  };
+
   const { data, error } = await client
     .from('folder_links')
-    .update({
-      label: payload.label,
-      icon: payload.icon,
-      href: payload.href,
-      external: payload.external,
-      display_order: payload.displayOrder,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', id)
     .select()
     .single();
@@ -58,15 +63,17 @@ export async function createFolderLink(
   client: TypedSupabaseClient,
   payload: FolderLinkPayload
 ): Promise<FolderLinkRow> {
+  const insertData: FolderLinkInsert = {
+    label: payload.label,
+    icon: payload.icon,
+    href: payload.href,
+    external: payload.external,
+    display_order: payload.displayOrder,
+  };
+
   const { data, error } = await client
     .from('folder_links')
-    .insert({
-      label: payload.label,
-      icon: payload.icon,
-      href: payload.href,
-      external: payload.external,
-      display_order: payload.displayOrder,
-    })
+    .insert(insertData)
     .select()
     .single();
 

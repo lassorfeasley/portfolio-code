@@ -1,6 +1,8 @@
 import { ApiError } from '@/lib/api/errors';
-import type { TypedSupabaseClient } from '@/lib/supabase/types';
+import type { TypedSupabaseClient, Database } from '@/lib/supabase/types';
 import type { HeroContent, HeroContentRow, HeroContentPayload } from './types';
+
+type HeroContentUpdate = Database['public']['Tables']['hero_content']['Update'];
 
 function toHeroContent(row: HeroContentRow): HeroContent {
   return {
@@ -35,16 +37,18 @@ export async function updateHeroContent(
   id: string,
   payload: HeroContentPayload
 ): Promise<HeroContentRow> {
+  const updateData: HeroContentUpdate = {
+    window_title: payload.windowTitle,
+    hero_text: payload.heroText,
+    hero_image_url: payload.heroImageUrl,
+    footer_link_text: payload.footerLinkText,
+    footer_link_href: payload.footerLinkHref,
+    updated_at: new Date().toISOString(),
+  };
+
   const { data, error } = await client
     .from('hero_content')
-    .update({
-      window_title: payload.windowTitle,
-      hero_text: payload.heroText,
-      hero_image_url: payload.heroImageUrl,
-      footer_link_text: payload.footerLinkText,
-      footer_link_href: payload.footerLinkHref,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', id)
     .select()
     .single();
