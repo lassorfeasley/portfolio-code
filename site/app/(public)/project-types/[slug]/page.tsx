@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import FooterDesktop from '@/app/components/FooterDesktop';
+import RetroWindow from '@/app/components/RetroWindow';
 
 export const revalidate = 60;
 
@@ -100,51 +101,40 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
         </div>
         <div className="windowcanvas onetwogrid alert">
           <div className="retro-window-placeholder">
-            <div className="retro-window">
-              <div className="window-bar">
-                <div className="wide">
-                  <div className="paragraph">{typeData.name}</div>
-                  <div className="paragraph">.txt</div>
-                </div>
-                <div className="x-out">×</div>
+            <RetroWindow title={`${typeData.name}.txt`} disableResize initialZIndex={1}>
+              <div className="v _10">
+                {typeData.font_awesome_icon ? (
+                  <div className="iconlogo">{typeData.font_awesome_icon}</div>
+                ) : null}
+                {typeData.landing_page_credentials ? (
+                  <div className="paragraph">{typeData.landing_page_credentials}</div>
+                ) : typeData.category ? (
+                  <div className="paragraph">{typeData.category}</div>
+                ) : null}
               </div>
-              <div className="window-content-wrapper">
-                <div className="window-content">
-                  {typeData.font_awesome_icon ? (
-                    <div className="iconlogo">{typeData.font_awesome_icon}</div>
-                  ) : null}
-                  {typeData.landing_page_credentials ? (
-                    <div className="paragraph">{typeData.landing_page_credentials}</div>
-                  ) : typeData.category ? (
-                    <div className="paragraph">{typeData.category}</div>
-                  ) : null}
-                </div>
-              </div>
-              <div className="resize-corner" />
-            </div>
+            </RetroWindow>
           </div>
           <div className="retro-window-placeholder alertmover">
-            <div className="retro-window noratio popup">
-              <div className="window-bar">
-                <div className="wide"><div className="paragraph">Alert</div></div>
-                <div className="x-out">×</div>
+            <RetroWindow
+              title="Alert"
+              className="noratio popup"
+              disableResize
+              initialZIndex={2}
+              autoFocus
+            >
+              <div className="v _10">
+                <div className="iconlogo red"></div>
+                <a href={`mailto:feasley@lassor.com?subject=Work%20with%20Lassor`} className="paragraph w-inline-block">
+                  <div className="w-embed">{`Explore ${article} ${typeData.name} design project with Lassor?`}</div>
+                </a>
+                <a href={`mailto:feasley@lassor.com?subject=Positive%20Vibes`} className="h _20 w-inline-block">
+                  <div className="paragraph button">Yes</div>
+                  <div className="paragraph button">No</div>
+                  <div className="paragraph button">OK</div>
+                  <div className="paragraph button">Cancel</div>
+                </a>
               </div>
-              <div className="window-content-wrapper">
-                <div className="window-content">
-                  <div className="iconlogo red"></div>
-                  <a href={`mailto:feasley@lassor.com?subject=Work%20with%20Lassor`} className="paragraph w-inline-block">
-                    <div className="w-embed">{`Explore ${article} ${typeData.name} design project with Lassor?`}</div>
-                  </a>
-                  <a href={`mailto:feasley@lassor.com?subject=Positive%20Vibes`} className="h _20 w-inline-block">
-                    <div className="paragraph button">Yes</div>
-                    <div className="paragraph button">No</div>
-                    <div className="paragraph button">OK</div>
-                    <div className="paragraph button">Cancel</div>
-                  </a>
-                </div>
-              </div>
-              <div className="resize-corner" />
-            </div>
+            </RetroWindow>
           </div>
         </div>
         <div className="windowcanvas w-dyn-list">

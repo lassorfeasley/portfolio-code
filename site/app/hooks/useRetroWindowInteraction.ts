@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 type Options = {
   disableDrag?: boolean;
   disableResize?: boolean;
+  initialZIndex?: number;
+  autoFocus?: boolean;
 };
 
 type PointerState =
@@ -35,10 +37,10 @@ const isMobile = () =>
   window.matchMedia('(pointer:coarse), (max-width: 767px)').matches;
 
 export function useRetroWindowInteraction(options: Options) {
-  const { disableDrag, disableResize } = options;
+  const { disableDrag, disableResize, initialZIndex, autoFocus } = options;
   const ref = useRef<HTMLDivElement | null>(null);
   const pointerState = useRef<PointerState>(null);
-  const [zIndex, setZIndex] = useState<number>();
+  const [zIndex, setZIndex] = useState<number>(initialZIndex);
   const [position, setPosition] = useState<{ left?: number; top?: number }>({});
   const [size, setSize] = useState<{ width?: number; height?: number }>({});
 
@@ -47,10 +49,6 @@ export function useRetroWindowInteraction(options: Options) {
       ref.current.dataset.reactManaged = 'true';
     }
   }, []);
-
-  useEffect(() => {
-    markReactManaged();
-  }, [markReactManaged]);
 
   const bringToFront = useCallback(() => {
     const current = ref.current;
@@ -66,6 +64,19 @@ export function useRetroWindowInteraction(options: Options) {
     const nextZ = maxZ + 1;
     setZIndex(nextZ);
   }, []);
+
+  useEffect(() => {
+    markReactManaged();
+    if (typeof initialZIndex === 'number') {
+      setZIndex(initialZIndex);
+    }
+  }, [markReactManaged, initialZIndex]);
+
+  useEffect(() => {
+    if (autoFocus) {
+      bringToFront();
+    }
+  }, [autoFocus, bringToFront]);
 
   const clampDragPosition = (value: number, min: number, max: number) =>
     Math.min(max, Math.max(min, value));

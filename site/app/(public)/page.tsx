@@ -1,55 +1,58 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import Script from 'next/script';
+import HomeDesktop, {
+  type HomeProject,
+  type HomeProjectType,
+} from '@/app/(public)/components/HomeDesktop';
+import FooterDesktop from '@/app/components/FooterDesktop';
+import { supabaseServer } from '@/lib/supabase/server';
 
-const webflowHtml = fs.readFileSync(path.join(process.cwd(), 'public/webflow/index.html'), 'utf-8');
-const originalBody = webflowHtml.match(/<body[\s\S]*?>([\s\S]*?)<\/body>/i)?.[1] ?? '';
+export const revalidate = 60;
 
-function rewriteHomepageLinks(html: string): string {
-  return html
-    // Projects → /work/[slug]
-    .replace(/https?:\/\/(?:www\.)?lassor\.com\/projects\/([a-z0-9-]+)/gi, '/work/$1')
-    // Project types → /project-types/[slug]
-    .replace(/https?:\/\/(?:www\.)?lassor\.com\/project-types\/([a-z0-9-]+)/gi, '/project-types/$1')
-    // Legacy webflow.io links
-    .replace(/https?:\/\/lassorfeasley\.webflow\.io\/project-types\/([a-z0-9-]+)/gi, '/project-types/$1')
-    // Faceblind
-    .replace(/https?:\/\/(?:www\.)?lassor\.com\/faceblind/gi, '/faceblind')
-    // Home root
-    .replace(/https?:\/\/(?:www\.)?lassor\.com\/(?=["'])/gi, '/');
-}
+export default async function Home() {
+  const hasSupabaseEnv = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  );
 
-function stripWebflowFormRuntime(html: string): string {
-  // Disable behavior with minimal structural change to preserve layout
-  let out = html;
+  let projects: HomeProject[] = [];
+  let projectTypes: HomeProjectType[] = [];
+  let statusMessage: string | null = null;
 
-  // 1) Strip Webflow data attributes that trigger runtime
-  out = out.replace(/\sdata-wf-[a-z-]+="[^"]*"/gi, '');
+  if (!hasSupabaseEnv) {
+    statusMessage = 'Supabase environment variables are not configured. Dynamic project data is unavailable.';
+  } else {
+    const supabase = supabaseServer();
+    const [
+      { data: projectData, error: projectError },
+      { data: typeData, error: typeError },
+    ] = await Promise.all([
+      supabase
+        .from('projects')
+        .select(
+          'id,name,slug,description,featured_image_url,year,project_types(name,slug)'
+        )
+        .eq('draft', false)
+        .eq('archived', false)
+        .order('published_on', { ascending: false, nullsLast: true }),
+      supabase
+        .from('project_types')
+        .select('id,name,slug,category')
+        .eq('draft', false)
+        .eq('archived', false)
+        .order('name', { ascending: true }),
+    ]);
 
-  // 2) Make the form inert but keep markup and inputs intact
-  out = out.replace(/<form\b([^>]*)>/gi, (_m, attrs) => {
-    const cleaned = String(attrs)
-      .replace(/\saction="[^"]*"/gi, '')
-      .replace(/\smethod="[^"]*"/gi, '');
-    return `<form${cleaned} onsubmit="return false" action="#">`;
-  });
+    projects = (projectData ?? []) as HomeProject[];
+    projectTypes = (typeData ?? []) as HomeProjectType[];
+    statusMessage = projectError?.message ?? typeError?.message ?? null;
+  }
 
-  return out;
-}
-
-let webflowBody = stripWebflowFormRuntime(rewriteHomepageLinks(originalBody));
-
-// Do not strip content; only strip inline scripts to avoid hydration drift
-webflowBody = webflowBody.replace(/<script[\s\S]*?<\/script>/gi, '');
-
-export default function Home() {
   return (
-    <main className="retro-root" suppressHydrationWarning>
-      <div dangerouslySetInnerHTML={{ __html: webflowBody }} />
-      {/* Homepage-specific features - load after markup is in the DOM */}
-      <Script src="/js/homepage-features.js" strategy="afterInteractive" />
+    <main className="retro-root">
+      <HomeDesktop
+        projects={projects}
+        projectTypes={projectTypes}
+        statusMessage={statusMessage}
+      />
+      <FooterDesktop />
     </main>
   );
 }
-
-

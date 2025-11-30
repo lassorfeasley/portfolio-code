@@ -10,6 +10,8 @@ type RetroWindowProps = {
   variant?: "default" | "doublewide" | "widescreen" | "nomax" | "noratio";
   disableDrag?: boolean;
   disableResize?: boolean;
+  initialZIndex?: number;
+  autoFocus?: boolean;
 };
 
 export default function RetroWindow({
@@ -19,6 +21,8 @@ export default function RetroWindow({
   variant = "default",
   disableDrag,
   disableResize,
+  initialZIndex,
+  autoFocus,
 }: RetroWindowProps) {
   const {
     ref,
@@ -27,7 +31,12 @@ export default function RetroWindow({
     handleDragStart,
     handleResizeStart,
     handleClose,
-  } = useRetroWindowInteraction({ disableDrag, disableResize });
+  } = useRetroWindowInteraction({
+    disableDrag,
+    disableResize,
+    initialZIndex,
+    autoFocus,
+  });
 
   const windowClass = useMemo(
     () =>

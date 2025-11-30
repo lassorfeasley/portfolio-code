@@ -3711,7 +3711,7 @@ a {
   --retro-translate-y: 0px;
   --retro-width: auto;
   --retro-z: 10000;
-  z-index: var(--retro-z, 10000);
+  z-index: 0;
   grid-column-gap: 0px;
   grid-row-gap: 0px;
   aspect-ratio: 3 / 2;
@@ -4059,8 +4059,12 @@ a {
 
 .retro-window-placeholder.alertmover {
   position: relative !important;
-  top: 20px !important;
+  top: 50% !important;
   left: -30px !important;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 
 .resize-corner {
@@ -4389,6 +4393,8 @@ a {
 
   .retro-window-placeholder.alertmover {
     left: auto;
+    top: auto;
+    transform: none;
   }
 
   .windowcanvas {
