@@ -221,17 +221,37 @@ window.addEventListener('load', initEcho);
       threshold: 0.1,
     });
 
-    const retroWindows = document.querySelectorAll('.retro-window');
-
-    retroWindows.forEach((windowEl) => {
+    // Function to process images in a window
+    function processWindowImages(windowEl) {
       const images = windowEl.querySelectorAll('img');
       images.forEach((img) => {
+        // Skip if already processed
+        if (img.dataset.canvasId) return;
+        // Skip if image has no dimensions yet (not rendered)
+        if (img.offsetWidth === 0 && img.offsetHeight === 0) {
+          // Wait for image to get dimensions
+          const checkDimensions = () => {
+            if (img.offsetWidth > 0 || img.offsetHeight > 0) {
+              prepareInitialPixel(img);
+            } else {
+              requestAnimationFrame(checkDimensions);
+            }
+          };
+          requestAnimationFrame(checkDimensions);
+          return;
+        }
         if (img.complete) {
           prepareInitialPixel(img);
         } else {
-          img.addEventListener('load', () => prepareInitialPixel(img));
+          img.addEventListener('load', () => prepareInitialPixel(img), { once: true });
         }
       });
+    }
+
+    const retroWindows = document.querySelectorAll('.retro-window');
+
+    retroWindows.forEach((windowEl) => {
+      processWindowImages(windowEl);
 
       // Check if window is already in viewport immediately
       const rect = windowEl.getBoundingClientRect();
@@ -309,18 +329,26 @@ window.addEventListener('load', initEcho);
       img.dataset.canvasId = canvas.id = `canvas-${Math.random().toString(36).slice(2)}`;
       
       // Use ResizeObserver for robust size tracking instead of just polling in draw loop
-      const resizeObserver = new ResizeObserver(() => {
-        updateCanvasPosition(img, canvas);
-        // Redraw immediately on resize to avoid lag
-        const currentStep = parseInt(img.dataset.currentPixelStep || '0', 10);
-        if (currentStep <= steps) { // Only if animation not finished
-             // We need to access 'doStep' context or just wait for next frame.
-             // Simpler: do nothing, the animation loop handles it.
-             // But if animation finished? We remove canvas anyway.
+      let resizeObserver = null;
+      if (typeof ResizeObserver !== 'undefined') {
+        try {
+          resizeObserver = new ResizeObserver(() => {
+            updateCanvasPosition(img, canvas);
+            // Redraw immediately on resize to avoid lag
+            const currentStep = parseInt(img.dataset.currentPixelStep || '0', 10);
+            if (currentStep <= steps) { // Only if animation not finished
+                 // We need to access 'doStep' context or just wait for next frame.
+                 // Simpler: do nothing, the animation loop handles it.
+                 // But if animation finished? We remove canvas anyway.
+            }
+          });
+          resizeObserver.observe(img);
+          // Store observer on image so pixelate() can access it later
+          img._pixelResizeObserver = resizeObserver;
+        } catch (e) {
+          // ResizeObserver failed, continue without it
         }
-      });
-      resizeObserver.observe(img);
-      img.dataset.resizeObserverAttached = 'true';
+      }
 
       // Start Animation Loop
       requestAnimationFrame(() => {
@@ -328,7 +356,7 @@ window.addEventListener('load', initEcho);
         
         const parentWindow = img.closest('.retro-window');
         if (parentWindow && parentWindow.dataset.animationTriggerActivated === 'true') {
-            pixelate(img, resizeObserver);
+            pixelate(img);
         }
       });
     }
@@ -348,7 +376,7 @@ window.addEventListener('load', initEcho);
         }
     }
 
-    function pixelate(img, resizeObserver) {
+    function pixelate(img) {
       if (!img.dataset.canvasId) return;
       const canvas = document.getElementById(img.dataset.canvasId);
       if (!canvas) return;
@@ -356,6 +384,9 @@ window.addEventListener('load', initEcho);
       if (img.dataset.animationFinished === 'true') return;
       if (img.dataset.animationStarted === 'true') return;
       img.dataset.animationStarted = 'true';
+
+      // Retrieve resizeObserver from image if available
+      const resizeObserver = img._pixelResizeObserver;
 
       const ctx = canvas.getContext('2d');
       let currentStep = 0;
@@ -365,6 +396,7 @@ window.addEventListener('load', initEcho);
         if (currentStep > steps) {
           // Cleanup
           if (resizeObserver) resizeObserver.disconnect();
+          delete img._pixelResizeObserver;
           if (canvas.parentNode) {
             canvas.parentNode.removeChild(canvas);
           }
@@ -445,11 +477,21 @@ window.addEventListener('load', initEcho);
     }
   }
 
+  // Initialize immediately if DOM is ready, otherwise wait
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initPixelImageEffect, { once: true });
   } else {
-    initPixelImageEffect();
+    // DOM already loaded, but wait a tick to ensure all scripts/styles are applied
+    setTimeout(initPixelImageEffect, 0);
   }
+  
+  // Also re-run on window load to catch any images that loaded late
+  window.addEventListener('load', () => {
+    if (!window.__pixelImageEffectInitialized) {
+      initPixelImageEffect();
+    }
+    // Note: IntersectionObserver handles dynamically added content automatically
+  });
 })();
 
 /* === Causes retro windows to be randomly positioned and  on the screen === */
