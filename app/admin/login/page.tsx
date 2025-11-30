@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 export const dynamic = 'force-dynamic';
 
 type AuthState = 'idle' | 'submitting' | 'success' | 'error';
+type ViewMode = 'login' | 'forgot-password';
 
 function AdminLoginForm() {
   const router = useRouter();
@@ -26,6 +27,7 @@ function AdminLoginForm() {
 
   const searchError = searchParams?.get('error');
 
+  const [viewMode, setViewMode] = useState<ViewMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<AuthState>('idle');
@@ -63,6 +65,31 @@ function AdminLoginForm() {
     [email, password, redirectPath, router]
   );
 
+  const handleForgotPassword = useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!email) {
+        setStatus('error');
+        setMessage('Email is required.');
+        return;
+      }
+      setStatus('submitting');
+      setMessage('');
+      const supabase = supabaseBrowser();
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/admin/reset-password`,
+      });
+      if (error) {
+        setStatus('error');
+        setMessage(error.message);
+        return;
+      }
+      setStatus('success');
+      setMessage('Password reset email sent! Check your inbox.');
+    },
+    [email]
+  );
+
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-xs space-y-6">
@@ -75,49 +102,106 @@ function AdminLoginForm() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Admin access</CardTitle>
-            <CardDescription>Enter your credentials to access the admin dashboard</CardDescription>
+            <CardTitle>{viewMode === 'login' ? 'Admin access' : 'Reset password'}</CardTitle>
+            <CardDescription>
+              {viewMode === 'login'
+                ? 'Enter your credentials to access the admin dashboard'
+                : 'Enter your email to receive a password reset link'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                  disabled={status === 'submitting'}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                  disabled={status === 'submitting'}
-                />
-              </div>
-              {message && (
-                <p
-                  className={cn(
-                    'text-sm',
-                    status === 'error' ? 'text-destructive' : 'text-muted-foreground'
-                  )}
+            {viewMode === 'login' ? (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="admin@example.com"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                    disabled={status === 'submitting'}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                    disabled={status === 'submitting'}
+                  />
+                </div>
+                {message && (
+                  <p
+                    className={cn(
+                      'text-sm',
+                      status === 'error' ? 'text-destructive' : 'text-muted-foreground'
+                    )}
+                  >
+                    {message}
+                  </p>
+                )}
+                <Button type="submit" className="w-full" disabled={status === 'submitting'}>
+                  {status === 'submitting' ? 'Signing in…' : 'Sign in'}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode('forgot-password');
+                    setStatus('idle');
+                    setMessage('');
+                    setPassword('');
+                  }}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {message}
-                </p>
-              )}
-              <Button type="submit" className="w-full" disabled={status === 'submitting'}>
-                {status === 'submitting' ? 'Signing in…' : 'Sign in'}
-              </Button>
-            </form>
+                  Forgot password?
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="admin@example.com"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                    disabled={status === 'submitting'}
+                  />
+                </div>
+                {message && (
+                  <p
+                    className={cn(
+                      'text-sm',
+                      status === 'error' ? 'text-destructive' : 'text-success'
+                    )}
+                  >
+                    {message}
+                  </p>
+                )}
+                <Button type="submit" className="w-full" disabled={status === 'submitting'}>
+                  {status === 'submitting' ? 'Sending…' : 'Send reset link'}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode('login');
+                    setStatus('idle');
+                    setMessage('');
+                  }}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  ← Back to login
+                </button>
+              </form>
+            )}
           </CardContent>
         </Card>
         <div className="text-center">

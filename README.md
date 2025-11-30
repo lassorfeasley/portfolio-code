@@ -6,11 +6,13 @@ Next.js 15 app that hydrates Lassor’s Webflow export, fetches live content fro
 
 - Navigate to `/admin/login` and sign in with a Supabase Auth email/password account.
 - Only addresses listed in `ADMIN_ALLOWED_EMAILS` can access admin routes; middleware automatically signs out unapproved users.
+- **Forgot password?** Click "Forgot password?" on the login page to receive a password reset email.
 - Once signed in you can:
   - Browse/search existing projects (draft + archived states visible).
   - Create or edit projects with live form validation, toggle draft/archived flags, and view an embedded preview.
   - Upload assets directly to Supabase Storage via drag-and-drop; uploaded URLs are injected into the relevant fields.
   - Delete projects (with confirmation) and trigger automatic ISR revalidation so public pages refresh immediately.
+  - Edit homepage content (hero section and folder links) via `/admin/homepage`.
 
 ## Data access layer
 
@@ -34,6 +36,31 @@ Set these in `.env.local` (and in your deployment provider):
 | `ADMIN_UPLOAD_BUCKET` | ➖ | Default bucket name when client omits one (default `projects`). |
 | `ADMIN_UPLOAD_MAX_BYTES` | ➖ | Optional upload size ceiling in bytes (default 25MB). |
 | `NEXT_PUBLIC_ADMIN_UPLOAD_BUCKET` | ➖ | Client-side default bucket label for uploader controls. |
+
+## Supabase Configuration
+
+### Password Reset Setup
+
+For password reset emails to work correctly in production:
+
+1. Go to your [Supabase Dashboard](https://app.supabase.com)
+2. Navigate to **Authentication** → **URL Configuration**
+3. Set **Site URL** to your production domain:
+   ```
+   https://www.lassor.com
+   ```
+4. Add **Redirect URLs** (both local and production):
+   ```
+   https://www.lassor.com/**
+   http://localhost:3000/**
+   ```
+5. Click **Save**
+
+The password reset flow:
+- User clicks "Forgot password?" on `/admin/login`
+- Enters their email and receives a reset link
+- Clicks the link and lands on `/admin/reset-password`
+- Sets a new password and gets redirected to the admin dashboard
 
 ## Development
 

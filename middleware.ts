@@ -43,6 +43,7 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 const isAdminRoute = pathname.startsWith('/admin');
   const isLoginRoute = pathname.startsWith('/admin/login');
+  const isResetPasswordRoute = pathname.startsWith('/admin/reset-password');
   const isApiRoute = pathname.startsWith('/api/admin');
 const isAuthLoginRoute = pathname.startsWith('/auth/login');
 const isAuthCreateRoute = pathname.startsWith('/auth/create-account');
@@ -53,6 +54,11 @@ const isAllowedUser = session
 
   if (isApiRoute && !isAllowedUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Allow reset-password route without authentication checks
+  if (isResetPasswordRoute) {
+    return res;
   }
 
 if (isAdminRoute && !session && !isLoginRoute) {
