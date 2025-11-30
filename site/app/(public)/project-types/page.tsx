@@ -1,29 +1,23 @@
 import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabase/server';
+import { listPublishedProjectTypes } from '@/lib/domain/project-types/service';
+import type { ProjectTypeSummary } from '@/lib/domain/project-types/types';
 
 export const revalidate = 60;
 
-type ProjectType = {
-  id: string;
-  name: string;
-  slug: string;
-  category: string | null;
-};
-
 export default async function ProjectTypesIndex() {
   const supabase = supabaseServer();
-  const { data, error } = await supabase
-    .from('project_types')
-    .select('id,name,slug,category')
-    .eq('draft', false)
-    .eq('archived', false)
-    .order('name', { ascending: true });
-
-  if (error) {
-    return <main className="retro-root"><div className="globalmargin"><p>Failed to load project types.</p></div></main>;
+  let types: ProjectTypeSummary[] = [];
+  let errorMessage: string | null = null;
+  try {
+    types = await listPublishedProjectTypes(supabase);
+  } catch (error) {
+    errorMessage = error instanceof Error ? error.message : 'Failed to load project types.';
   }
 
-  const types = (data ?? []) as ProjectType[];
+  if (errorMessage) {
+    return <main className="retro-root"><div className="globalmargin"><p>Failed to load project types.</p></div></main>;
+  }
 
   return (
     <main className="retro-root">

@@ -12,6 +12,13 @@ Next.js 15 app that hydrates Lassor’s Webflow export, fetches live content fro
   - Upload assets directly to Supabase Storage via drag-and-drop; uploaded URLs are injected into the relevant fields.
   - Delete projects (with confirmation) and trigger automatic ISR revalidation so public pages refresh immediately.
 
+## Data access layer
+
+- All Supabase clients are created via `lib/supabase/{server,client,admin}.ts`, which now share a typed `Database` schema so you get autocomplete + type safety everywhere.
+- Queries, inserts, and transforms live in `lib/domain/**/service.ts`; each service accepts an injected `TypedSupabaseClient`, so API routes, server components, and server actions all share the same logic.
+- View-model shaping (e.g., `ProjectSummary`, `ProjectDetail`) is handled in adjacent `selectors.ts` files so UI components never need to care about raw Supabase response shapes.
+- When adding a new feature, create/extend a domain module first, then call those helpers from pages or routes; this keeps SQL strings, env guards, and error handling in one place and makes testing straightforward (see `lib/domain/projects/service.test.ts` for examples).
+
 ## Environment variables
 
 Set these in `.env.local` (and in your deployment provider):

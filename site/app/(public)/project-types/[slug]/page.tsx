@@ -4,6 +4,14 @@ import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import FooterDesktop from '@/app/components/FooterDesktop';
 import RetroWindow from '@/app/components/RetroWindow';
+import {
+  getPublishedProjectTypeBySlug,
+  listProjectTypeSlugs,
+} from '@/lib/domain/project-types/service';
+import { listPublishedProjectsByType } from '@/lib/domain/projects/service';
+import { NotFoundError } from '@/lib/api/errors';
+import type { ProjectTypeDetail } from '@/lib/domain/project-types/types';
+import type { ProjectSummary } from '@/lib/domain/projects/types';
 
 export const revalidate = 60;
 
@@ -11,12 +19,8 @@ export async function generateStaticParams() {
   const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
   if (!hasEnv) return [];
   const supabase = supabaseServer();
-  const { data } = await supabase
-    .from('project_types')
-    .select('slug')
-    .eq('draft', false)
-    .eq('archived', false);
-  return (data ?? []).map((t) => ({ slug: t.slug }));
+  const slugs = await listProjectTypeSlugs(supabase);
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata(
@@ -61,34 +65,18 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
       );
     }
     const supabase = supabaseServer();
-
-    const [{ data: typeData, error: typeError }, { data: projects, error: projectsError }] = await Promise.all([
-      supabase
-        .from('project_types')
-        .select('id,name,slug,category,landing_page_credentials,font_awesome_icon')
-        .eq('slug', slug)
-        .eq('draft', false)
-        .eq('archived', false)
-        .single(),
-      supabase
-        .from('projects')
-        .select('id,name,slug,featured_image_url,year,description,project_type_id')
-        .eq('draft', false)
-        .eq('archived', false),
-    ]);
-
-    if (typeError) {
-      console.error('Error fetching project type:', typeError);
-      return notFound();
+    let typeData: ProjectTypeDetail;
+    let projects: ProjectSummary[] = [];
+    try {
+      typeData = await getPublishedProjectTypeBySlug(supabase, slug);
+      projects = await listPublishedProjectsByType(supabase, typeData.id);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return notFound();
+      }
+      throw error;
     }
 
-    if (projectsError) {
-      console.error('Error fetching projects:', projectsError);
-    }
-
-    if (!typeData) return notFound();
-
-  const filtered = (projects ?? []).filter((p) => p.project_type_id === typeData.id);
   const article = /^[aeiou]/i.test(typeData.name ?? '') ? 'an' : 'a';
 
   return (
@@ -139,7 +127,7 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
         </div>
         <div className="windowcanvas w-dyn-list">
           <div role="list" className="desktopgrid w-dyn-items">
-            {filtered.map((p) => (
+            {projects.map((p) => (
               <div key={p.id} role="listitem" className="retro-window-placeholder w-dyn-item">
                 <div id="draggable-window" className="retro-window">
                   <div className="window-bar">

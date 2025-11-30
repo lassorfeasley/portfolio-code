@@ -1,13 +1,14 @@
 import type { NextRequest } from 'next/server';
-import { supabaseServiceRole } from '@/lib/supabase/admin';
 import { requireAdminSession } from '@/lib/auth/admin';
 import { validateProjectPayload } from '@/lib/validators/projects';
-import type { ProjectPayload } from '@/types/projects';
-import { ApiError, NotFoundError } from '@/lib/api/errors';
+import { ApiError } from '@/lib/api/errors';
 import { handleApiError, json } from '@/lib/api/response';
-
-const PROJECT_COLUMNS =
-  'id,name,slug,description,featured_image_url,images_urls,process_image_urls,process_images_label,process_and_context_html,year,linked_document_url,video_url,fallback_writing_url,project_type_id,draft,archived,created_at,updated_at';
+import { supabaseServiceRole } from '@/lib/supabase/admin';
+import {
+  deleteProject,
+  getAdminProjectById,
+  updateProject,
+} from '@/lib/domain/projects/service';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -16,14 +17,8 @@ export async function GET(_: NextRequest, { params }: Params) {
     await requireAdminSession();
     const { id } = await params;
     const adminClient = supabaseServiceRole();
-    const { data, error } = await adminClient.from('projects').select(PROJECT_COLUMNS).eq('id', id).maybeSingle();
-    if (error) {
-      throw new ApiError('Failed to load project', 500, error.message);
-    }
-    if (!data) {
-      throw new NotFoundError('Project not found');
-    }
-    return json(data);
+    const project = await getAdminProjectById(adminClient, id);
+    return json(project);
   } catch (error) {
     return handleApiError(error);
   }
@@ -33,7 +28,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   try {
     await requireAdminSession();
     const { id } = await params;
-    const payload = (await request.json()) as ProjectPayload;
+    const payload = await request.json();
 
     if (payload.id && payload.id !== id) {
       throw new ApiError('Payload id does not match route id.', 400);
@@ -45,27 +40,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     const adminClient = supabaseServiceRole();
-    const { data: conflict } = await adminClient
-      .from('projects')
-      .select('id')
-      .eq('slug', data.slug)
-      .neq('id', id)
-      .maybeSingle();
-    if (conflict) {
-      throw new ApiError('Slug already exists.', 409);
-    }
-
-    const { data: updated, error } = await adminClient
-      .from('projects')
-      .update(data)
-      .eq('id', id)
-      .select(PROJECT_COLUMNS)
-      .single();
-
-    if (error || !updated) {
-      throw new ApiError('Failed to update project', 500, error?.message);
-    }
-
+    const updated = await updateProject(adminClient, id, data);
     return json(updated);
   } catch (error) {
     return handleApiError(error);
@@ -77,13 +52,7 @@ export async function DELETE(_: NextRequest, { params }: Params) {
     await requireAdminSession();
     const { id } = await params;
     const adminClient = supabaseServiceRole();
-    const { error, count } = await adminClient.from('projects').delete({ count: 'exact' }).eq('id', id);
-    if (error) {
-      throw new ApiError('Failed to delete project', 500, error.message);
-    }
-    if (!count) {
-      throw new NotFoundError('Project not found');
-    }
+    await deleteProject(adminClient, id);
     return json({ success: true });
   } catch (error) {
     return handleApiError(error);

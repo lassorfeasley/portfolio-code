@@ -1,8 +1,9 @@
 import type { NextRequest } from 'next/server';
-import { supabaseServiceRole } from '@/lib/supabase/admin';
 import { requireAdminSession } from '@/lib/auth/admin';
 import { ApiError } from '@/lib/api/errors';
 import { handleApiError, json } from '@/lib/api/response';
+import { supabaseServiceRole } from '@/lib/supabase/admin';
+import { uploadFileToBucket } from '@/lib/domain/uploads/service';
 
 const defaultBucket = process.env.ADMIN_UPLOAD_BUCKET || 'projects';
 const allowedBuckets = (process.env.ADMIN_UPLOAD_BUCKETS || defaultBucket)
@@ -47,22 +48,9 @@ export async function POST(request: NextRequest) {
     const objectPath = buildObjectPath(prefix, file.name);
 
     const adminClient = supabaseServiceRole();
-    const { error } = await adminClient.storage.from(bucketParam).upload(objectPath, file, {
-      upsert: false,
-      contentType: file.type || 'application/octet-stream',
-    });
+    const uploaded = await uploadFileToBucket(adminClient, bucketParam, objectPath, file);
 
-    if (error) {
-      throw new ApiError('Upload failed', 500, error.message);
-    }
-
-    const { data: publicData } = adminClient.storage.from(bucketParam).getPublicUrl(objectPath);
-
-    return json({
-      bucket: bucketParam,
-      path: objectPath,
-      publicUrl: publicData.publicUrl,
-    });
+    return json(uploaded);
   } catch (error) {
     return handleApiError(error);
   }

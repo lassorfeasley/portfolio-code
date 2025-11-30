@@ -1,30 +1,18 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
+import { getPublishedArticleBySlug, listArticleSlugs } from '@/lib/domain/articles/service';
+import type { ArticleRow } from '@/lib/domain/articles/types';
+import { NotFoundError } from '@/lib/api/errors';
 
 export const revalidate = 60;
-
-type Article = {
-  id: string;
-  name: string;
-  slug: string;
-  publication: string | null;
-  title: string | null;
-  date_published: string | null;
-  url: string | null;
-  featured_image_url: string | null;
-};
 
 export async function generateStaticParams() {
   const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
   if (!hasEnv) return [];
   const supabase = supabaseServer();
-  const { data } = await supabase
-    .from('articles')
-    .select('slug')
-    .eq('draft', false)
-    .eq('archived', false);
-  return (data ?? []).map((a) => ({ slug: a.slug }));
+  const slugs = await listArticleSlugs(supabase);
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata(
@@ -61,16 +49,15 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     );
   }
   const supabase = supabaseServer();
-  const { data, error } = await supabase
-    .from('articles')
-    .select('id,name,slug,publication,title,date_published,url,featured_image_url')
-    .eq('slug', slug)
-    .eq('draft', false)
-    .eq('archived', false)
-    .single();
-
-  if (error || !data) return notFound();
-  const a = data as Article;
+  let a: ArticleRow;
+  try {
+    a = await getPublishedArticleBySlug(supabase, slug);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return notFound();
+    }
+    throw error;
+  }
 
   return (
     <main className="retro-root">

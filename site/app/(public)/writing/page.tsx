@@ -1,21 +1,23 @@
 import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabase/server';
+import { listPublishedArticles } from '@/lib/domain/articles/service';
+import type { ArticleSummary } from '@/lib/domain/articles/types';
 
 export const revalidate = 60;
 
 export default async function WritingIndex() {
   const supabase = supabaseServer();
-  const { data } = await supabase
-    .from('articles')
-    .select('name,slug,publication,title,date_published,featured_image_url')
-    .eq('draft', false)
-    .eq('archived', false)
-    .order('date_published', { ascending: false });
+  let articles: ArticleSummary[] = [];
+  try {
+    articles = await listPublishedArticles(supabase);
+  } catch (error) {
+    console.error(error);
+  }
 
   return (
     <main className="retro-root">
       <section className="cluttered-desktop-container">
-        {(data ?? []).map((a) => (
+        {articles.map((a) => (
           <div key={a.slug} className="retro-window">
             <div className="window-bar">
               <div className="x-out" />

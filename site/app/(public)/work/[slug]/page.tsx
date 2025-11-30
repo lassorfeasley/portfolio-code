@@ -8,25 +8,14 @@ import ExternalLinksWindow from '@/app/components/ExternalLinksWindow';
 import { toLargeUrl } from '@/lib/supabase/image';
 import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
 import LightboxGallery from '@/app/components/LightboxGallery';
+import {
+  getPublishedProjectBySlug,
+  listPublicProjectSlugs,
+} from '@/lib/domain/projects/service';
+import type { ProjectDetail } from '@/lib/domain/projects/types';
+import { NotFoundError } from '@/lib/api/errors';
 
 export const revalidate = 60;
-
-type Project = {
-  id: string;
-  name: string | null;
-  slug: string;
-  description: string | null;
-  featured_image_url: string | null;
-  images_urls: string[] | null;
-  process_image_urls: string[] | null;
-  process_images_label: string | null;
-  process_and_context_html: string | null;
-  year: string | null;
-  linked_document_url: string | null;
-  video_url: string | null;
-  fallback_writing_url: string | null;
-  project_types?: { name: string | null; slug: string } | { name: string | null; slug: string }[] | null;
-};
 
 function toEmbedUrl(raw: string | null): string | null {
   if (!raw) return null;
@@ -73,12 +62,8 @@ export async function generateStaticParams() {
   const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
   if (!hasEnv) return [];
   const supabase = supabaseServer();
-  const { data } = await supabase
-    .from('projects')
-    .select('slug')
-    .eq('draft', false)
-    .eq('archived', false);
-  return (data ?? []).map((p) => ({ slug: p.slug }));
+  const slugs = await listPublicProjectSlugs(supabase);
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata(
@@ -120,25 +105,22 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
     );
   }
   const supabase = supabaseServer();
-
-  const { data, error } = await supabase
-    .from('projects')
-    .select('id,name,slug,description,featured_image_url,images_urls,process_image_urls,process_images_label,process_and_context_html,year,linked_document_url,video_url,fallback_writing_url,project_types(name,slug)')
-    .eq('slug', slug)
-    .eq('draft', false)
-    .eq('archived', false)
-    .single();
-
-  if (error || !data) return notFound();
-  const p = data as Project;
-  const projectTypeRel = p.project_types;
-  const projectType = Array.isArray(projectTypeRel)
-    ? (projectTypeRel[0] ?? null)
-    : (projectTypeRel ?? null);
+  let project: ProjectDetail;
+  try {
+    project = await getPublishedProjectBySlug(supabase, slug);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return notFound();
+    }
+    throw error;
+  }
+  const projectType = project.projectType;
   const projectTypeName = projectType?.name ?? 'Work';
   const projectTypeHref = projectType?.slug ? `/project-types/${projectType.slug}` : '/work';
-  const hasFinalImages = Array.isArray(p.images_urls) && p.images_urls.length > 0;
-  const hasProcessSection = ((p.process_and_context_html ?? '').trim() !== '') || (Array.isArray(p.process_image_urls) && p.process_image_urls.length > 0);
+  const hasFinalImages = Array.isArray(project.images_urls) && project.images_urls.length > 0;
+  const hasProcessSection =
+    ((project.process_and_context_html ?? '').trim() !== '') ||
+    (Array.isArray(project.process_image_urls) && project.process_image_urls.length > 0);
   const externalLinks = (() => {
     const links: { href: string; label: string }[] = [];
     const toBrand = (rawUrl: string | null): string | null => {
@@ -152,13 +134,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         return null;
       }
     };
-    const projectName = (p.name ?? '').toUpperCase();
+    const projectName = (project.name ?? '').toUpperCase();
     const add = (href: string | null) => {
       const brand = toBrand(href);
       if (href && brand) links.push({ href, label: `${brand} × ${projectName}` });
     };
-    add(p.linked_document_url);
-    add(p.fallback_writing_url);
+    add(project.linked_document_url);
+    add(project.fallback_writing_url);
     return links;
   })();
 
@@ -169,29 +151,29 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         <div className="topbar">
           <Link href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></Link>
           <Link href={projectTypeHref} className="h _5 link w-inline-block"><div>{projectTypeName}</div><div>→</div></Link>
-          <div className="h _5 link"><div className="text-block-5">{p.name}</div></div>
+          <div className="h _5 link"><div className="text-block-5">{project.name}</div></div>
         </div>
 
         <div className="windowcanvas">
           <div className="onetwogrid _40">
             <div className="retro-window-placeholder">
-              <RetroWindow title={p.name ?? ''} className="nomax noscrollonm">
-                {p.description ? <div className="paragraph">{p.description}</div> : null}
+              <RetroWindow title={project.name ?? ''} className="nomax noscrollonm">
+                {project.description ? <div className="paragraph">{project.description}</div> : null}
                 {/* If a video is present, do not show featured image to avoid duplication */}
-                {!p.video_url && p.featured_image_url ? (
+                {!project.video_url && project.featured_image_url ? (
                   <ImageWithSupabaseFallback
-                    src={toLargeUrl(p.featured_image_url, 1800)}
-                    alt={p.name ?? ''}
+                    src={toLargeUrl(project.featured_image_url, 1800)}
+                    alt={project.name ?? ''}
                     className="lightbox-link"
                     style={{ maxWidth: '100%', height: 'auto' }}
                   />
                 ) : null}
-                {p.video_url ? (
+                {project.video_url ? (
                   <div className="videowrapper">
                     <div className="video w-video w-embed" style={{ maxHeight: 'none', height: 'auto' }}>
                       <iframe
-                        src={toEmbedUrl(p.video_url) ?? undefined}
-                        title={p.name ?? 'video'}
+                        src={toEmbedUrl(project.video_url) ?? undefined}
+                        title={project.name ?? 'video'}
                         frameBorder={0}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen
@@ -210,7 +192,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
               <div className="retro-window-placeholder noratio pushdown">
                 <RetroWindow title="Final images and renderings" className="doublewide square">
                   <div className="gallery">
-                    <LightboxGallery images={p.images_urls!} />
+                    <LightboxGallery images={project.images_urls!} />
                   </div>
                 </RetroWindow>
               </div>
@@ -221,16 +203,16 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             {hasProcessSection ? (
               <div className="retro-window-placeholder">
                 <RetroWindow title="Process and context" className="doublewide noratioonm">
-                  {(p.process_and_context_html ?? '').trim() !== '' ? (
+                  {(project.process_and_context_html ?? '').trim() !== '' ? (
                     <div className="v _10">
-                      <div className="paragraph w-richtext" dangerouslySetInnerHTML={{ __html: p.process_and_context_html as string }} />
+                      <div className="paragraph w-richtext" dangerouslySetInnerHTML={{ __html: project.process_and_context_html as string }} />
                     </div>
                   ) : null}
-                  {Array.isArray(p.process_image_urls) && p.process_image_urls.length > 0 ? (
+                  {Array.isArray(project.process_image_urls) && project.process_image_urls.length > 0 ? (
                     <div className="v _10">
-                      {p.process_images_label ? <div className="captionlable">{p.process_images_label}</div> : null}
+                      {project.process_images_label ? <div className="captionlable">{project.process_images_label}</div> : null}
                       <div className="gallery">
-                        <LightboxGallery images={p.process_image_urls} />
+                        <LightboxGallery images={project.process_image_urls} />
                       </div>
                     </div>
                   ) : null}

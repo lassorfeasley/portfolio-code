@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseServer } from '@/lib/supabase/server';
+import { buildProjectSlugTypeMap } from '@/lib/domain/projects/service';
 
 export const revalidate = 3600;
 export const runtime = 'nodejs';
@@ -13,43 +14,12 @@ export async function GET() {
     return NextResponse.json({}, { status: 200 });
   }
 
-  const supabase = createClient(url, key);
-
-  const { data, error } = await supabase
-    .from('projects')
-    .select('slug, project_types!inner(slug)')
-    .eq('draft', false)
-    .eq('archived', false);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  type RowLike = { slug: string; project_types?: unknown };
-  const hasSlug = (value: unknown): value is { slug: string } => {
-    if (typeof value !== 'object' || value === null) return false;
-    const slug = (value as Record<string, unknown>).slug;
-    return typeof slug === 'string';
-  };
-
-  const extractProjectTypeSlug = (rel: unknown): string | undefined => {
-    if (Array.isArray(rel)) {
-      const first = rel[0];
-      return hasSlug(first) ? first.slug : undefined;
-    }
-    return hasSlug(rel) ? rel.slug : undefined;
-  };
-
-  const isRowLike = (value: unknown): value is RowLike => {
-    if (typeof value !== 'object' || value === null) return false;
-    const slug = (value as Record<string, unknown>).slug;
-    return typeof slug === 'string';
-  };
-
-  const map: Record<string, string> = {};
-  const rows = Array.isArray(data) ? data : [];
-  for (const item of rows) {
-    if (!isRowLike(item)) continue;
-    map[item.slug] = extractProjectTypeSlug(item.project_types) ?? '';
+  try {
+    const supabase = supabaseServer();
+    const map = await buildProjectSlugTypeMap(supabase);
+    return NextResponse.json(map, { status: 200 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to build project map';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  return NextResponse.json(map, { status: 200 });
 }

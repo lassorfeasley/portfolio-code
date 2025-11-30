@@ -1,21 +1,17 @@
 import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabase/server';
+import { listPublishedProjects } from '@/lib/domain/projects/service';
 
 export const revalidate = 60;
 
 export default async function WorkIndex() {
   const supabase = supabaseServer();
-  const { data } = await supabase
-    .from('projects')
-    .select('name,slug,featured_image_url,year,description')
-    .eq('draft', false)
-    .eq('archived', false)
-    .order('published_on', { ascending: false });
+  const projects = await listPublishedProjects(supabase);
 
   return (
     <main className="retro-root">
       <section className="cluttered-desktop-container">
-        {(data ?? []).map((p) => (
+        {projects.map((p) => (
           <div key={p.slug} className="retro-window">
             <div className="window-bar">
               <div className="x-out" />

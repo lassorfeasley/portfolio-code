@@ -5,27 +5,12 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
 import RetroWindow from '@/app/components/RetroWindow';
-
-export type HomeProject = {
-  id: string;
-  name: string | null;
-  slug: string;
-  description: string | null;
-  featured_image_url: string | null;
-  year: string | null;
-  project_types?: { name: string | null; slug: string } | { name: string | null; slug: string }[] | null;
-};
-
-export type HomeProjectType = {
-  id: string;
-  name: string | null;
-  slug: string;
-  category: string | null;
-};
+import type { ProjectSummary } from '@/lib/domain/projects/types';
+import type { ProjectTypeSummary } from '@/lib/domain/project-types/types';
 
 type HomeDesktopProps = {
-  projects: HomeProject[];
-  projectTypes: HomeProjectType[];
+  projects: ProjectSummary[];
+  projectTypes: ProjectTypeSummary[];
   statusMessage?: string | null;
 };
 
@@ -47,17 +32,7 @@ function normalize(value: string): string {
   return value.toLowerCase().trim();
 }
 
-function extractProjectType(project: HomeProject) {
-  const rel = project.project_types;
-  if (!rel) return { slug: null as string | null, name: null as string | null };
-  const type = Array.isArray(rel) ? rel[0] ?? null : rel;
-  return {
-    slug: type?.slug ?? null,
-    name: type?.name ?? null,
-  };
-}
-
-type ProjectWithMeta = HomeProject & {
+type ProjectWithMeta = ProjectSummary & {
   _typeSlug: string | null;
   _typeName: string | null;
 };
@@ -68,10 +43,11 @@ export default function HomeDesktop({ projects, projectTypes, statusMessage }: H
 
   const preparedProjects = useMemo<ProjectWithMeta[]>(
     () =>
-      projects.map((project) => {
-        const type = extractProjectType(project);
-        return { ...project, _typeSlug: type.slug, _typeName: type.name };
-      }),
+      projects.map((project) => ({
+        ...project,
+        _typeSlug: project.projectType?.slug ?? null,
+        _typeName: project.projectType?.name ?? null,
+      })),
     [projects]
   );
 
