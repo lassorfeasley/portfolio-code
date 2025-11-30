@@ -199,6 +199,11 @@ window.addEventListener('load', initEcho);
 
 
 (function attachPixelImageEffect() {
+  // Very early debug to confirm script is loaded
+  if (typeof console !== 'undefined' && console.log) {
+    console.log('[Pixel Effect] Script loaded, document readyState:', document.readyState);
+  }
+  
   function initPixelImageEffect() {
     if (window.__pixelImageEffectInitialized) {
       return;
@@ -617,6 +622,9 @@ window.addEventListener('load', initEcho);
   // Initialize with multiple strategies to catch all cases
   function attemptInit() {
     try {
+      if (typeof console !== 'undefined' && console.log) {
+        console.log('[Pixel Effect] Attempting initialization, readyState:', document.readyState);
+      }
       initPixelImageEffect();
     } catch (e) {
       if (typeof console !== 'undefined' && console.error) {
@@ -625,35 +633,48 @@ window.addEventListener('load', initEcho);
     }
   }
 
-  // Strategy 1: If DOM is still loading, wait for DOMContentLoaded
+  // Strategy 1: Try immediately (for scripts loaded after DOM is ready)
+  if (document.body) {
+    setTimeout(attemptInit, 50);
+  }
+
+  // Strategy 2: If DOM is still loading, wait for DOMContentLoaded
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', attemptInit, { once: true });
   } else {
-    // Strategy 2: DOM is ready, but wait a tick for React hydration
-    setTimeout(attemptInit, 100);
+    // DOM is ready, but wait a bit for React hydration and other scripts
+    setTimeout(attemptInit, 200);
   }
   
   // Strategy 3: Also try on window load (catches late-loading images)
   window.addEventListener('load', () => {
     setTimeout(() => {
       if (!window.__pixelImageEffectInitialized) {
+        if (typeof console !== 'undefined' && console.log) {
+          console.log('[Pixel Effect] Window loaded, attempting initialization');
+        }
         attemptInit();
       } else {
         // Re-process in case new images were added after initial load
-        // Use the reinit function if available, otherwise just log
         if (window.__pixelImageEffectReinit) {
-          // Don't fully reinit, just process new windows
           const windows = document.querySelectorAll('.retro-window:not([data-pixel-effect-observed="true"])');
           if (windows.length > 0 && typeof console !== 'undefined' && console.log) {
-            console.log(`[Pixel Effect] Found ${windows.length} new windows after load, will be processed by MutationObserver`);
+            console.log(`[Pixel Effect] Found ${windows.length} new windows after load`);
           }
         }
       }
-    }, 200);
+    }, 300);
   });
   
-  // Strategy 4: Expose init function globally for manual triggering if needed
-  // Note: This will be set inside initPixelImageEffect
+  // Strategy 4: Fallback - try one more time after a longer delay
+  setTimeout(() => {
+    if (!window.__pixelImageEffectInitialized) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[Pixel Effect] Fallback initialization attempt');
+      }
+      attemptInit();
+    }
+  }, 1000);
 })();
 
 /* === Causes retro windows to be randomly positioned and  on the screen === */
