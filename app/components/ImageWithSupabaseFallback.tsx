@@ -47,6 +47,7 @@ export default function ImageWithSupabaseFallback({
       priority={priority}
       loading={priority ? undefined : loading}
       unoptimized={unoptimized}
+      crossOrigin="anonymous"
       onError={() => {
         if (isSupabaseTransformedUrl(currentSrc)) {
           setCurrentSrc(toOriginalObjectUrl(currentSrc));

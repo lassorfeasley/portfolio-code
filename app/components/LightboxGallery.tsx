@@ -77,6 +77,7 @@ export default function LightboxGallery({
                     unoptimized
                     className="cover-object"
                     style={{ objectFit: 'cover' }}
+                    crossOrigin="anonymous"
                   />
                 </div>
               </a>
@@ -105,6 +106,7 @@ export default function LightboxGallery({
               onError={handleImageError}
               unoptimized
               style={{ objectFit: 'contain' }}
+              crossOrigin="anonymous"
             />
           </div>
           <button className="lf-lightbox-next" aria-label="Next" onClick={next}>›</button>

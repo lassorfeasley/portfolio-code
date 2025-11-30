@@ -187,6 +187,7 @@ export default function HomeDesktop({ projects, projectTypes, statusMessage }: H
                 height={800}
                 sizes="(max-width: 768px) 90vw, 400px"
                 priority={false}
+                crossOrigin="anonymous"
               />
               <Link href="/faceblind" className="link-block-4 w-inline-block">
                 <div className="navlink light">Lassor is face-blind. Learn more →</div>
