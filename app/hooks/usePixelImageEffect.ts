@@ -10,7 +10,7 @@ interface UsePixelImageEffectOptions {
 }
 
 interface UsePixelImageEffectReturn {
-  canvasRef: React.RefObject<HTMLCanvasElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
   isAnimating: boolean;
   isFinished: boolean;
 }
