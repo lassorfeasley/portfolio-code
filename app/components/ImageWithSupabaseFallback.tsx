@@ -4,7 +4,6 @@ import Image from 'next/image';
 import { CSSProperties, useMemo, useState, useRef, useEffect } from 'react';
 import { isSupabaseTransformedUrl, toOriginalObjectUrl } from '@/lib/supabase/image';
 import { usePixelImageEffect } from '@/app/hooks/usePixelImageEffect';
-import { usePixelEffectEnabled } from '@/app/contexts/PixelEffectContext';
 
 type Props = {
   src: string;
@@ -39,8 +38,26 @@ export default function ImageWithSupabaseFallback({
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Use context to determine if pixel effect should be enabled
-  const isPixelEffectEnabled = usePixelEffectEnabled();
+  // Check for data attribute on ancestor (survives DOM manipulation)
+  const [isPixelEffectEnabled, setIsPixelEffectEnabled] = useState(false);
+  
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    // Look for ancestor with data-pixel-effect-enabled="true"
+    // This works even if the element has been moved by float system
+    const checkPixelEffect = () => {
+      const retroWindow = containerRef.current?.closest('[data-pixel-effect-enabled="true"]');
+      setIsPixelEffectEnabled(retroWindow !== null);
+    };
+    
+    checkPixelEffect();
+    
+    // Recheck after a delay to catch floated windows
+    const timeoutId = setTimeout(checkPixelEffect, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
   
   // Find the actual img element after Next.js Image renders it
   useEffect(() => {
