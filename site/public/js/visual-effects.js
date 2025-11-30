@@ -171,6 +171,23 @@ function setupEchoEffect(draggableSelector) {
 function initEcho() {
     // Adjust selectors to match your draggable elements
     setupEchoEffect('.retro-window, .draggable-folder');
+
+    // Observe DOM changes so dynamically injected windows also get the echo behavior (SPA navigation)
+    if (!window.__echoObserverAttached) {
+      const target = document.querySelector('.public-body') || document.body;
+      if (target) {
+        const observer = new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+              setupEchoEffect('.retro-window, .draggable-folder');
+              break;
+            }
+          }
+        });
+        observer.observe(target, { childList: true, subtree: true });
+        window.__echoObserverAttached = true;
+      }
+    }
 }
 
 if (document.readyState === 'loading') {

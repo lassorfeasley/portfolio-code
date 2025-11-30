@@ -4,6 +4,7 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { getPublishedArticleBySlug, listArticleSlugs } from '@/lib/domain/articles/service';
 import type { ArticleRow } from '@/lib/domain/articles/types';
 import { NotFoundError } from '@/lib/api/errors';
+import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
 
 export const revalidate = 60;
 
@@ -70,7 +71,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             <h1>{a.title ?? a.name}</h1>
             {a.publication ? <p>{a.publication}</p> : null}
             {a.date_published ? <p>{new Date(a.date_published).toLocaleDateString()}</p> : null}
-            {a.featured_image_url ? <img src={a.featured_image_url} alt={a.title ?? a.name} /> : null}
+            {a.featured_image_url ? (
+              <ImageWithSupabaseFallback
+                src={a.featured_image_url}
+                alt={a.title ?? a.name ?? ''}
+                style={{ width: '100%', height: 'auto' }}
+              />
+            ) : null}
             {a.url ? (
               <p>
                 <a href={a.url} target="_blank" rel="noreferrer">Read externally</a>

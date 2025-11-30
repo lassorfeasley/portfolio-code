@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import FooterDesktop from '@/app/components/FooterDesktop';
 import RetroWindow from '@/app/components/RetroWindow';
+import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
 import {
   getPublishedProjectTypeBySlug,
   listProjectTypeSlugs,
@@ -141,7 +142,13 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
                         <div className="paragraph mxht learn-more">learn more →</div>
                       </div>
                       {p.featured_image_url ? (
-                        <img src={p.featured_image_url} alt={p.name ?? ''} className="lightbox-link" />
+                        <ImageWithSupabaseFallback
+                          src={p.featured_image_url}
+                          alt={p.name ?? ''}
+                          className="lightbox-link"
+                          style={{ width: '100%', height: 'auto' }}
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                        />
                       ) : null}
                     </Link>
                   </div>
