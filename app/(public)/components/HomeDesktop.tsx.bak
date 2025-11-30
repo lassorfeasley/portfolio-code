@@ -19,6 +19,16 @@ type HomeDesktopProps = {
 };
 
 
+const folderLinks = [
+  { label: 'UI design', icon: '', href: '/project-types/interaction-design' },
+  { label: 'Writing', icon: '', href: '/project-types/writing' },
+  { label: 'Resume', icon: '', href: 'https://docs.google.com/document/d/1qz8Qwrk6aoD1n1vEe5Zd7OhaEhun8UOuY0xcW2SnRmg/edit?tab=t.0', external: true },
+  { label: 'UX design', icon: '', href: '/project-types/innovation' },
+  { label: 'Walking forward', icon: '', href: 'https://walking.lassor.com', external: true },
+  { label: 'LinkedIn', icon: '', href: 'https://www.linkedin.com/in/lassor/', external: true },
+  { label: 'Industrial design', icon: '', href: '/project-types/industrial-design' },
+  { label: 'Seatback Safety', icon: '', href: 'https://www.lassor.com/projects/seatback-safety', external: true },
+];
 
 function normalize(value: string): string {
   return value.toLowerCase().trim();

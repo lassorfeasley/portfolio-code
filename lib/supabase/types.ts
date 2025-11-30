@@ -168,6 +168,72 @@ export type Database = {
         };
         Relationships: [];
       };
+      hero_content: {
+        Row: {
+          id: string;
+          window_title: string;
+          hero_text: string;
+          hero_image_url: string;
+          footer_link_text: string | null;
+          footer_link_href: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          window_title?: string;
+          hero_text: string;
+          hero_image_url: string;
+          footer_link_text?: string | null;
+          footer_link_href?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          window_title?: string;
+          hero_text?: string;
+          hero_image_url?: string;
+          footer_link_text?: string | null;
+          footer_link_href?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
+      folder_links: {
+        Row: {
+          id: string;
+          label: string;
+          icon: string;
+          href: string;
+          external: boolean;
+          display_order: number;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          label: string;
+          icon?: string;
+          href: string;
+          external?: boolean;
+          display_order?: number;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          label?: string;
+          icon?: string;
+          href?: string;
+          external?: boolean;
+          display_order?: number;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: Record<string, never>;
     Enums: Record<string, never>;
