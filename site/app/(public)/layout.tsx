@@ -17,11 +17,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
       <Script src="/js/retro-window-state.js?v=1" strategy="afterInteractive" />
       <Script src="/js/retro-scatter-engine.js?v=1" strategy="afterInteractive" />
       <Script src="/js/core-effects.js?v=2" strategy="afterInteractive" />
-      <Script src="/js/visual-effects.js?v=6" strategy="afterInteractive" onLoad={() => {
-        if (typeof window !== 'undefined' && window.__pixelImageEffectReinit) {
-          setTimeout(() => window.__pixelImageEffectReinit(), 500);
-        }
-      }} />
+      <Script src="/js/visual-effects.js?v=6" strategy="afterInteractive" />
       <div className="public-body">{children}</div>
     </ErrorBoundary>
   );
