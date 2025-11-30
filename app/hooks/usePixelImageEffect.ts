@@ -243,11 +243,15 @@ export function usePixelImageEffect(
     requestAnimationFrame(() => {
       const ctx = canvas.getContext('2d');
       if (ctx) {
+        console.log('[Pixel Hook] 🎨 Drawing initial pixelated state, steps:', steps);
         drawPixelStep(img, canvas, ctx, steps);
 
         // Start animation if in viewport
         if (isInViewportRef.current) {
+          console.log('[Pixel Hook] ▶️ Image in viewport, starting animation');
           startAnimation(img, canvas);
+        } else {
+          console.log('[Pixel Hook] 👁️ Image not in viewport yet, waiting');
         }
       }
     });
@@ -299,32 +303,60 @@ export function usePixelImageEffect(
 
   // Setup canvas when image loads
   useEffect(() => {
-    console.log('[Pixel Hook] Setup effect running:', {
+    console.log('[Pixel Hook] 🎨 Setup effect running:', {
       enabled,
       hasImage: !!imageRef.current,
-      hasCanvas: !!canvasRef.current
+      hasCanvas: !!canvasRef.current,
+      imageSrc: imageRef.current?.src?.substring(imageRef.current.src.lastIndexOf('/') + 1, imageRef.current.src.lastIndexOf('/') + 30),
+      imageComplete: imageRef.current?.complete,
+      imageNaturalWidth: imageRef.current?.naturalWidth
     });
     
-    if (!enabled || !imageRef.current || !canvasRef.current) return;
+    // If disabled, ensure canvas stays hidden
+    if (!enabled) {
+      console.log('[Pixel Hook] ❌ Disabled - hiding canvas');
+      if (canvasRef.current) {
+        canvasRef.current.style.display = 'none';
+      }
+      return;
+    }
+    
+    if (!imageRef.current || !canvasRef.current) {
+      console.log('[Pixel Hook] ⚠️ Missing refs, cannot setup');
+      return;
+    }
+    
+    console.log('[Pixel Hook] ✅ All conditions met, proceeding with setup');
 
     const img = imageRef.current;
     const canvas = canvasRef.current;
 
     // Wait for canvas to be in DOM
     const checkAndPrepare = () => {
+      console.log('[Pixel Hook] checkAndPrepare:', {
+        canvasInParent: !!canvas.parentElement,
+        canvasInBody: document.body.contains(canvas),
+        imageComplete: img.complete,
+        imageNaturalWidth: img.naturalWidth
+      });
+      
       if (canvas.parentElement || document.body.contains(canvas)) {
         const handleLoad = () => {
+          console.log('[Pixel Hook] 📸 Image loaded event, preparing canvas');
           prepareCanvas(img);
         };
 
         if (img.complete && img.naturalWidth > 0) {
           // Image already loaded
+          console.log('[Pixel Hook] 📸 Image already complete, preparing canvas immediately');
           prepareCanvas(img);
         } else {
+          console.log('[Pixel Hook] ⏳ Waiting for image load event');
           img.addEventListener('load', handleLoad, { once: true });
         }
       } else {
         // Canvas not in DOM yet, retry
+        console.log('[Pixel Hook] ⏳ Canvas not in DOM yet, retrying in 50ms');
         setTimeout(checkAndPrepare, 50);
       }
     };

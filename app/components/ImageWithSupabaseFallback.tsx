@@ -42,19 +42,49 @@ export default function ImageWithSupabaseFallback({
   const [isPixelEffectEnabled, setIsPixelEffectEnabled] = useState(false);
   
   useEffect(() => {
-    if (!containerRef.current) return;
+    console.log('[Pixel Effect] Component mounted for image:', src.substring(src.lastIndexOf('/') + 1, src.lastIndexOf('/') + 30));
+    
+    if (!containerRef.current) {
+      console.log('[Pixel Effect] No container ref yet');
+      return;
+    }
     
     // Look for ancestor with data-pixel-effect-enabled="true"
     // This works even if the element has been moved by float system
     const checkPixelEffect = () => {
-      const retroWindow = containerRef.current?.closest('[data-pixel-effect-enabled="true"]');
-      const isEnabled = retroWindow !== null;
-      console.log('[Pixel Effect] Detection check:', {
-        isEnabled,
-        hasContainer: !!containerRef.current,
-        foundWindow: !!retroWindow,
-        dataAttr: retroWindow?.getAttribute('data-pixel-effect-enabled')
+      const container = containerRef.current;
+      console.log('[Pixel Effect] Checking from container:', {
+        containerTagName: container?.tagName,
+        containerParent: container?.parentElement?.tagName,
+        containerParentClass: container?.parentElement?.className
       });
+      
+      const retroWindow = container?.closest('[data-pixel-effect-enabled="true"]');
+      const isEnabled = retroWindow !== null;
+      
+      console.log('[Pixel Effect] Detection result:', {
+        isEnabled,
+        foundWindow: !!retroWindow,
+        windowClass: retroWindow?.className,
+        windowFloatId: (retroWindow as HTMLElement)?.dataset?.floatId,
+        dataAttr: retroWindow?.getAttribute('data-pixel-effect-enabled'),
+        ancestorChain: (() => {
+          const chain = [];
+          let el = container?.parentElement;
+          let depth = 0;
+          while (el && depth < 10) {
+            chain.push({
+              tag: el.tagName,
+              class: el.className,
+              hasDataAttr: el.hasAttribute('data-pixel-effect-enabled')
+            });
+            el = el.parentElement;
+            depth++;
+          }
+          return chain;
+        })()
+      });
+      
       setIsPixelEffectEnabled(isEnabled);
       return isEnabled;
     };
@@ -65,16 +95,17 @@ export default function ImageWithSupabaseFallback({
     // If not found, recheck after delays to catch floated windows
     // The float system runs 500ms after page load, so check at 200ms, 600ms, and 1000ms
     if (!immediate) {
+      console.log('[Pixel Effect] Initial check failed, scheduling rechecks...');
       const timeout1 = setTimeout(() => {
-        console.log('[Pixel Effect] Recheck at 200ms');
+        console.log('[Pixel Effect] ⏰ Recheck at 200ms');
         checkPixelEffect();
       }, 200);
       const timeout2 = setTimeout(() => {
-        console.log('[Pixel Effect] Recheck at 600ms');
+        console.log('[Pixel Effect] ⏰ Recheck at 600ms');
         checkPixelEffect();
       }, 600);
       const timeout3 = setTimeout(() => {
-        console.log('[Pixel Effect] Recheck at 1000ms');
+        console.log('[Pixel Effect] ⏰ Recheck at 1000ms');
         checkPixelEffect();
       }, 1000);
       
@@ -83,8 +114,10 @@ export default function ImageWithSupabaseFallback({
         clearTimeout(timeout2);
         clearTimeout(timeout3);
       };
+    } else {
+      console.log('[Pixel Effect] ✅ Enabled on first check!');
     }
-  }, []);
+  }, [src]);
   
   // Find the actual img element after Next.js Image renders it
   useEffect(() => {
@@ -118,6 +151,16 @@ export default function ImageWithSupabaseFallback({
 
   // Only enable pixel effect if context allows and not opted out
   const shouldPixelate = isPixelEffectEnabled && !className?.includes('no-pixelate');
+  
+  useEffect(() => {
+    console.log('[Pixel Effect] shouldPixelate changed:', {
+      shouldPixelate,
+      isPixelEffectEnabled,
+      hasNoPixelateClass: className?.includes('no-pixelate'),
+      className
+    });
+  }, [shouldPixelate, isPixelEffectEnabled, className]);
+  
   const { canvasRef } = usePixelImageEffect(imageRef, { enabled: shouldPixelate });
 
   return (
@@ -140,7 +183,16 @@ export default function ImageWithSupabaseFallback({
           }
         }}
       />
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <canvas 
+        ref={canvasRef} 
+        style={{ 
+          display: 'none',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          pointerEvents: 'none'
+        }} 
+      />
     </div>
   );
 }

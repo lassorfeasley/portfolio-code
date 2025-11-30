@@ -53,6 +53,11 @@ export default function RetroWindow({
     [className, variant]
   );
 
+  // Debug log to verify data attribute is set
+  if (typeof window !== 'undefined') {
+    console.log('[RetroWindow] Rendering with data-pixel-effect-enabled for:', title);
+  }
+
   return (
     <div
       ref={ref}
