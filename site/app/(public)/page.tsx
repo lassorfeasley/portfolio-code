@@ -31,7 +31,7 @@ export default async function Home() {
         )
         .eq('draft', false)
         .eq('archived', false)
-        .order('published_on', { ascending: false, nullsLast: true }),
+        .order('published_on', { ascending: false, nullsFirst: false }),
       supabase
         .from('project_types')
         .select('id,name,slug,category')

@@ -27,7 +27,6 @@ type PointerState =
     }
   | null;
 
-const SAFE_SIDE_PADDING = 16;
 const SAFE_BOTTOM_PADDING = 80;
 const ALLOW_OVERFLOW_X = 100;
 const ALLOW_OVERFLOW_Y = 150;
@@ -157,7 +156,7 @@ export function useRetroWindowInteraction(options: Options) {
       // So we just need to ensure we don't clear it here.
       // The previous code was: setSize((prev) => ({ ...prev, height: undefined }));
       // which CLEARED height. Now we are doing:
-      setSize((prev) => ({
+      setSize(() => ({
         width: state.lockedWidth,
         height: state.lockedHeight,
       }));
