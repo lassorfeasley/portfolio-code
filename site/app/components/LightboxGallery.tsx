@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
+import { useCallback, useEffect, useState, type SyntheticEvent } from 'react';
 import { toLargeUrl, toThumbUrl, toOriginalObjectUrl, isSupabaseTransformedUrl } from '@/lib/supabase/image';
 import { createPortal } from 'react-dom';
 
@@ -22,6 +23,16 @@ export default function LightboxGallery({
   const hide = useCallback(() => setOpen(false), []);
   const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length]);
   const prev = useCallback(() => setIndex((i) => (i - 1 + images.length) % images.length), [images.length]);
+
+  const handleImageError = useCallback((event: SyntheticEvent<HTMLImageElement>) => {
+    const img = event.currentTarget;
+    const failingSrc = img.currentSrc || img.src;
+    if (isSupabaseTransformedUrl(failingSrc)) {
+      const fallback = toOriginalObjectUrl(failingSrc);
+      img.src = fallback;
+      img.srcset = '';
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -50,19 +61,16 @@ export default function LightboxGallery({
           return (
             <div key={i} className={itemClassName}>
               <a href="#" className={linkClassName} onClick={(e) => { e.preventDefault(); show(i); }} aria-label="Open image">
-                <div className="thumb-frame">
-                  <img
+                <div className="thumb-frame" style={{ position: 'relative' }}>
+                  <Image
                     src={thumb}
                     alt=""
+                    fill
+                    sizes="(max-width: 767px) 50vw, (max-width: 1279px) 33vw, 220px"
                     loading="lazy"
-                    onError={(e) => {
-                      const img = e.currentTarget as HTMLImageElement;
-                      if (isSupabaseTransformedUrl(img.currentSrc || img.src)) {
-                        img.src = toOriginalObjectUrl(img.currentSrc || img.src);
-                      }
-                    }}
+                    onError={handleImageError}
                     className="cover-object"
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ objectFit: 'cover' }}
                   />
                 </div>
               </a>
@@ -80,17 +88,17 @@ export default function LightboxGallery({
         >
           <button className="lf-lightbox-close" aria-label="Close" onClick={hide}>×</button>
           <button className="lf-lightbox-prev" aria-label="Previous" onClick={prev}>‹</button>
-          <img
-            className="lf-lightbox-img no-pixelate"
-            src={toLargeUrl(images[index], 2200)}
-            alt=""
-            onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              if (isSupabaseTransformedUrl(img.currentSrc || img.src)) {
-                img.src = toOriginalObjectUrl(img.currentSrc || img.src);
-              }
-            }}
-          />
+          <div className="lf-lightbox-img-wrapper">
+            <Image
+              className="lf-lightbox-img no-pixelate"
+              src={toLargeUrl(images[index], 2200)}
+              alt=""
+              fill
+              sizes="(max-width: 767px) 90vw, min(92vw, 1600px)"
+              onError={handleImageError}
+              style={{ objectFit: 'contain' }}
+            />
+          </div>
           <button className="lf-lightbox-next" aria-label="Next" onClick={next}>›</button>
 
           <style jsx>{`
@@ -98,8 +106,16 @@ export default function LightboxGallery({
               position: fixed; inset: 0; background: rgba(0,0,0,0.92);
               display: grid; place-items: center; z-index: 2147483000;
             }
+            .lf-lightbox-img-wrapper {
+              position: relative;
+              width: min(92vw, 1600px);
+              height: min(90vh, 1120px);
+              max-height: 90vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
             .lf-lightbox-img {
-              max-width: min(92vw, 1600px); max-height: 90vh;
               box-shadow: 0 0 24px rgba(0,0,0,0.6);
             }
             .lf-lightbox-close, .lf-lightbox-prev, .lf-lightbox-next {

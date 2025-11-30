@@ -39,7 +39,7 @@ export function useRetroWindowInteraction(options: Options) {
   const { disableDrag, disableResize, initialZIndex, autoFocus } = options;
   const ref = useRef<HTMLDivElement | null>(null);
   const pointerState = useRef<PointerState>(null);
-  const [zIndex, setZIndex] = useState<number>(initialZIndex);
+  const [zIndex, setZIndex] = useState<number | undefined>(initialZIndex);
   const [position, setPosition] = useState<{ left?: number; top?: number }>({});
   const [size, setSize] = useState<{ width?: number; height?: number }>({});
 
