@@ -79,14 +79,30 @@ export default function HomeDesktop({ projects, projectTypes, statusMessage }: H
   useEffect(() => {
     if (filteredProjects.length === 0) return;
     
-    // Wait for React to finish rendering, then trigger scatter
-    const timeoutId = setTimeout(() => {
+    // Wait for React to finish rendering, then trigger scatter with retries
+    const triggerScatter = () => {
       if (typeof window.retroApplyScatterEffect === 'function') {
-        window.retroApplyScatterEffect();
+        const containers = document.querySelectorAll('.cluttered-desktop-container');
+        if (containers.length > 0) {
+          window.retroApplyScatterEffect();
+        }
       }
-    }, 100);
+    };
+    
+    // Try immediately after render
+    const timeoutId1 = setTimeout(triggerScatter, 100);
+    
+    // Retry after a longer delay for production builds
+    const timeoutId2 = setTimeout(triggerScatter, 500);
+    
+    // Final retry after even longer delay
+    const timeoutId3 = setTimeout(triggerScatter, 1500);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId1);
+      clearTimeout(timeoutId2);
+      clearTimeout(timeoutId3);
+    };
   }, [filteredProjects.length]);
 
   const emptyStateMessage =

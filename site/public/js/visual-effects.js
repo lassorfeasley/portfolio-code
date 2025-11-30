@@ -633,6 +633,27 @@ window.addEventListener('load', initEcho);
     }
   }
 
+  // Helper to check if React has rendered elements
+  function hasRetroWindows() {
+    return document.querySelectorAll('.retro-window').length > 0;
+  }
+
+  // Retry initialization until React has rendered
+  function retryInit(maxAttempts = 20, delay = 250) {
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (window.__pixelImageEffectInitialized) {
+        clearInterval(interval);
+        return;
+      }
+      if (hasRetroWindows() || attempts >= maxAttempts) {
+        clearInterval(interval);
+        attemptInit();
+      }
+    }, delay);
+  }
+
   // Strategy 1: Try immediately (for scripts loaded after DOM is ready)
   if (document.body) {
     setTimeout(attemptInit, 50);
@@ -640,10 +661,14 @@ window.addEventListener('load', initEcho);
 
   // Strategy 2: If DOM is still loading, wait for DOMContentLoaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', attemptInit, { once: true });
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(attemptInit, 200);
+      retryInit(); // Start retry mechanism
+    }, { once: true });
   } else {
     // DOM is ready, but wait a bit for React hydration and other scripts
     setTimeout(attemptInit, 200);
+    retryInit(); // Start retry mechanism
   }
   
   // Strategy 3: Also try on window load (catches late-loading images)
@@ -654,25 +679,38 @@ window.addEventListener('load', initEcho);
           console.log('[Pixel Effect] Window loaded, attempting initialization');
         }
         attemptInit();
+        // Retry one more time after window load
+        setTimeout(() => {
+          if (!window.__pixelImageEffectInitialized && hasRetroWindows()) {
+            attemptInit();
+          }
+        }, 500);
       } else {
         // Re-process in case new images were added after initial load
         if (window.__pixelImageEffectReinit) {
           const windows = document.querySelectorAll('.retro-window:not([data-pixel-effect-observed="true"])');
           if (windows.length > 0 && typeof console !== 'undefined' && console.log) {
             console.log(`[Pixel Effect] Found ${windows.length} new windows after load`);
+            window.__pixelImageEffectReinit();
           }
         }
       }
     }, 300);
   });
   
-  // Strategy 4: Fallback - try one more time after a longer delay
+  // Strategy 4: Fallback - try one more time after a longer delay (for production builds)
   setTimeout(() => {
     if (!window.__pixelImageEffectInitialized) {
       if (typeof console !== 'undefined' && console.warn) {
         console.warn('[Pixel Effect] Fallback initialization attempt');
       }
       attemptInit();
+      // Final retry after 2 seconds
+      setTimeout(() => {
+        if (!window.__pixelImageEffectInitialized && hasRetroWindows()) {
+          attemptInit();
+        }
+      }, 2000);
     }
   }, 1000);
 })();
@@ -779,8 +817,60 @@ if (typeof window !== 'undefined') {
   window.retroApplyScatterEffect = applyScatterEffect;
 }
 
+// Helper to check if dependencies are ready
+function areScatterDependenciesReady() {
+  return typeof window.retroSetGridModeFor === 'function' || 
+         typeof window.retroSetGridMode === 'function';
+}
+
+// Helper to check if DOM elements exist
+function hasScatterTargets() {
+  return document.querySelectorAll('.cluttered-desktop-container').length > 0;
+}
+
+// Retry scatter effect until dependencies and DOM are ready
+function retryScatterEffect(maxAttempts = 30, delay = 200) {
+  let attempts = 0;
+  const interval = setInterval(() => {
+    attempts++;
+    if (areScatterDependenciesReady() && hasScatterTargets()) {
+      clearInterval(interval);
+      applyScatterEffect();
+    } else if (attempts >= maxAttempts) {
+      clearInterval(interval);
+      // Try anyway if we've waited long enough
+      if (hasScatterTargets()) {
+        applyScatterEffect();
+      }
+    }
+  }, delay);
+}
+
 // Run on initial load
 window.addEventListener('load', () => {
   // Delay slightly to ensure DOM is ready
-  setTimeout(applyScatterEffect, 100);
+  setTimeout(() => {
+    if (areScatterDependenciesReady() && hasScatterTargets()) {
+      applyScatterEffect();
+    } else {
+      // Start retry mechanism if dependencies aren't ready
+      retryScatterEffect();
+    }
+  }, 100);
 });
+
+// Also try after a longer delay for production builds
+setTimeout(() => {
+  if (hasScatterTargets() && !document.querySelector('.retro-window[data-scatter-randomized="true"]')) {
+    if (areScatterDependenciesReady()) {
+      applyScatterEffect();
+    } else {
+      // Wait a bit more for dependencies
+      setTimeout(() => {
+        if (hasScatterTargets()) {
+          applyScatterEffect();
+        }
+      }, 500);
+    }
+  }
+}, 1500);
