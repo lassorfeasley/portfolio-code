@@ -21,7 +21,7 @@ export async function listPublishedProjectTypes(
     throw new ApiError('Failed to load project types', 500, error.message);
   }
 
-  return (data ?? []).map((row) => toProjectTypeSummary(row));
+  return ((data as unknown as ProjectTypeRow[]) ?? []).map((row) => toProjectTypeSummary(row));
 }
 
 export async function listAdminProjectTypes(
@@ -36,7 +36,7 @@ export async function listAdminProjectTypes(
     throw new ApiError('Failed to load project types', 500, error.message);
   }
 
-  return data ?? [];
+  return (data as unknown as ProjectTypeRow[]) ?? [];
 }
 
 export async function getAdminProjectTypeById(
@@ -55,7 +55,7 @@ export async function getAdminProjectTypeById(
   if (!data) {
     throw new NotFoundError('Project type not found');
   }
-  return data;
+  return data as unknown as ProjectTypeRow;
 }
 
 export async function getPublishedProjectTypeBySlug(
@@ -77,7 +77,7 @@ export async function getPublishedProjectTypeBySlug(
     throw new NotFoundError('Project type not found');
   }
 
-  return toProjectTypeDetail(data);
+  return toProjectTypeDetail(data as unknown as ProjectTypeRow);
 }
 
 export async function listProjectTypeSlugs(
@@ -92,7 +92,7 @@ export async function listProjectTypeSlugs(
   if (error) {
     throw new ApiError('Failed to load project type slugs', 500, error.message);
   }
-  return (data ?? []).map((row) => row.slug);
+  return ((data as unknown as { slug: string }[]) ?? []).map((row) => row.slug);
 }
 
 async function assertProjectTypeSlugAvailable(
@@ -105,10 +105,11 @@ async function assertProjectTypeSlugAvailable(
     .select('id')
     .eq('slug', slug)
     .maybeSingle();
+  const row = data as unknown as { id: string } | null;
   if (error) {
     throw new ApiError('Failed to validate project type slug', 500, error.message);
   }
-  if (data && data.id !== excludeId) {
+  if (row && row.id !== excludeId) {
     throw new ApiError('Slug already exists.', 409);
   }
 }
@@ -120,7 +121,7 @@ export async function createProjectType(
   await assertProjectTypeSlugAvailable(client, payload.slug);
   const { data, error } = await client
     .from('project_types')
-    .insert(payload)
+    .insert(payload as unknown as never)
     .select(PROJECT_TYPE_COLUMNS)
     .single();
 
@@ -128,7 +129,7 @@ export async function createProjectType(
     throw new ApiError('Failed to create project type', 500, error?.message);
   }
 
-  return data;
+  return data as unknown as ProjectTypeRow;
 }
 
 export async function updateProjectType(
@@ -139,7 +140,7 @@ export async function updateProjectType(
   await assertProjectTypeSlugAvailable(client, payload.slug, id);
   const { data, error } = await client
     .from('project_types')
-    .update(payload)
+    .update(payload as unknown as never)
     .eq('id', id)
     .select(PROJECT_TYPE_COLUMNS)
     .single();
@@ -148,7 +149,7 @@ export async function updateProjectType(
     throw new ApiError('Failed to update project type', 500, error?.message);
   }
 
-  return data;
+  return data as unknown as ProjectTypeRow;
 }
 
 export async function deleteProjectType(

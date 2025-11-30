@@ -1,6 +1,5 @@
 import { describe, expect, beforeEach, it, vi } from 'vitest';
 import type { NextRequest } from 'next/server';
-import { ApiError } from '@/lib/api/errors';
 import { POST } from './route';
 
 vi.hoisted(() => {

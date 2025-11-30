@@ -21,7 +21,7 @@ type WorkspaceState<TItem extends WorkspaceItem, TPayload> = {
   viewMode: 'list' | 'editor';
 };
 
-type WorkspaceActions<TItem extends WorkspaceItem, TPayload> = {
+type WorkspaceActions<TItem extends WorkspaceItem> = {
   handleSelect: (id: string) => void;
   handleCreateNew: () => void;
   handleDuplicate: (item: TItem) => void;
@@ -35,9 +35,9 @@ type WorkspaceActions<TItem extends WorkspaceItem, TPayload> = {
  * Generic workspace hook for managing list/editor views with create/edit/delete operations.
  * Eliminates code duplication between ProjectsWorkspace and ProjectTypesWorkspace.
  */
-export function useWorkspace<TItem extends WorkspaceItem, TPayload>(
+export function useWorkspace<TItem extends WorkspaceItem, TPayload extends object>(
   config: WorkspaceConfig<TItem, TPayload>
-): WorkspaceState<TItem, TPayload> & WorkspaceActions<TItem, TPayload> {
+): WorkspaceState<TItem, TPayload> & WorkspaceActions<TItem> {
   const { initialItems, emptyPayload, toPayload, getItemName, getItemSlug } = config;
 
   const [items, setItems] = useState<TItem[]>(initialItems);
@@ -133,7 +133,7 @@ export function useWorkspace<TItem extends WorkspaceItem, TPayload>(
 /**
  * Get the selected item payload, using draft template if creating or finding from items.
  */
-export function useSelectedPayload<TItem extends WorkspaceItem, TPayload>(
+export function useSelectedPayload<TItem extends WorkspaceItem, TPayload extends object>(
   items: TItem[],
   selectedId: string | null,
   isCreating: boolean,

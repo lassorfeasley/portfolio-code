@@ -2,15 +2,12 @@ import { ApiError, NotFoundError } from '@/lib/api/errors';
 import type { TypedSupabaseClient } from '@/lib/supabase/types';
 import type { ArticleRow, ArticleSummary } from '@/lib/domain/articles/types';
 
-const ARTICLE_COLUMNS =
-  'id,name,slug,publication,title,date_published,url,featured_image_url,draft,archived,created_at,updated_at';
-
 export async function listPublishedArticles(
   client: TypedSupabaseClient
 ): Promise<ArticleSummary[]> {
   const { data, error } = await client
     .from('articles')
-    .select(ARTICLE_COLUMNS)
+    .select('*')
     .eq('draft', false)
     .eq('archived', false)
     .order('date_published', { ascending: false, nullsFirst: false });
@@ -19,7 +16,7 @@ export async function listPublishedArticles(
     throw new ApiError('Failed to load articles', 500, error.message);
   }
 
-  return (data ?? []).map((row) => ({
+  return ((data as unknown as ArticleRow[]) ?? []).map((row) => ({
     id: row.id,
     name: row.name,
     slug: row.slug,
@@ -36,7 +33,7 @@ export async function getPublishedArticleBySlug(
 ): Promise<ArticleRow> {
   const { data, error } = await client
     .from('articles')
-    .select(ARTICLE_COLUMNS)
+    .select('*')
     .eq('slug', slug)
     .eq('draft', false)
     .eq('archived', false)
@@ -48,7 +45,7 @@ export async function getPublishedArticleBySlug(
   if (!data) {
     throw new NotFoundError('Article not found');
   }
-  return data;
+  return data as unknown as ArticleRow;
 }
 
 export async function listArticleSlugs(client: TypedSupabaseClient): Promise<string[]> {
@@ -61,5 +58,5 @@ export async function listArticleSlugs(client: TypedSupabaseClient): Promise<str
   if (error) {
     throw new ApiError('Failed to load article slugs', 500, error.message);
   }
-  return (data ?? []).map((row) => row.slug);
+  return ((data as unknown as { slug: string }[]) ?? []).map((row) => row.slug);
 }

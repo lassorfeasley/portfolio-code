@@ -29,7 +29,7 @@ export async function listPublishedProjects(
     throw new ApiError('Failed to load projects', 500, error.message);
   }
 
-  return (data ?? []).map((row) => toProjectSummary(row as ProjectWithTypeRelation));
+  return ((data as unknown as ProjectWithTypeRelation[]) ?? []).map((row) => toProjectSummary(row as ProjectWithTypeRelation));
 }
 
 export async function listPublishedProjectsByType(
@@ -48,7 +48,7 @@ export async function listPublishedProjectsByType(
     throw new ApiError('Failed to load projects for project type', 500, error.message);
   }
 
-  return (data ?? []).map((row) => toProjectSummary(row as ProjectWithTypeRelation));
+  return ((data as unknown as ProjectWithTypeRelation[]) ?? []).map((row) => toProjectSummary(row as ProjectWithTypeRelation));
 }
 
 export async function getPublishedProjectBySlug(
@@ -70,7 +70,7 @@ export async function getPublishedProjectBySlug(
     throw new NotFoundError('Project not found');
   }
 
-  return toProjectDetail(data as ProjectWithTypeRelation);
+  return toProjectDetail(data as unknown as ProjectWithTypeRelation);
 }
 
 export async function listPublicProjectSlugs(client: TypedSupabaseClient): Promise<string[]> {
@@ -84,7 +84,7 @@ export async function listPublicProjectSlugs(client: TypedSupabaseClient): Promi
     throw new ApiError('Failed to load project slugs', 500, error.message);
   }
 
-  return (data ?? []).map((row) => row.slug);
+  return ((data as unknown as { slug: string }[]) ?? []).map((row) => row.slug);
 }
 
 export async function listAdminProjects(
@@ -99,7 +99,7 @@ export async function listAdminProjects(
     throw new ApiError('Failed to load projects', 500, error.message);
   }
 
-  return data ?? [];
+  return (data as unknown as ProjectRow[]) ?? [];
 }
 
 export async function getAdminProjectById(
@@ -119,7 +119,7 @@ export async function getAdminProjectById(
     throw new NotFoundError('Project not found');
   }
 
-  return data;
+  return data as unknown as ProjectRow;
 }
 
 async function assertProjectSlugAvailable(
@@ -128,11 +128,12 @@ async function assertProjectSlugAvailable(
   excludeId?: string | null
 ) {
   const query = client.from('projects').select('id').eq('slug', slug).maybeSingle();
-  const { data, error } = await query;
+  const { data: queryData, error } = await query;
+  const row = queryData as unknown as { id: string } | null;
   if (error) {
     throw new ApiError('Failed to validate project slug', 500, error.message);
   }
-  if (data && data.id !== excludeId) {
+  if (row && row.id !== excludeId) {
     throw new ApiError('Slug already exists.', 409);
   }
 }
@@ -144,7 +145,7 @@ export async function createProject(
   await assertProjectSlugAvailable(client, payload.slug);
   const { data, error } = await client
     .from('projects')
-    .insert(payload)
+    .insert(payload as unknown as never)
     .select(PROJECT_COLUMNS)
     .single();
 
@@ -152,7 +153,7 @@ export async function createProject(
     throw new ApiError('Failed to create project', 500, error?.message);
   }
 
-  return data;
+  return data as unknown as ProjectRow;
 }
 
 export async function updateProject(
@@ -163,7 +164,7 @@ export async function updateProject(
   await assertProjectSlugAvailable(client, payload.slug, id);
   const { data, error } = await client
     .from('projects')
-    .update(payload)
+    .update(payload as unknown as never)
     .eq('id', id)
     .select(PROJECT_COLUMNS)
     .single();
@@ -172,7 +173,7 @@ export async function updateProject(
     throw new ApiError('Failed to update project', 500, error?.message);
   }
 
-  return data;
+  return data as unknown as ProjectRow;
 }
 
 export async function deleteProject(
@@ -202,7 +203,7 @@ export async function buildProjectSlugTypeMap(
   }
 
   const map: ProjectSlugTypeMap = {};
-  for (const row of data ?? []) {
+  for (const row of (data as unknown as ProjectWithTypeRelation[]) ?? []) {
     const rel = (row as ProjectWithTypeRelation).project_types;
     if (!row.slug) continue;
     if (Array.isArray(rel)) {

@@ -6,7 +6,6 @@ import { LogOut, PanelsTopLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 type AdminShellProps = {
   userEmail: string;

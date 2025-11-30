@@ -1,6 +1,7 @@
 'use client';
 
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import Link from 'next/link';
 import RetroWindow from '@/app/components/RetroWindow';
 import { logError } from '@/lib/utils/logger';
 
@@ -61,9 +62,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                     </pre>
                   </details>
                 ) : null}
-                <a href="/" className="link-block-4 w-inline-block" style={{ textDecoration: 'underline' }}>
+                <Link href="/" className="link-block-4 w-inline-block" style={{ textDecoration: 'underline' }}>
                   Return to home →
-                </a>
+                </Link>
               </div>
             </RetroWindow>
           </div>
