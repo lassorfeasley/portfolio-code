@@ -1,55 +1,41 @@
 import Link from 'next/link';
+import type { FolderLink } from '@/lib/domain/folder-links/types';
 
-export default function FooterDesktop() {
+type FooterDesktopProps = {
+  folderLinks: FolderLink[];
+};
+
+export default function FooterDesktop({ folderLinks }: FooterDesktopProps) {
   return (
     <div className="globalmargin">
       <div id="desktop" className="windowcanvas">
         <div id="w-node-d338f0d6-9d2e-be6a-b9db-22c2d03af9e7-c4a829df" className="wide">
           <div className="align-right">
             <div className="folder-grid">
-              <div className="icon-placeholder">
-                <div className="draggable-folder">
-                  <Link href="/project-types/interaction-design" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">UI design</div></Link>
+              {folderLinks.map((link) => (
+                <div key={link.id} className="icon-placeholder">
+                  <div className="draggable-folder">
+                    {link.external ? (
+                      <a href={link.href} target="_blank" rel="noreferrer" className="iconlink w-inline-block">
+                        <div className="folder">{link.icon}</div>
+                        <div className="navlink foldericon">{link.label}</div>
+                      </a>
+                    ) : (
+                      <Link href={link.href} className="iconlink w-inline-block">
+                        <div className="folder">{link.icon}</div>
+                        <div className="navlink foldericon">{link.label}</div>
+                      </Link>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ))}
+              {/* Extra "Account" link for the footer */}
               <div className="icon-placeholder">
                 <div className="draggable-folder">
-                  <Link href="/project-types/writing" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Writing</div></Link>
-                </div>
-              </div>
-              <div className="icon-placeholder">
-                <div className="draggable-folder">
-                  <a href="https://docs.google.com/document/d/1qz8Qwrk6aoD1n1vEe5Zd7OhaEhun8UOuY0xcW2SnRmg/edit?tab=t.0" target="_blank" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Resume</div></a>
-                </div>
-              </div>
-              <div className="icon-placeholder">
-                <div className="draggable-folder">
-                  <Link href="/project-types/interaction-design" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">UX design</div></Link>
-                </div>
-              </div>
-              <div className="icon-placeholder">
-                <div className="draggable-folder">
-                  <a href="https://walking.lassor.com" target="_blank" rel="noreferrer" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Walking forward</div></a>
-                </div>
-              </div>
-              <div className="icon-placeholder">
-                <div className="draggable-folder">
-                  <a href="https://www.linkedin.com/in/lassor/" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">LinkedIn</div></a>
-                </div>
-              </div>
-              <div className="icon-placeholder">
-                <div className="draggable-folder">
-                  <Link href="/project-types/industrial-design" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Industrial design</div></Link>
-                </div>
-              </div>
-              <div className="icon-placeholder">
-                <div className="draggable-folder">
-                  <Link href="/work/seatback-safety" className="iconlink w-inline-block"><div className="folder"></div><p className="navlink foldericon">Seatback Safety</p></Link>
-                </div>
-              </div>
-              <div className="icon-placeholder">
-                <div className="draggable-folder">
-                  <Link href="/auth/login" className="iconlink w-inline-block"><div className="folder"></div><div className="navlink foldericon">Account</div></Link>
+                  <Link href="/auth/login" className="iconlink w-inline-block">
+                    <div className="folder"></div>
+                    <div className="navlink foldericon">Account</div>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -59,5 +45,3 @@ export default function FooterDesktop() {
     </div>
   );
 }
-
-

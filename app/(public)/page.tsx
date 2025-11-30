@@ -66,7 +66,7 @@ export default async function Home() {
         folderLinks={folderLinks}
         statusMessage={statusMessage}
       />
-      <FooterDesktop />
+      <FooterDesktop folderLinks={folderLinks} />
     </main>
   );
 }

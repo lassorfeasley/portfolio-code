@@ -37,16 +37,18 @@ export async function updateHeroContent(
   id: string,
   payload: HeroContentPayload
 ): Promise<HeroContentRow> {
+  const updatePayload = {
+    window_title: payload.windowTitle,
+    hero_text: payload.heroText,
+    hero_image_url: payload.heroImageUrl,
+    footer_link_text: payload.footerLinkText,
+    footer_link_href: payload.footerLinkHref,
+    updated_at: new Date().toISOString(),
+  } satisfies HeroContentUpdate;
+
   const { data, error } = await client
     .from('hero_content')
-    .update({
-      window_title: payload.windowTitle,
-      hero_text: payload.heroText,
-      hero_image_url: payload.heroImageUrl,
-      footer_link_text: payload.footerLinkText,
-      footer_link_href: payload.footerLinkHref,
-      updated_at: new Date().toISOString(),
-    } as HeroContentUpdate)
+    .update(updatePayload)
     .eq('id', id)
     .select()
     .single();
