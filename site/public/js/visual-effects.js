@@ -198,203 +198,259 @@ if (document.readyState === 'loading') {
 window.addEventListener('load', initEcho);
 
 
-/* === Makes images load in a pixelated effect === */
-
-document.addEventListener("DOMContentLoaded", () => {
-  const steps = 6;
-  const totalTargetDuration = 5000;
-  const minStepDelay = 250;
-  const maxStepDelay = Math.max(0, (totalTargetDuration - steps * minStepDelay) / steps);
-
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        triggerImagesInWindow(entry.target);
-        observer.unobserve(entry.target);
-      }
-    });
-  }, {
-    threshold: 0.1
-  });
-
-  const retroWindows = document.querySelectorAll(".retro-window");
-
-  retroWindows.forEach(windowEl => {
-    const images = windowEl.querySelectorAll("img");
-    images.forEach(img => {
-      if (img.complete) {
-        prepareInitialPixel(img);
-      } else {
-        img.addEventListener("load", () => prepareInitialPixel(img));
-      }
-    });
-    
-    // Check if window is already in viewport immediately
-    const rect = windowEl.getBoundingClientRect();
-    if (rect.top < window.innerHeight && rect.bottom > 0) {
-      setTimeout(() => {
-        triggerImagesInWindow(windowEl);
-        observer.unobserve(windowEl);
-      }, 50);
+(function attachPixelImageEffect() {
+  function initPixelImageEffect() {
+    if (window.__pixelImageEffectInitialized) {
+      return;
     }
-    
-    observer.observe(windowEl);
-  });
+    window.__pixelImageEffectInitialized = true;
 
-  window.addEventListener("load", () => {
-    retroWindows.forEach(windowEl => {
+    const steps = 6;
+    const totalTargetDuration = 5000;
+    const minStepDelay = 250;
+    const maxStepDelay = Math.max(0, (totalTargetDuration - steps * minStepDelay) / steps);
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          triggerImagesInWindow(entry.target);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.1,
+    });
+
+    const retroWindows = document.querySelectorAll('.retro-window');
+
+    retroWindows.forEach((windowEl) => {
+      const images = windowEl.querySelectorAll('img');
+      images.forEach((img) => {
+        if (img.complete) {
+          prepareInitialPixel(img);
+        } else {
+          img.addEventListener('load', () => prepareInitialPixel(img));
+        }
+      });
+
+      // Check if window is already in viewport immediately
       const rect = windowEl.getBoundingClientRect();
       if (rect.top < window.innerHeight && rect.bottom > 0) {
-        triggerImagesInWindow(windowEl);
-        observer.unobserve(windowEl);
+        setTimeout(() => {
+          triggerImagesInWindow(windowEl);
+          observer.unobserve(windowEl);
+        }, 50);
       }
+
+      observer.observe(windowEl);
     });
-  });
 
-  function triggerImagesInWindow(windowEl) {
-    windowEl.dataset.animationTriggerActivated = "true"; // Mark the window as ready for animations
-    const images = windowEl.querySelectorAll("img");
-    images.forEach(img => {
-      // Only attempt to pixelate if the image has been prepared (canvasId exists)
-      // and its parent window is now marked as activated.
-      // pixelate() itself has guards against re-animating.
-      if (img.dataset.canvasId) {
-        pixelate(img);
-      }
-      // If canvasId is not set yet, prepareInitialPixel will handle calling pixelate
-      // for this image once it's ready, because windowEl.dataset.animationTriggerActivated is now true.
+    window.addEventListener('load', () => {
+      retroWindows.forEach((windowEl) => {
+        const rect = windowEl.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+          triggerImagesInWindow(windowEl);
+          observer.unobserve(windowEl);
+        }
+      });
     });
-  }
 
-  function prepareInitialPixel(img) {
-    // Store original styles
-    const originalStyles = {
-      width: img.style.width,
-      height: img.style.height,
-      position: img.style.position,
-      display: img.style.display
-    };
-    img.dataset.originalStyles = JSON.stringify(originalStyles);
-
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-
-    // Set canvas size to match displayed image size
-    const rect = img.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-    
-    canvas.style.position = "absolute";
-    canvas.style.top = "0";
-    canvas.style.left = "0";
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
-    canvas.style.zIndex = "2";
-    canvas.style.pointerEvents = "none";
-
-    // Create wrapper
-    const wrapper = document.createElement("div");
-    wrapper.classList.add("pixel-loading-wrapper");
-    wrapper.style.position = "relative";
-    wrapper.style.display = "inline-block";
-    wrapper.style.width = rect.width + "px";
-    wrapper.style.height = rect.height + "px";
-
-    // Position image
-    img.style.position = "absolute";
-    img.style.top = "0";
-    img.style.left = "0";
-    img.style.width = "100%";
-    img.style.height = "100%";
-    img.style.visibility = "hidden";
-
-    // Set up DOM structure
-    img.parentNode.insertBefore(wrapper, img);
-    wrapper.appendChild(img);
-    wrapper.appendChild(canvas);
-
-    img.dataset.canvasId = canvas.id = "canvas-" + Math.random().toString(36).slice(2);
-    drawPixelStep(img, canvas, ctx, steps); // Draw initial highly pixelated state
-
-    // Check if the parent window is already activated for animations
-    const parentWindow = img.closest('.retro-window');
-    if (parentWindow && parentWindow.dataset.animationTriggerActivated === "true") {
-      // If so, and the canvas is ready (which it is at this point), trigger animation for this image.
-      // pixelate() has its own guards to prevent re-animation if already started/finished.
-      pixelate(img);
-    }
-  }
-
-  function pixelate(img) {
-    if (!img.dataset.canvasId) {
-      // console.warn("pixelate: canvasId not set for image:", img.src, ". Image may not be loaded/prepared yet.");
-      return;
-    }
-    const canvas = document.getElementById(img.dataset.canvasId);
-    if (!canvas) {
-      // console.error("Pixelate: Canvas element not found for ID:", img.dataset.canvasId, "for image:", img.src);
-      return;
+    function triggerImagesInWindow(windowEl) {
+      windowEl.dataset.animationTriggerActivated = 'true'; // Mark the window as ready for animations
+      const images = windowEl.querySelectorAll('img');
+      images.forEach((img) => {
+        if (img.dataset.canvasId) {
+          pixelate(img);
+        }
+      });
     }
 
-    if (img.dataset.animationFinished === "true") {
-      return; // Animation already completed
-    }
-    if (img.dataset.animationStarted === "true") {
-      return; // Animation already in progress
-    }
-    img.dataset.animationStarted = "true";
+    async function prepareInitialPixel(img) {
+      if (img.dataset.canvasId) return;
 
-    const ctx = canvas.getContext("2d");
+      // Attempt to ensure image is ready, but don't block endlessly
+      if ('decode' in img) {
+        try {
+          await img.decode();
+        } catch (e) {
+          // console.warn("Image decode failed or not needed", e);
+        }
+      }
+      if (img.dataset.canvasId) return;
 
-    let currentStep = 0;
+      // Setup Canvas as a Sibling Overlay
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
 
-    function doStep() {
-      if (currentStep > steps) {
-        const wrapper = canvas.parentElement;
-
-        // Restore original styles
-        const originalStyles = JSON.parse(img.dataset.originalStyles || '{}');
-        Object.entries(originalStyles).forEach(([prop, value]) => {
-          img.style[prop] = value;
-        });
-
-        img.style.visibility = "visible";
-        // img.style.position = "static"; // This line is removed as originalStyles should handle position restoration.
-
-        // Move image back to original position
-        wrapper.parentNode.insertBefore(img, wrapper);
-        wrapper.remove();
-
-        delete img.dataset.animationStarted;
-        img.dataset.animationFinished = "true";
-        return;
+      // Ensure parent is positioned so we can place canvas relative to it
+      const parent = img.parentElement;
+      const parentStyle = window.getComputedStyle(parent);
+      if (parentStyle.position === 'static') {
+        parent.style.position = 'relative';
       }
 
-      drawPixelStep(img, canvas, ctx, steps - currentStep);
-      currentStep++;
-      const randomDelay = minStepDelay + Math.floor(Math.random() * maxStepDelay);
-      setTimeout(doStep, randomDelay);
+      canvas.style.position = 'absolute';
+      canvas.style.pointerEvents = 'none';
+      canvas.style.zIndex = '10';
+      // Safeguard: ensure canvas never exceeds parent bounds, preventing overflow flashes
+      canvas.style.maxWidth = '100%';
+      canvas.style.maxHeight = '100%';
+      
+      // Initial sizing/positioning
+      updateCanvasPosition(img, canvas);
+
+      // Insert canvas
+      if (img.nextSibling) {
+        parent.insertBefore(canvas, img.nextSibling);
+      } else {
+        parent.appendChild(canvas);
+      }
+
+      img.dataset.canvasId = canvas.id = `canvas-${Math.random().toString(36).slice(2)}`;
+      
+      // Use ResizeObserver for robust size tracking instead of just polling in draw loop
+      const resizeObserver = new ResizeObserver(() => {
+        updateCanvasPosition(img, canvas);
+        // Redraw immediately on resize to avoid lag
+        const currentStep = parseInt(img.dataset.currentPixelStep || '0', 10);
+        if (currentStep <= steps) { // Only if animation not finished
+             // We need to access 'doStep' context or just wait for next frame.
+             // Simpler: do nothing, the animation loop handles it.
+             // But if animation finished? We remove canvas anyway.
+        }
+      });
+      resizeObserver.observe(img);
+      img.dataset.resizeObserverAttached = 'true';
+
+      // Start Animation Loop
+      requestAnimationFrame(() => {
+        drawPixelStep(img, canvas, ctx, steps);
+        
+        const parentWindow = img.closest('.retro-window');
+        if (parentWindow && parentWindow.dataset.animationTriggerActivated === 'true') {
+            pixelate(img, resizeObserver);
+        }
+      });
     }
 
-    doStep();
+    function updateCanvasPosition(img, canvas) {
+        // Match image position/size
+        canvas.style.left = `${img.offsetLeft}px`;
+        canvas.style.top = `${img.offsetTop}px`;
+        canvas.style.width = `${img.offsetWidth}px`;
+        canvas.style.height = `${img.offsetHeight}px`;
+        
+        // Update buffer size if needed (resolution)
+        if (canvas.width !== img.offsetWidth || canvas.height !== img.offsetHeight) {
+             // Prevent 0x0 canvas
+             canvas.width = Math.max(1, img.offsetWidth);
+             canvas.height = Math.max(1, img.offsetHeight);
+        }
+    }
+
+    function pixelate(img, resizeObserver) {
+      if (!img.dataset.canvasId) return;
+      const canvas = document.getElementById(img.dataset.canvasId);
+      if (!canvas) return;
+
+      if (img.dataset.animationFinished === 'true') return;
+      if (img.dataset.animationStarted === 'true') return;
+      img.dataset.animationStarted = 'true';
+
+      const ctx = canvas.getContext('2d');
+      let currentStep = 0;
+
+      function doStep() {
+        img.dataset.currentPixelStep = currentStep;
+        if (currentStep > steps) {
+          // Cleanup
+          if (resizeObserver) resizeObserver.disconnect();
+          if (canvas.parentNode) {
+            canvas.parentNode.removeChild(canvas);
+          }
+          delete img.dataset.animationStarted;
+          delete img.dataset.currentPixelStep;
+          img.dataset.animationFinished = 'true';
+          return;
+        }
+
+        drawPixelStep(img, canvas, ctx, steps - currentStep);
+        currentStep++;
+        const randomDelay = minStepDelay + Math.floor(Math.random() * maxStepDelay);
+        setTimeout(doStep, randomDelay);
+      }
+
+      doStep();
+    }
+
+    function drawPixelStep(img, canvas, ctx, exponent) {
+      // Sync position/size in case of layout shifts during animation
+      updateCanvasPosition(img, canvas);
+
+      const width = canvas.width;
+      const height = canvas.height;
+      const pixelSize = Math.max(1, Math.pow(2, exponent));
+      
+      const downCanvas = document.createElement('canvas');
+      downCanvas.width = Math.max(1, Math.floor(width / pixelSize));
+      downCanvas.height = Math.max(1, Math.floor(height / pixelSize));
+      const downCtx = downCanvas.getContext('2d');
+      
+      downCtx.imageSmoothingEnabled = false;
+      ctx.imageSmoothingEnabled = false;
+
+      try {
+        // Handle object-fit
+        const computed = window.getComputedStyle(img);
+        const objectFit = computed.objectFit;
+        
+        if (objectFit === 'cover' || objectFit === 'contain') {
+           const imgRatio = img.naturalWidth / img.naturalHeight;
+           const canvasRatio = width / height;
+           let sx, sy, sw, sh;
+           
+           if (objectFit === 'cover') {
+               if (imgRatio > canvasRatio) {
+                   sh = img.naturalHeight;
+                   sw = sh * canvasRatio;
+                   sy = 0;
+                   sx = (img.naturalWidth - sw) / 2;
+               } else {
+                   sw = img.naturalWidth;
+                   sh = sw / canvasRatio;
+                   sx = 0;
+                   sy = (img.naturalHeight - sh) / 2;
+               }
+           } else { // contain
+               if (imgRatio > canvasRatio) {
+                   sw = img.naturalWidth;
+                   sh = sw / canvasRatio;
+                   sx = 0;
+                   sy = (img.naturalHeight - sh) / 2;
+               } else {
+                   sh = img.naturalHeight;
+                   sw = sh * canvasRatio;
+                   sy = 0;
+                   sx = (img.naturalWidth - sw) / 2;
+               }
+           }
+           downCtx.drawImage(img, sx, sy, sw, sh, 0, 0, downCanvas.width, downCanvas.height);
+        } else {
+           downCtx.drawImage(img, 0, 0, downCanvas.width, downCanvas.height);
+        }
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(downCanvas, 0, 0, width, height);
+      } catch (e) {}
+    }
   }
 
-  function drawPixelStep(img, canvas, ctx, exponent) {
-    const rect = img.getBoundingClientRect();
-    const pixelSize = Math.pow(2, exponent);
-
-    const downCanvas = document.createElement("canvas");
-    downCanvas.width = rect.width / pixelSize;
-    downCanvas.height = rect.height / pixelSize;
-    const downCtx = downCanvas.getContext("2d");
-    downCtx.imageSmoothingEnabled = false;
-    downCtx.drawImage(img, 0, 0, downCanvas.width, downCanvas.height);
-
-    ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(downCanvas, 0, 0, canvas.width, canvas.height);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPixelImageEffect, { once: true });
+  } else {
+    initPixelImageEffect();
   }
-});
+})();
 
 /* === Causes retro windows to be randomly positioned and  on the screen === */
 function applyScatterEffect() {
@@ -503,106 +559,3 @@ window.addEventListener('load', () => {
   // Delay slightly to ensure DOM is ready
   setTimeout(applyScatterEffect, 100);
 });
-
-
-/* === Makes draggable folders mimic GUI folders === */
-function initFolderDrag() {
-  const containers = document.querySelectorAll('.folder-grid');
-  if (!containers.length) return;
-
-  containers.forEach((container) => {
-    const draggableFolders = container.querySelectorAll('.draggable-folder');
-
-    draggableFolders.forEach(folder => {
-      if (!folder || folder.dataset.folderDragAttached === 'true') return;
-      folder.dataset.folderDragAttached = 'true';
-      const link = folder.querySelector('a, .link-block');
-      let isDragging = false;
-      let startX, startY;
-
-      // Use click capture to prevent navigation if we just dragged
-      if (link) {
-        link.addEventListener('click', (e) => {
-          if (isDragging) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }, true);
-      }
-
-      folder.addEventListener('mousedown', function (e) {
-        // Only start drag on left click
-        if (e.button !== 0) return;
-        
-        e.preventDefault();
-        isDragging = false;
-        startX = e.clientX;
-        startY = e.clientY;
-
-        if (getComputedStyle(container).position === 'static') {
-          container.style.position = 'relative';
-        }
-
-        const containerRect = container.getBoundingClientRect();
-        const folderRect = folder.getBoundingClientRect();
-
-        const offsetX = startX - folderRect.left;
-        const offsetY = startY - folderRect.top;
-
-        // Promote to absolute ONLY when we actually start dragging
-        // But for now, mimic old behavior: immediately absolute on mousedown
-        folder.style.position = 'absolute';
-        folder.style.left = (folderRect.left - containerRect.left) + 'px';
-        folder.style.top = (folderRect.top - containerRect.top) + 'px';
-        folder.style.width = folderRect.width + 'px';
-        folder.style.height = folderRect.height + 'px';
-        folder.style.zIndex = '9999';
-
-        const onMouseMove = (moveEvent) => {
-          const dx = moveEvent.clientX - startX;
-          const dy = moveEvent.clientY - startY;
-          if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-            isDragging = true;
-          }
-
-          // Clamp to container bounds? Or allow free drag?
-          // For now, match old logic: free drag relative to container
-          const left = moveEvent.clientX - containerRect.left - offsetX;
-          const top = moveEvent.clientY - containerRect.top - offsetY;
-          folder.style.left = `${left}px`;
-          folder.style.top = `${top}px`;
-        };
-
-        const onMouseUp = () => {
-          document.removeEventListener('mousemove', onMouseMove);
-          document.removeEventListener('mouseup', onMouseUp);
-          folder.style.zIndex = '';
-          
-          // Note: We don't reset position to static/relative, 
-          // so it stays dropped where the user left it.
-          
-          // Reset drag state slightly later to let click handler fire first if needed
-          setTimeout(() => {
-             isDragging = false;
-          }, 50);
-        };
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp, { once: true });
-      });
-
-      folder.ondragstart = () => false;
-    });
-  });
-}
-
-// Run on load and also expose for re-running if needed (e.g. client nav)
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initFolderDrag);
-} else {
-  initFolderDrag();
-}
-// Also try window load to be safe
-window.addEventListener('load', initFolderDrag);
-
-

@@ -49,6 +49,73 @@ describe('validateProjectPayload', () => {
     expect(data.process_images_label).toBe('label');
     expect(data.year).toBe('2024');
   });
+
+  it('requires slug value', () => {
+    const { errors } = validateProjectPayload({
+      slug: '   ',
+      name: 'Test',
+      description: '',
+      featured_image_url: '',
+      images_urls: [],
+      process_image_urls: [],
+      process_images_label: '',
+      process_and_context_html: '',
+      year: '',
+      linked_document_url: '',
+      video_url: '',
+      fallback_writing_url: '',
+      project_type_id: null,
+      draft: false,
+      archived: false,
+    });
+    expect(errors).toMatchObject({ slug: 'Slug is required.' });
+  });
+
+  it('enforces process html length limit', () => {
+    const hugeHtml = '<p>x</p>'.repeat(8000); // > 50000 chars
+    const { errors } = validateProjectPayload({
+      slug: 'valid-slug',
+      name: 'Test',
+      description: '',
+      featured_image_url: '',
+      images_urls: [],
+      process_image_urls: [],
+      process_images_label: '',
+      process_and_context_html: hugeHtml,
+      year: '',
+      linked_document_url: '',
+      video_url: '',
+      fallback_writing_url: '',
+      project_type_id: null,
+      draft: false,
+      archived: false,
+    });
+    expect(errors).toMatchObject({ process_and_context_html: 'Process HTML is too long.' });
+  });
+
+  it('normalizes booleans and project type ids', () => {
+    const { data, errors } = validateProjectPayload({
+      slug: 'valid',
+      name: 'Project',
+      description: '',
+      featured_image_url: '',
+      images_urls: [],
+      process_image_urls: [],
+      process_images_label: '',
+      process_and_context_html: '',
+      year: '',
+      linked_document_url: '',
+      video_url: '',
+      fallback_writing_url: '',
+      project_type_id: ' 123 ',
+      draft: 0 as unknown as boolean,
+      archived: 1 as unknown as boolean,
+    });
+    expect(errors).toBeNull();
+    expect(data.project_type_id).toBe('123');
+    expect(data.draft).toBe(false);
+    expect(data.archived).toBe(true);
+  });
 });
 
 

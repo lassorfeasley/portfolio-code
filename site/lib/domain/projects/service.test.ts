@@ -1,53 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   buildProjectSlugTypeMap,
+  getPublishedProjectBySlug,
   listPublishedProjects,
 } from '@/lib/domain/projects/service';
-import type { ProjectRow, ProjectTypeRow } from '@/lib/domain/projects/types';
 import type { TypedSupabaseClient } from '@/lib/supabase/types';
-
-function createProjectRow(overrides: Partial<ProjectRow> = {}): ProjectRow {
-  return {
-    id: 'project-1',
-    name: 'Sample Project',
-    slug: 'sample-project',
-    description: 'Example description',
-    featured_image_url: 'https://example.com/featured.png',
-    images_urls: ['https://example.com/final.png'],
-    process_image_urls: ['https://example.com/process.png'],
-    process_images_label: 'Process',
-    process_and_context_html: '<p>Context</p>',
-    year: '2024',
-    linked_document_url: 'https://example.com/doc',
-    video_url: null,
-    fallback_writing_url: 'https://example.com/writeup',
-    project_type_id: 'type-1',
-    draft: false,
-    archived: false,
-    created_at: null,
-    updated_at: null,
-    published_on: '2024-01-01',
-    ...overrides,
-  };
-}
-
-function createProjectTypeRow(
-  overrides: Partial<ProjectTypeRow> = {}
-): ProjectTypeRow {
-  return {
-    id: 'type-1',
-    name: 'Interaction design',
-    slug: 'interaction-design',
-    category: 'Design',
-    landing_page_credentials: null,
-    font_awesome_icon: null,
-    draft: false,
-    archived: false,
-    created_at: null,
-    updated_at: null,
-    ...overrides,
-  };
-}
+import { ApiError, NotFoundError } from '@/lib/api/errors';
+import { createProjectRow, createProjectTypeRow } from '@/lib/test-utils';
 
 describe('projects service', () => {
   it('listPublishedProjects returns summaries with project type metadata', async () => {
@@ -115,5 +74,57 @@ describe('projects service', () => {
 
     expect(map).toEqual({ 'sample-project': 'design' });
     expect(mockClient.from).toHaveBeenCalledWith('projects');
+  });
+
+  it('listPublishedProjects throws ApiError when query fails', async () => {
+    const builder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: null, error: { message: 'boom' } }),
+    };
+    const mockClient = { from: vi.fn(() => builder) } as unknown as TypedSupabaseClient;
+
+    await expect(listPublishedProjects(mockClient)).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('getPublishedProjectBySlug returns detail data', async () => {
+    const mockType = createProjectTypeRow();
+    const mockRow = {
+      ...createProjectRow(),
+      project_types: mockType,
+    } as ProjectRow & { project_types: ProjectTypeRow };
+
+    const builder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: mockRow, error: null }),
+    };
+    const mockClient = { from: vi.fn(() => builder) } as unknown as TypedSupabaseClient;
+
+    const detail = await getPublishedProjectBySlug(mockClient, 'sample-project');
+    expect(detail.name).toBe(mockRow.name);
+    expect(detail.projectType?.slug).toBe(mockType.slug);
+  });
+
+  it('getPublishedProjectBySlug throws NotFoundError when record missing', async () => {
+    const builder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    const mockClient = { from: vi.fn(() => builder) } as unknown as TypedSupabaseClient;
+
+    await expect(getPublishedProjectBySlug(mockClient, 'missing')).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('getPublishedProjectBySlug throws ApiError on query failure', async () => {
+    const builder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: { message: 'db down' } }),
+    };
+    const mockClient = { from: vi.fn(() => builder) } as unknown as TypedSupabaseClient;
+
+    await expect(getPublishedProjectBySlug(mockClient, 'slug')).rejects.toBeInstanceOf(ApiError);
   });
 });

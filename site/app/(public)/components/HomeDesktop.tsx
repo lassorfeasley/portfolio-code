@@ -117,7 +117,7 @@ export default function HomeDesktop({ projects, projectTypes, statusMessage }: H
       <section className="windowcanvas twoonegrid">
         <div className="retro-window-placeholder">
           <RetroWindow title="Lassor_headshot.jpg" className="homepage" variant="nomax">
-            <div className="window-content">
+            <>
               <div className="paragraph homepage">
                 Hi! I am Lassor Feasley. I am a product designer, entrepreneur, and the cofounder and CEO of Renewables.org, the solar crowdfunding
                 nonprofit. Take a look around!
@@ -134,7 +134,7 @@ export default function HomeDesktop({ projects, projectTypes, statusMessage }: H
               <Link href="/faceblind" className="link-block-4 w-inline-block">
                 <div className="navlink light">Lassor is face-blind. Learn more →</div>
               </Link>
-            </div>
+            </>
           </RetroWindow>
         </div>
         <div className="align-right">
