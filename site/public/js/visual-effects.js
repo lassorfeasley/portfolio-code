@@ -204,6 +204,27 @@ window.addEventListener('load', initEcho);
       return;
     }
     window.__pixelImageEffectInitialized = true;
+    
+    // Expose re-init function for manual triggering
+    window.__pixelImageEffectReinit = function() {
+      // Reset flag and reprocess
+      delete window.__pixelImageEffectInitialized;
+      const windows = document.querySelectorAll('.retro-window');
+      windows.forEach((w) => {
+        delete w.dataset.pixelEffectObserved;
+        w.querySelectorAll('img').forEach((img) => {
+          delete img.dataset.canvasId;
+          delete img.dataset.animationStarted;
+          delete img.dataset.animationFinished;
+        });
+      });
+      initPixelImageEffect();
+    };
+    
+    // Debug: Log initialization
+    if (typeof console !== 'undefined' && console.log) {
+      console.log('[Pixel Effect] Initializing pixelation effect');
+    }
 
     const steps = 6;
     const totalTargetDuration = 5000;
@@ -297,6 +318,13 @@ window.addEventListener('load', initEcho);
 
     // Initial processing
     findAndProcessWindows();
+    
+    // Debug: Log how many windows/images were found
+    if (typeof console !== 'undefined' && console.log) {
+      const windows = document.querySelectorAll('.retro-window');
+      const totalImages = Array.from(windows).reduce((sum, w) => sum + w.querySelectorAll('img').length, 0);
+      console.log(`[Pixel Effect] Found ${windows.length} retro windows with ${totalImages} images`);
+    }
 
     // Watch for new windows/images being added (for React hydration, lazy loading, etc.)
     const domObserver = new MutationObserver((mutations) => {
@@ -355,6 +383,11 @@ window.addEventListener('load', initEcho);
 
     async function prepareInitialPixel(img) {
       if (img.dataset.canvasId) return;
+      
+      // Debug: Log image being processed
+      if (typeof console !== 'undefined' && console.log) {
+        console.log('[Pixel Effect] Preparing pixelation for image:', img.src || img.alt || 'unknown');
+      }
       
       try {
         // Attempt to ensure image is ready, but don't block endlessly
@@ -435,8 +468,10 @@ window.addEventListener('load', initEcho);
         }
       });
       } catch (e) {
-        // If anything fails during setup, silently continue
-        // This prevents one broken image from breaking the entire effect
+        // If anything fails during setup, log it for debugging
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('[Pixel Effect] Error preparing image:', e, img);
+        }
       }
     }
 
@@ -464,13 +499,28 @@ window.addEventListener('load', initEcho);
     }
 
     function pixelate(img) {
-      if (!img.dataset.canvasId) return;
+      if (!img.dataset.canvasId) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn('[Pixel Effect] pixelate() called but canvasId not set for image:', img);
+        }
+        return;
+      }
       const canvas = document.getElementById(img.dataset.canvasId);
-      if (!canvas) return;
+      if (!canvas) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn('[Pixel Effect] Canvas not found for ID:', img.dataset.canvasId);
+        }
+        return;
+      }
 
       if (img.dataset.animationFinished === 'true') return;
       if (img.dataset.animationStarted === 'true') return;
       img.dataset.animationStarted = 'true';
+      
+      // Debug: Log animation start
+      if (typeof console !== 'undefined' && console.log) {
+        console.log('[Pixel Effect] Starting pixelation animation for:', img.src || img.alt || 'unknown');
+      }
 
       // Retrieve resizeObserver from image if available
       const resizeObserver = img._pixelResizeObserver;
@@ -564,21 +614,46 @@ window.addEventListener('load', initEcho);
     }
   }
 
-  // Initialize immediately if DOM is ready, otherwise wait
+  // Initialize with multiple strategies to catch all cases
+  function attemptInit() {
+    try {
+      initPixelImageEffect();
+    } catch (e) {
+      if (typeof console !== 'undefined' && console.error) {
+        console.error('[Pixel Effect] Initialization error:', e);
+      }
+    }
+  }
+
+  // Strategy 1: If DOM is still loading, wait for DOMContentLoaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPixelImageEffect, { once: true });
+    document.addEventListener('DOMContentLoaded', attemptInit, { once: true });
   } else {
-    // DOM already loaded, but wait a tick to ensure all scripts/styles are applied
-    setTimeout(initPixelImageEffect, 0);
+    // Strategy 2: DOM is ready, but wait a tick for React hydration
+    setTimeout(attemptInit, 100);
   }
   
-  // Also re-run on window load to catch any images that loaded late
+  // Strategy 3: Also try on window load (catches late-loading images)
   window.addEventListener('load', () => {
-    if (!window.__pixelImageEffectInitialized) {
-      initPixelImageEffect();
-    }
-    // Note: IntersectionObserver handles dynamically added content automatically
+    setTimeout(() => {
+      if (!window.__pixelImageEffectInitialized) {
+        attemptInit();
+      } else {
+        // Re-process in case new images were added after initial load
+        // Use the reinit function if available, otherwise just log
+        if (window.__pixelImageEffectReinit) {
+          // Don't fully reinit, just process new windows
+          const windows = document.querySelectorAll('.retro-window:not([data-pixel-effect-observed="true"])');
+          if (windows.length > 0 && typeof console !== 'undefined' && console.log) {
+            console.log(`[Pixel Effect] Found ${windows.length} new windows after load, will be processed by MutationObserver`);
+          }
+        }
+      }
+    }, 200);
   });
+  
+  // Strategy 4: Expose init function globally for manual triggering if needed
+  // Note: This will be set inside initPixelImageEffect
 })();
 
 /* === Causes retro windows to be randomly positioned and  on the screen === */
