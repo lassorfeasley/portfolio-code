@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { CSSProperties, useMemo, useState, useRef, useEffect } from 'react';
+import { CSSProperties, useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { isSupabaseTransformedUrl, toOriginalObjectUrl } from '@/lib/supabase/image';
 import { usePixelImageEffect } from '@/app/hooks/usePixelImageEffect';
 
@@ -39,7 +39,16 @@ export default function ImageWithSupabaseFallback({
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Check for data attribute on ancestor (survives DOM manipulation)
-  const [isPixelEffectEnabled, setIsPixelEffectEnabled] = useState(false);
+  // Using a ref-based check instead of state to avoid timing issues
+  const isPixelEffectEnabledRef = useRef<boolean>(false);
+  const [, forceUpdate] = useState({});
+  
+  // Synchronous check function that doesn't rely on state
+  const checkIfPixelEffectEnabled = useCallback(() => {
+    if (!containerRef.current) return false;
+    const retroWindow = containerRef.current.closest('[data-pixel-effect-enabled="true"]');
+    return retroWindow !== null;
+  }, []);
   
   useEffect(() => {
     console.log('[Pixel Effect] Component mounted for image:', src.substring(src.lastIndexOf('/') + 1, src.lastIndexOf('/') + 30));
@@ -85,7 +94,14 @@ export default function ImageWithSupabaseFallback({
         })()
       });
       
-      setIsPixelEffectEnabled(isEnabled);
+      const wasEnabled = isPixelEffectEnabledRef.current;
+      isPixelEffectEnabledRef.current = isEnabled;
+      
+      // Force re-render if state changed
+      if (wasEnabled !== isEnabled) {
+        forceUpdate({});
+      }
+      
       return isEnabled;
     };
     
@@ -117,7 +133,7 @@ export default function ImageWithSupabaseFallback({
     } else {
       console.log('[Pixel Effect] ✅ Enabled on first check!');
     }
-  }, [src]);
+  }, [src, forceUpdate]);
   
   // Find the actual img element after Next.js Image renders it
   useEffect(() => {
@@ -149,17 +165,18 @@ export default function ImageWithSupabaseFallback({
     return () => observer.disconnect();
   }, []);
 
-  // Only enable pixel effect if context allows and not opted out
-  const shouldPixelate = isPixelEffectEnabled && !className?.includes('no-pixelate');
+  // Only enable pixel effect if detected and not opted out
+  // Use ref value directly to avoid state timing issues
+  const shouldPixelate = isPixelEffectEnabledRef.current && !className?.includes('no-pixelate');
   
   useEffect(() => {
-    console.log('[Pixel Effect] shouldPixelate changed:', {
+    console.log('[Pixel Effect] shouldPixelate value:', {
       shouldPixelate,
-      isPixelEffectEnabled,
+      isPixelEffectEnabled: isPixelEffectEnabledRef.current,
       hasNoPixelateClass: className?.includes('no-pixelate'),
       className
     });
-  }, [shouldPixelate, isPixelEffectEnabled, className]);
+  }, [shouldPixelate, className]);
   
   const { canvasRef } = usePixelImageEffect(imageRef, { enabled: shouldPixelate });
 
