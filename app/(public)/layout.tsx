@@ -17,7 +17,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
       <Script src="/js/retro-window-state.js?v=1" strategy="afterInteractive" />
       <Script src="/js/retro-scatter-engine.js?v=1" strategy="afterInteractive" />
       <Script src="/js/core-effects.js?v=2" strategy="afterInteractive" />
-      <Script src="/js/visual-effects.js?v=8" strategy="afterInteractive" />
+      <Script src="/js/visual-effects.js?v=9" strategy="afterInteractive" />
       <div className="public-body">{children}</div>
     </ErrorBoundary>
   );

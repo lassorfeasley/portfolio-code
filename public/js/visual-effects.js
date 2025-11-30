@@ -199,6 +199,11 @@ window.addEventListener('load', initEcho);
 
 
 (function attachPixelImageEffect() {
+  // Pixel effect now handled by React-based implementation
+  // Legacy script disabled to prevent conflicts
+  console.log('[Pixel Effect] Legacy script disabled - using React implementation');
+  return;
+  
   // Very early debug to confirm script is loaded
   if (typeof console !== 'undefined' && console.log) {
     console.log('[Pixel Effect] Script loaded, document readyState:', document.readyState);
