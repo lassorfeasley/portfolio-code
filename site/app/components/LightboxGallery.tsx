@@ -1,6 +1,6 @@
 "use client";
 
-import Image from 'next/image';
+import Image, { type ImageLoaderProps } from 'next/image';
 import { useCallback, useEffect, useState, type SyntheticEvent } from 'react';
 import { toLargeUrl, toThumbUrl, toOriginalObjectUrl, isSupabaseTransformedUrl } from '@/lib/supabase/image';
 import { createPortal } from 'react-dom';
@@ -10,6 +10,8 @@ type LightboxGalleryProps = {
   itemClassName?: string;
   linkClassName?: string;
 };
+
+const passthroughLoader = ({ src }: ImageLoaderProps) => src;
 
 export default function LightboxGallery({
   images,
@@ -52,6 +54,8 @@ export default function LightboxGallery({
 
   if (!Array.isArray(images) || images.length === 0) return null;
 
+  const safeIndex = Math.max(0, Math.min(index, images.length - 1));
+  const activeImageSrc = toLargeUrl(images[safeIndex], 2200);
   return (
     <>
       <div className="collection-list w-dyn-items">
@@ -63,12 +67,14 @@ export default function LightboxGallery({
               <a href="#" className={linkClassName} onClick={(e) => { e.preventDefault(); show(i); }} aria-label="Open image">
                 <div className="thumb-frame" style={{ position: 'relative' }}>
                   <Image
+                    loader={passthroughLoader}
                     src={thumb}
                     alt=""
                     fill
                     sizes="(max-width: 767px) 50vw, (max-width: 1279px) 33vw, 220px"
                     loading="lazy"
                     onError={handleImageError}
+                    unoptimized
                     className="cover-object"
                     style={{ objectFit: 'cover' }}
                   />
@@ -90,12 +96,14 @@ export default function LightboxGallery({
           <button className="lf-lightbox-prev" aria-label="Previous" onClick={prev}>‹</button>
           <div className="lf-lightbox-img-wrapper">
             <Image
+              loader={passthroughLoader}
               className="lf-lightbox-img no-pixelate"
-              src={toLargeUrl(images[index], 2200)}
+              src={activeImageSrc}
               alt=""
               fill
               sizes="(max-width: 767px) 90vw, min(92vw, 1600px)"
               onError={handleImageError}
+              unoptimized
               style={{ objectFit: 'contain' }}
             />
           </div>

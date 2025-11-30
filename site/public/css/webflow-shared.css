@@ -4065,6 +4065,7 @@ a {
   display: flex;
   align-items: center;
   height: 100%;
+  z-index: 100;
 }
 
 .resize-corner {
@@ -4202,6 +4203,15 @@ a {
   grid-column-gap: 0px;
   grid-row-gap: 0px;
   padding: 0;
+  margin-bottom: -60px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.globalmargin > .windowcanvas.search + .windowcanvas {
+  margin-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 .desktopgrid {
