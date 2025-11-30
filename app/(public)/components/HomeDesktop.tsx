@@ -139,7 +139,7 @@ export default function HomeDesktop({ projects, projectTypes, statusMessage }: H
                 Hi! I am Lassor Feasley. I am a product designer, entrepreneur, and the cofounder and CEO of Renewables.org, the solar crowdfunding
                 nonprofit. Take a look around!
               </div>
-              <Image
+              <ImageWithSupabaseFallback
                 src={HERO_IMAGE}
                 alt="Portrait of Lassor Feasley"
                 className="image-2 max-with"
@@ -147,7 +147,6 @@ export default function HomeDesktop({ projects, projectTypes, statusMessage }: H
                 height={800}
                 sizes="(max-width: 768px) 90vw, 400px"
                 priority={false}
-                crossOrigin="anonymous"
               />
               <Link href="/faceblind" className="link-block-4 w-inline-block">
                 <div className="navlink light">Lassor is face-blind. Learn more →</div>
