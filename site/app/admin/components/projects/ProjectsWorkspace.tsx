@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { ProjectPayload, ProjectRecord, ProjectTypeRecord } from '@/types/projects';
 import { Button } from '@/components/ui/button';
 import { ProjectsTable } from './ProjectsTable';
 import { ProjectEditor } from './ProjectEditor';
+import { useWorkspace, useSelectedPayload } from '@/app/hooks/useWorkspace';
 
 type ProjectsWorkspaceProps = {
   initialProjects: ProjectRecord[];
@@ -48,101 +48,51 @@ function toPayload(project: ProjectRecord | null): ProjectPayload {
 }
 
 export function ProjectsWorkspace({ initialProjects, projectTypes }: ProjectsWorkspaceProps) {
-  const [projects, setProjects] = useState<ProjectRecord[]>(initialProjects);
-  const [selectedId, setSelectedId] = useState<string | null>(initialProjects[0]?.id ?? null);
-  const [isCreating, setIsCreating] = useState(initialProjects.length === 0);
-  const [draftTemplate, setDraftTemplate] = useState<ProjectPayload | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'editor'>(initialProjects.length === 0 ? 'editor' : 'list');
+  const workspace = useWorkspace<ProjectRecord, ProjectPayload>({
+    initialItems: initialProjects,
+    emptyPayload: emptyProject,
+    toPayload,
+    getItemName: (project) => project.name ?? '',
+    getItemSlug: (project) => project.slug ?? null,
+  });
 
-  const handleSelect = (projectId: string) => {
-    setSelectedId(projectId);
-    setIsCreating(false);
-    setDraftTemplate(null);
-    setViewMode('editor');
-  };
+  const selectedProject = useSelectedPayload(
+    workspace.items,
+    workspace.selectedId,
+    workspace.isCreating,
+    workspace.draftTemplate,
+    emptyProject,
+    toPayload
+  );
 
-  const handleCreateNew = () => {
-    setSelectedId(null);
-    setIsCreating(true);
-    setDraftTemplate(emptyProject);
-    setViewMode('editor');
-  };
-
-  const handleDuplicate = (project: ProjectRecord) => {
-    const duplicated = toPayload(project);
-    duplicated.id = undefined;
-    duplicated.slug = `${duplicated.slug ?? project.id}-copy`;
-    duplicated.name = duplicated.name ? `${duplicated.name} (copy)` : 'Untitled copy';
-    duplicated.draft = true;
-    setDraftTemplate(duplicated);
-    setSelectedId(null);
-    setIsCreating(true);
-  };
-
-  const handleBackToList = () => {
-    setViewMode('list');
-    setIsCreating(false);
-    setDraftTemplate(null);
-  };
-
-  const handleSaved = (updated: ProjectRecord) => {
-    setProjects((current) => {
-      const exists = current.some((project) => project.id === updated.id);
-      if (exists) {
-        return current.map((project) => (project.id === updated.id ? updated : project));
-      }
-      return [updated, ...current];
-    });
-    setSelectedId(updated.id);
-    setIsCreating(false);
-    setDraftTemplate(null);
-  };
-
-  const handleDeletedProject = (id: string) => {
-    setProjects((current) => current.filter((project) => project.id !== id));
-    if (selectedId === id) {
-      setSelectedId(null);
-      setIsCreating(true);
-      setDraftTemplate(emptyProject);
-    }
-  };
-
-  const selectedProject = useMemo<ProjectPayload>(() => {
-    if (isCreating) {
-      return draftTemplate ?? emptyProject;
-    }
-    const project = projects.find((item) => item.id === selectedId);
-    return toPayload(project ?? null);
-  }, [draftTemplate, isCreating, projects, selectedId]);
-
-  const showBackButton = projects.length > 0;
+  const showBackButton = workspace.items.length > 0;
 
   return (
     <div className="space-y-6">
-      {viewMode === 'list' ? (
+      {workspace.viewMode === 'list' ? (
         <ProjectsTable
-          projects={projects}
+          projects={workspace.items}
           projectTypes={projectTypes}
-          selectedId={isCreating ? null : selectedId}
-          onSelect={handleSelect}
-          onCreateNew={handleCreateNew}
-          onDuplicate={handleDuplicate}
+          selectedId={workspace.isCreating ? null : workspace.selectedId}
+          onSelect={workspace.handleSelect}
+          onCreateNew={workspace.handleCreateNew}
+          onDuplicate={workspace.handleDuplicate}
         />
       ) : (
         <div className="space-y-4">
           {showBackButton ? (
-            <Button variant="ghost" className="w-fit gap-2" onClick={handleBackToList}>
+            <Button variant="ghost" className="w-fit gap-2" onClick={workspace.handleBackToList}>
               <ArrowLeft className="h-4 w-4" />
               Back to projects
             </Button>
           ) : null}
           <ProjectEditor
-            key={selectedProject.id ?? (isCreating ? 'new-project' : 'empty-state')}
+            key={selectedProject.id ?? (workspace.isCreating ? 'new-project' : 'empty-state')}
             project={selectedProject}
             projectTypes={projectTypes}
-            isCreating={isCreating}
-            onSaved={handleSaved}
-            onDeleted={handleDeletedProject}
+            isCreating={workspace.isCreating}
+            onSaved={workspace.handleSaved}
+            onDeleted={workspace.handleDeleted}
           />
         </div>
       )}

@@ -5,12 +5,12 @@ import { getPublishedArticleBySlug, listArticleSlugs } from '@/lib/domain/articl
 import type { ArticleRow } from '@/lib/domain/articles/types';
 import { NotFoundError } from '@/lib/api/errors';
 import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
+import { hasSupabaseEnv } from '@/lib/utils/env';
 
 export const revalidate = 60;
 
 export async function generateStaticParams() {
-  const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
-  if (!hasEnv) return [];
+  if (!hasSupabaseEnv()) return [];
   const supabase = supabaseServer();
   const slugs = await listArticleSlugs(supabase);
   return slugs.map((slug) => ({ slug }));
@@ -32,8 +32,7 @@ export async function generateMetadata(
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
-  if (!hasEnv) {
+  if (!hasSupabaseEnv()) {
     return (
       <main className="retro-root">
         <section className="cluttered-desktop-container">

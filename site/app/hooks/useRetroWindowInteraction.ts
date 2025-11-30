@@ -161,11 +161,9 @@ export function useRetroWindowInteraction(options: Options) {
         height: state.lockedHeight,
       }));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const maybeUpdateShadow = (window as any)?.updateBreathingShadow;
-      if (typeof maybeUpdateShadow === 'function') {
+      if (typeof window.updateBreathingShadow === 'function') {
         try {
-          maybeUpdateShadow();
+          window.updateBreathingShadow();
         } catch {
           // no-op
         }
@@ -205,11 +203,9 @@ export function useRetroWindowInteraction(options: Options) {
       current.style.cursor = 'grabbing';
 
       // Float legacy windows if helper exists
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const maybeFloat = (window as any)?.retroFloatWindow;
-      if (typeof maybeFloat === 'function') {
+      if (typeof window.retroFloatWindow === 'function') {
         try {
-          maybeFloat(current);
+          window.retroFloatWindow(current);
         } catch {
           // ignore failure
         }
@@ -275,11 +271,9 @@ export function useRetroWindowInteraction(options: Options) {
       };
 
       // Float legacy windows if helper exists
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const maybeFloat = (window as any)?.retroFloatWindow;
-      if (typeof maybeFloat === 'function') {
+      if (typeof window.retroFloatWindow === 'function') {
         try {
-          maybeFloat(current);
+          window.retroFloatWindow(current);
         } catch {
           // ignore failure
         }

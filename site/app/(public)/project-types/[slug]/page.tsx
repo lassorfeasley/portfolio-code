@@ -13,12 +13,12 @@ import { listPublishedProjectsByType } from '@/lib/domain/projects/service';
 import { NotFoundError } from '@/lib/api/errors';
 import type { ProjectTypeDetail } from '@/lib/domain/project-types/types';
 import type { ProjectSummary } from '@/lib/domain/projects/types';
+import { hasSupabaseEnv } from '@/lib/utils/env';
 
 export const revalidate = 60;
 
 export async function generateStaticParams() {
-  const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
-  if (!hasEnv) return [];
+  if (!hasSupabaseEnv()) return [];
   const supabase = supabaseServer();
   const slugs = await listProjectTypeSlugs(supabase);
   return slugs.map((slug) => ({ slug }));
@@ -41,8 +41,7 @@ export async function generateMetadata(
 export default async function ProjectTypePage({ params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
-    const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
-    if (!hasEnv) {
+    if (!hasSupabaseEnv()) {
       return (
         <main className="retro-root">
           <div className="globalmargin">

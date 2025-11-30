@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
 import RetroWindow from '@/app/components/RetroWindow';
 import type { ProjectSummary } from '@/lib/domain/projects/types';
@@ -74,6 +74,20 @@ export default function HomeDesktop({ projects, projectTypes, statusMessage }: H
   const handleFilterClick = (slug: string | null) => {
     setActiveCategory((current) => (current === slug ? null : slug));
   };
+
+  // Trigger scatter effect after projects render
+  useEffect(() => {
+    if (filteredProjects.length === 0) return;
+    
+    // Wait for React to finish rendering, then trigger scatter
+    const timeoutId = setTimeout(() => {
+      if (typeof window.retroApplyScatterEffect === 'function') {
+        window.retroApplyScatterEffect();
+      }
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [filteredProjects.length]);
 
   const emptyStateMessage =
     projects.length === 0

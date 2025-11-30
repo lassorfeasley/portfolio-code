@@ -5,19 +5,18 @@ import { listPublishedProjects } from '@/lib/domain/projects/service';
 import { listPublishedProjectTypes } from '@/lib/domain/project-types/service';
 import type { ProjectSummary } from '@/lib/domain/projects/types';
 import type { ProjectTypeSummary } from '@/lib/domain/project-types/types';
+import { hasSupabaseEnv } from '@/lib/utils/env';
 
 export const revalidate = 60;
 
 export default async function Home() {
-  const hasSupabaseEnv = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
-  );
+  const envConfigured = hasSupabaseEnv();
 
   let projects: ProjectSummary[] = [];
   let projectTypes: ProjectTypeSummary[] = [];
   let statusMessage: string | null = null;
 
-  if (!hasSupabaseEnv) {
+  if (!envConfigured) {
     statusMessage = 'Supabase environment variables are not configured. Dynamic project data is unavailable.';
   } else {
     const supabase = supabaseServer();

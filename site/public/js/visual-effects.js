@@ -397,7 +397,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* === Causes retro windows to be randomly positioned and  on the screen === */
-window.addEventListener('load', () => {
+function applyScatterEffect() {
   // Only run the script if the screen is at least as wide as an iPad in landscape (1024px)
   if (!window.matchMedia('(min-width: 1024px)').matches) {
     return;
@@ -491,6 +491,17 @@ window.addEventListener('load', () => {
   } else if (typeof window.retroSetGridMode === 'function') {
      window.retroSetGridMode(false);
   }
+}
+
+// Expose function globally so React can call it
+if (typeof window !== 'undefined') {
+  window.retroApplyScatterEffect = applyScatterEffect;
+}
+
+// Run on initial load
+window.addEventListener('load', () => {
+  // Delay slightly to ensure DOM is ready
+  setTimeout(applyScatterEffect, 100);
 });
 
 
