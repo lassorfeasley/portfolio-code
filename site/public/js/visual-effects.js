@@ -203,6 +203,24 @@ window.addEventListener('load', initEcho);
   if (typeof console !== 'undefined' && console.log) {
     console.log('[Pixel Effect] Script loaded, document readyState:', document.readyState);
   }
+
+  const pixelEffectDebug = (() => {
+    try {
+      return Boolean(window && window.__pixelEffectDebug);
+    } catch (_) {
+      return false;
+    }
+  })();
+
+  function pixelLog(...args) {
+    if (!pixelEffectDebug || typeof console === 'undefined' || !console.log) return;
+    console.log('[Pixel Effect DEBUG]', ...args);
+  }
+
+  function pixelWarn(...args) {
+    if (typeof console === 'undefined' || !console.warn) return;
+    console.warn('[Pixel Effect]', ...args);
+  }
   
   function initPixelImageEffect() {
     if (window.__pixelImageEffectInitialized) {
@@ -235,6 +253,8 @@ window.addEventListener('load', initEcho);
     const totalTargetDuration = 5000;
     const minStepDelay = 250;
     const maxStepDelay = Math.max(0, (totalTargetDuration - steps * minStepDelay) / steps);
+    const MAX_PREP_RETRIES = 12;
+    const PREP_RETRY_DELAY = 120;
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -247,66 +267,93 @@ window.addEventListener('load', initEcho);
       threshold: 0.1,
     });
 
+    function isPixelCandidate(img) {
+      if (!img || !(img instanceof HTMLImageElement)) return false;
+      if (img.dataset.canvasId) return false;
+      if (img.classList?.contains('no-pixelate')) return false;
+      if (img.closest('.no-pixelate')) return false;
+      const placeholderType = img.getAttribute('data-placeholder') || img.dataset.placeholder;
+      if (placeholderType === 'blur' && !img.dataset.nimg) return false;
+      const src = img.currentSrc || img.src || '';
+      if (!src && !img.getAttribute('data-nimg')) return false;
+      return true;
+    }
+
+    function hasRenderableDimensions(img) {
+      if (!img) return false;
+      const attrWidth = parseInt(img.getAttribute('width') || '0', 10);
+      const attrHeight = parseInt(img.getAttribute('height') || '0', 10);
+      return (
+        (img.offsetWidth > 0 && img.offsetHeight > 0) ||
+        (img.naturalWidth > 0 && img.naturalHeight > 0) ||
+        (attrWidth > 0 && attrHeight > 0)
+      );
+    }
+
+    function describeWindow(windowEl) {
+      return (
+        windowEl.getAttribute('data-window-title') ||
+        windowEl.dataset.windowId ||
+        windowEl.querySelector('.window-title, .titlebar-title, .title-text')?.textContent ||
+        windowEl.id ||
+        'unknown'
+      );
+    }
+
+    function scheduleImagePrepare(img, attempt = 0) {
+      if (!img || img.dataset.canvasId) return;
+      if (hasRenderableDimensions(img)) {
+        prepareInitialPixel(img);
+        return;
+      }
+
+      if (attempt >= MAX_PREP_RETRIES) {
+        pixelWarn('Image never acquired dimensions, skipping pixel effect:', img.currentSrc || img.src || img.alt || 'unknown');
+        return;
+      }
+
+      const delay = PREP_RETRY_DELAY * (attempt + 1);
+      setTimeout(() => scheduleImagePrepare(img, attempt + 1), delay);
+    }
+
     // Function to process images in a window
     function processWindowImages(windowEl) {
-      const images = windowEl.querySelectorAll('img');
+      const images = Array.from(windowEl.querySelectorAll('img')).filter(isPixelCandidate);
+      pixelLog('Processing window', describeWindow(windowEl), 'candidate images:', images.length);
+      if (images.length === 0) {
+        return false;
+      }
+
       images.forEach((img) => {
-        // Skip if already processed
-        if (img.dataset.canvasId) return;
-        
-        // Skip images with no-pixelate class (e.g., lightbox images)
-        if (img.classList && img.classList.contains('no-pixelate')) return;
-        
-        // Try to prepare immediately, but also set up fallbacks
-        const tryPrepare = () => {
-          try {
-            // Use naturalWidth/Height as fallback if offset dimensions are 0
-            const hasDimensions = img.offsetWidth > 0 || img.offsetHeight > 0 || 
-                                 img.naturalWidth > 0 || img.naturalHeight > 0;
-            
-            if (hasDimensions) {
-              prepareInitialPixel(img);
-            } else {
-              // Wait a bit and try again
-              setTimeout(() => {
-                if (!img.dataset.canvasId) {
-                  const retryHasDimensions = img.offsetWidth > 0 || img.offsetHeight > 0 || 
-                                            img.naturalWidth > 0 || img.naturalHeight > 0;
-                  if (retryHasDimensions) {
-                    prepareInitialPixel(img);
-                  }
-                }
-              }, 100);
-            }
-          } catch (e) {
-            // Silently continue if one image fails
-          }
-        };
-        
-        if (img.complete && img.naturalWidth > 0) {
-          tryPrepare();
+        if (img.complete && (img.naturalWidth > 0 || img.dataset.nimg === 'fill')) {
+          scheduleImagePrepare(img, 0);
         } else {
-          // Set up load listener
-          img.addEventListener('load', () => {
-            setTimeout(tryPrepare, 10);
-          }, { once: true });
-          // Also try immediately in case it's already loaded but event fired
-          if (img.complete) {
-            setTimeout(tryPrepare, 10);
-          }
+          img.addEventListener(
+            'load',
+            () => scheduleImagePrepare(img, 0),
+            { once: true }
+          );
+          scheduleImagePrepare(img, 0);
         }
       });
+
+      return true;
     }
 
     // Function to find and process all retro windows (including newly added ones)
     function findAndProcessWindows() {
       const retroWindows = document.querySelectorAll('.retro-window');
       retroWindows.forEach((windowEl) => {
-        // Skip if already processed
-        if (windowEl.dataset.pixelEffectObserved === 'true') return;
-        windowEl.dataset.pixelEffectObserved = 'true';
-        
-        processWindowImages(windowEl);
+        const status = windowEl.dataset.pixelEffectObserved;
+        if (status === 'true' || status === 'no-images') return;
+
+        const processed = processWindowImages(windowEl);
+
+        if (processed) {
+          windowEl.dataset.pixelEffectObserved = 'true';
+        } else if (!status) {
+          windowEl.dataset.pixelEffectObserved = 'no-images';
+        }
 
         // Check if window is already in viewport immediately
         const rect = windowEl.getBoundingClientRect();
@@ -333,27 +380,34 @@ window.addEventListener('load', initEcho);
 
     // Watch for new windows/images being added (for React hydration, lazy loading, etc.)
     const domObserver = new MutationObserver((mutations) => {
-      let shouldReprocess = false;
+      const windowsToReprocess = new Set();
+
+      const markWindow = (node) => {
+        if (!(node instanceof HTMLElement)) return;
+        if (node.classList?.contains('retro-window')) {
+          windowsToReprocess.add(node);
+        }
+        const parentWindow = node.closest?.('.retro-window');
+        if (parentWindow) {
+          windowsToReprocess.add(parentWindow);
+        }
+        node.querySelectorAll?.('.retro-window').forEach((nested) => windowsToReprocess.add(nested));
+      };
+
       mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === 1) { // Element node
-            // Check if a retro-window was added
-            if (node.classList && node.classList.contains('retro-window')) {
-              shouldReprocess = true;
-            }
-            // Check if an img was added inside a retro-window
-            if (node.tagName === 'IMG' && node.closest('.retro-window')) {
-              shouldReprocess = true;
-            }
-            // Check if any retro-windows exist in the subtree
-            if (node.querySelectorAll && node.querySelectorAll('.retro-window').length > 0) {
-              shouldReprocess = true;
-            }
-          }
-        });
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach(markWindow);
+        } else if (mutation.type === 'attributes' && mutation.target instanceof HTMLImageElement) {
+          markWindow(mutation.target);
+        }
       });
-      if (shouldReprocess) {
-        findAndProcessWindows();
+
+      if (windowsToReprocess.size > 0) {
+        windowsToReprocess.forEach((win) => {
+          pixelLog('Marking window for pixel-effect reprocess due to DOM changes:', describeWindow(win));
+          delete win.dataset.pixelEffectObserved;
+        });
+        requestAnimationFrame(findAndProcessWindows);
       }
     });
 
@@ -361,6 +415,8 @@ window.addEventListener('load', initEcho);
     domObserver.observe(document.body, {
       childList: true,
       subtree: true,
+      attributes: true,
+      attributeFilter: ['src', 'data-nimg', 'loading']
     });
 
     window.addEventListener('load', () => {

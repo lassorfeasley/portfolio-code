@@ -105,6 +105,31 @@ export default function HomeDesktop({ projects, projectTypes, statusMessage }: H
     };
   }, [filteredProjects.length]);
 
+  // Trigger pixel effect re-initialization after projects render
+  useEffect(() => {
+    if (filteredProjects.length === 0) return;
+    if (typeof window === 'undefined') return;
+
+    const triggerPixelEffect = () => {
+      if (typeof window.__pixelImageEffectReinit === 'function') {
+        window.__pixelImageEffectReinit();
+      } else if (typeof window.dispatchEvent === 'function') {
+        // Fallback event for scripts that listen for reinit requests
+        window.dispatchEvent(new CustomEvent('retroPixelEffectReinitRequest'));
+      }
+    };
+
+    const timers = [
+      setTimeout(triggerPixelEffect, 300),
+      setTimeout(triggerPixelEffect, 1200),
+      setTimeout(triggerPixelEffect, 3000),
+    ];
+
+    return () => {
+      timers.forEach((timerId) => clearTimeout(timerId));
+    };
+  }, [filteredProjects.length]);
+
   const emptyStateMessage =
     projects.length === 0
       ? 'No projects are available yet. Add one in the admin dashboard to populate this space.'
