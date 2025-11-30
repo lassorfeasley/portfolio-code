@@ -24,7 +24,7 @@ const DEFAULT_MIN_STEP_DELAY = 250;
  * Creates a canvas overlay that progressively reduces pixelation as the image loads.
  */
 export function usePixelImageEffect(
-  imageRef: React.RefObject<HTMLImageElement>,
+  imageRef: React.RefObject<HTMLImageElement | null>,
   options: UsePixelImageEffectOptions = {}
 ): UsePixelImageEffectReturn {
   const {
