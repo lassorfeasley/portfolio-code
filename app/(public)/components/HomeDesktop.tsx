@@ -112,8 +112,8 @@ export default function HomeDesktop({ projects, projectTypes, statusMessage }: H
 
     let attempts = 0;
     const maxAttempts = 50; // Try for up to ~10 seconds (50 * 200ms)
-    let intervalId: NodeJS.Timeout;
-
+    let intervalId: NodeJS.Timeout | null = null;
+    
     const triggerPixelEffect = () => {
       // Check if the specific function from visual-effects.js is available
       if (typeof window.__pixelImageEffectReinit === 'function') {
