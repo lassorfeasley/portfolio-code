@@ -269,7 +269,15 @@ window.addEventListener('load', initEcho);
 
     function isPixelCandidate(img) {
       if (!img || !(img instanceof HTMLImageElement)) return false;
-      if (img.dataset.canvasId) return false;
+      if (img.dataset.canvasId) {
+        const existingCanvas = document.getElementById(img.dataset.canvasId);
+        if (existingCanvas) {
+          return false;
+        }
+        // Canvas was removed (likely by React hydration); clear stale ID so we can rebuild
+        pixelLog('Detected missing canvas for image, clearing stale canvasId:', img.dataset.canvasId);
+        delete img.dataset.canvasId;
+      }
       if (img.classList?.contains('no-pixelate')) return false;
       if (img.closest('.no-pixelate')) return false;
       const placeholderType = img.getAttribute('data-placeholder') || img.dataset.placeholder;
@@ -443,7 +451,14 @@ window.addEventListener('load', initEcho);
     }
 
     async function prepareInitialPixel(img) {
-      if (img.dataset.canvasId) return;
+      if (img.dataset.canvasId) {
+        const existingCanvas = document.getElementById(img.dataset.canvasId);
+        if (existingCanvas) {
+          return;
+        }
+        pixelLog('prepareInitialPixel: rebuilding missing canvas for image');
+        delete img.dataset.canvasId;
+      }
       
       // Debug: Log image being processed
       if (typeof console !== 'undefined' && console.log) {
@@ -462,7 +477,14 @@ window.addEventListener('load', initEcho);
             // Decode failed or timed out, continue anyway
           }
         }
-        if (img.dataset.canvasId) return;
+        if (img.dataset.canvasId) {
+          const existingCanvasAfterDecode = document.getElementById(img.dataset.canvasId);
+          if (existingCanvasAfterDecode) {
+            return;
+          }
+          pixelLog('prepareInitialPixel: clearing stale canvasId after decode');
+          delete img.dataset.canvasId;
+        }
 
       // Setup Canvas as a Sibling Overlay
       const canvas = document.createElement('canvas');
@@ -769,6 +791,16 @@ window.addEventListener('load', initEcho);
       }, 2000);
     }
   }, 1000);
+
+  // Allow React surfaces to request a re-initialization after hydration
+  window.addEventListener('retroPixelEffectReinitRequest', () => {
+    pixelLog('Received retroPixelEffectReinitRequest event');
+    if (typeof window.__pixelImageEffectReinit === 'function') {
+      window.__pixelImageEffectReinit();
+    } else {
+      attemptInit();
+    }
+  });
 })();
 
 /* === Causes retro windows to be randomly positioned and  on the screen === */
