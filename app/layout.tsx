@@ -13,7 +13,10 @@ export const metadata: Metadata = {
   title: { default: 'Lassor Feasley', template: '%s · Lassor Feasley' },
   description: 'Portfolio of Lassor Feasley: interaction, UX and industrial design, and writing.',
   icons: {
-    icon: '/favicon-32x32.png',
+    icon: [
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
     shortcut: '/favicon-32x32.png',
     apple: '/apple-touch-icon.png',
   },
