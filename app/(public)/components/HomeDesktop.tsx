@@ -250,8 +250,68 @@ export default function HomeDesktop({
 }
 
 function FolderGrid({ links }: { links: FolderLink[] }) {
+  // Debug: Log all folder links data
+  console.log('🔍 FolderGrid - All links:', links);
+  console.log('🔍 FolderGrid - Links count:', links.length);
+  links.forEach((link, index) => {
+    console.log(`🔍 FolderGrid - Link ${index}:`, {
+      id: link.id,
+      label: link.label,
+      icon: link.icon,
+      iconType: typeof link.icon,
+      iconLength: link.icon?.length,
+      iconCharCodes: link.icon ? Array.from(link.icon).map(c => c.charCodeAt(0).toString(16)) : null,
+      iconJSON: JSON.stringify(link.icon),
+      href: link.href,
+      external: link.external,
+    });
+  });
+
   return (
-    <div className="folder-grid">
+    <>
+      {/* Visual Debug Panel */}
+      {process.env.NODE_ENV === 'development' && (
+        <div style={{
+          position: 'fixed',
+          top: 10,
+          right: 10,
+          background: 'rgba(0,0,0,0.9)',
+          color: '#0f0',
+          padding: '10px',
+          fontSize: '10px',
+          fontFamily: 'monospace',
+          zIndex: 10000,
+          maxWidth: '350px',
+          maxHeight: '500px',
+          overflow: 'auto',
+          border: '2px solid #0f0'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '12px' }}>🔍 ICON DEBUG</div>
+          <div style={{ marginBottom: '10px', paddingBottom: '5px', borderBottom: '2px solid #0f0' }}>
+            <div>Total Links: {links.length}</div>
+          </div>
+          {links.map((link, idx) => {
+            const isEmpty = !link.icon || link.icon.trim().length === 0;
+            return (
+              <div key={link.id} style={{ 
+                marginBottom: '10px', 
+                borderBottom: '1px solid #333', 
+                paddingBottom: '5px',
+                backgroundColor: isEmpty ? 'rgba(255,0,0,0.1)' : 'rgba(0,255,0,0.05)'
+              }}>
+                <div><strong>{link.label}</strong> {isEmpty && <span style={{color: '#f00'}}>⚠️ EMPTY</span>}</div>
+                <div>Icon: {link.icon || '(empty)'}</div>
+                <div>Length: {link.icon?.length || 0}</div>
+                <div>Type: {typeof link.icon}</div>
+                <div>JSON: {JSON.stringify(link.icon)}</div>
+                <div>Codes: {link.icon ? Array.from(link.icon).map(c => `U+${c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')}`).join(', ') : 'N/A'}</div>
+                <div>Href: {link.href}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="folder-grid">
       {links.map((link) => (
         <div key={link.id} className="icon-placeholder">
           <div className="draggable-folder">
@@ -268,13 +328,28 @@ function FolderGrid({ links }: { links: FolderLink[] }) {
         </div>
       ))}
     </div>
+    </>
   );
 }
 
 function FolderLinkContent({ icon, label }: { icon: string; label: string }) {
+  // Debug: Log individual icon data
+  console.log(`🔍 FolderLinkContent - "${label}":`, {
+    icon,
+    iconType: typeof icon,
+    iconLength: icon?.length,
+    iconCharCodes: icon ? Array.from(icon).map(c => `U+${c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')}`) : null,
+    iconJSON: JSON.stringify(icon),
+    iconEscaped: icon ? icon.replace(/[\u0000-\u001F\u007F-\u009F]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`) : null,
+    isEmpty: !icon || icon.length === 0,
+    isWhitespace: icon ? /^\s*$/.test(icon) : false,
+  });
+
   return (
     <>
-      <div className="folder">{icon}</div>
+      <div className="folder" data-debug-icon={JSON.stringify(icon)} data-debug-label={label}>
+        {icon || '[NO ICON]'}
+      </div>
       <div className="navlink foldericon">{label}</div>
     </>
   );
