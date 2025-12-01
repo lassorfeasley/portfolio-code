@@ -49,7 +49,7 @@ export async function updateFolderLink(
     })
     .eq('id', id)
     .select()
-    .single() as Promise<{ data: FolderLinkRow; error: PostgrestError | null }>);
+    .single() as unknown as Promise<{ data: FolderLinkRow; error: PostgrestError | null }>);
 
   if (error) {
     throw new ApiError('Failed to update folder link', 500, error.message);
@@ -72,7 +72,7 @@ export async function createFolderLink(
       display_order: payload.displayOrder,
     })
     .select()
-    .single() as Promise<{ data: FolderLinkRow; error: PostgrestError | null }>);
+    .single() as unknown as Promise<{ data: FolderLinkRow; error: PostgrestError | null }>);
 
   if (error) {
     throw new ApiError('Failed to create folder link', 500, error.message);

@@ -50,7 +50,7 @@ export async function updateHeroContent(
     })
     .eq('id', id)
     .select()
-    .single() as Promise<{ data: HeroContentRow; error: PostgrestError | null }>);
+    .single() as unknown as Promise<{ data: HeroContentRow; error: PostgrestError | null }>);
 
   if (error) {
     throw new ApiError('Failed to update hero content', 500, error.message);
