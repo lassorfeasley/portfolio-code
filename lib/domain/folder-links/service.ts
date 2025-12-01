@@ -36,21 +36,19 @@ export async function updateFolderLink(
   id: string,
   payload: FolderLinkPayload
 ): Promise<FolderLinkRow> {
-  const updatePayload = {
-    label: payload.label,
-    icon: payload.icon,
-    href: payload.href,
-    external: payload.external,
-    display_order: payload.displayOrder,
-    updated_at: new Date().toISOString(),
-  } satisfies FolderLinkUpdate;
-
-  const { data, error } = await client
+  const { data, error } = await (client
     .from('folder_links')
-    .update(updatePayload)
+    .update({
+      label: payload.label,
+      icon: payload.icon,
+      href: payload.href,
+      external: payload.external,
+      display_order: payload.displayOrder,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', id)
     .select()
-    .single();
+    .single() as Promise<{ data: FolderLinkRow; error: any }>);
 
   if (error) {
     throw new ApiError('Failed to update folder link', 500, error.message);
@@ -63,19 +61,17 @@ export async function createFolderLink(
   client: TypedSupabaseClient,
   payload: FolderLinkPayload
 ): Promise<FolderLinkRow> {
-  const insertPayload = {
-    label: payload.label,
-    icon: payload.icon,
-    href: payload.href,
-    external: payload.external,
-    display_order: payload.displayOrder,
-  } satisfies FolderLinkInsert;
-
-  const { data, error } = await client
+  const { data, error } = await (client
     .from('folder_links')
-    .insert(insertPayload)
+    .insert({
+      label: payload.label,
+      icon: payload.icon,
+      href: payload.href,
+      external: payload.external,
+      display_order: payload.displayOrder,
+    })
     .select()
-    .single();
+    .single() as Promise<{ data: FolderLinkRow; error: any }>);
 
   if (error) {
     throw new ApiError('Failed to create folder link', 500, error.message);
