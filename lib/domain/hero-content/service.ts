@@ -23,6 +23,7 @@ export async function getHeroContent(
     .from('hero_content')
     .select('*')
     .limit(1)
+    .returns<HeroContentRow>()
     .single();
 
   if (error) {
@@ -47,8 +48,7 @@ export async function updateHeroContent(
       footer_link_text: payload.footerLinkText,
       footer_link_href: payload.footerLinkHref,
       updated_at: new Date().toISOString(),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
+    })
     .eq('id', id)
     .select()
     .single() as unknown as Promise<{ data: HeroContentRow; error: PostgrestError | null }>);
@@ -59,4 +59,3 @@ export async function updateHeroContent(
 
   return data;
 }
-

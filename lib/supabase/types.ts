@@ -161,7 +161,7 @@ export type Database = {
           id?: string;
           name?: string | null;
           publication?: string | null;
-          slug?: string;
+          slug: string;
           title?: string | null;
           updated_at?: string | null;
           url?: string | null;
@@ -235,6 +235,7 @@ export type Database = {
         Relationships: [];
       };
     };
+    Views: Record<string, never>;
     Functions: Record<string, never>;
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

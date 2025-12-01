@@ -23,7 +23,8 @@ export async function listFolderLinks(
   const { data, error } = await client
     .from('folder_links')
     .select('*')
-    .order('display_order', { ascending: true });
+    .order('display_order', { ascending: true })
+    .returns<FolderLinkRow[]>();
 
   if (error) {
     throw new ApiError('Failed to load folder links', 500, error.message);
@@ -46,8 +47,7 @@ export async function updateFolderLink(
       external: payload.external,
       display_order: payload.displayOrder,
       updated_at: new Date().toISOString(),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
+    })
     .eq('id', id)
     .select()
     .single() as unknown as Promise<{ data: FolderLinkRow; error: PostgrestError | null }>);
@@ -71,8 +71,7 @@ export async function createFolderLink(
       href: payload.href,
       external: payload.external,
       display_order: payload.displayOrder,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
+    })
     .select()
     .single() as unknown as Promise<{ data: FolderLinkRow; error: PostgrestError | null }>);
 
@@ -96,4 +95,3 @@ export async function deleteFolderLink(
     throw new ApiError('Failed to delete folder link', 500, error.message);
   }
 }
-
