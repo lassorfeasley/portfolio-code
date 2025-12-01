@@ -47,7 +47,7 @@ export async function updateHeroContent(
       footer_link_text: payload.footerLinkText,
       footer_link_href: payload.footerLinkHref,
       updated_at: new Date().toISOString(),
-    })
+    } as any)
     .eq('id', id)
     .select()
     .single() as unknown as Promise<{ data: HeroContentRow; error: PostgrestError | null }>);

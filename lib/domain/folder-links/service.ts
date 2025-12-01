@@ -46,7 +46,7 @@ export async function updateFolderLink(
       external: payload.external,
       display_order: payload.displayOrder,
       updated_at: new Date().toISOString(),
-    })
+    } as any)
     .eq('id', id)
     .select()
     .single() as unknown as Promise<{ data: FolderLinkRow; error: PostgrestError | null }>);
@@ -70,7 +70,7 @@ export async function createFolderLink(
       href: payload.href,
       external: payload.external,
       display_order: payload.displayOrder,
-    })
+    } as any)
     .select()
     .single() as unknown as Promise<{ data: FolderLinkRow; error: PostgrestError | null }>);
 
