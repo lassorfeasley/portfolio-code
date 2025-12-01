@@ -1,9 +1,10 @@
 import { ApiError } from '@/lib/api/errors';
-import type { TypedSupabaseClient, Database } from '@/lib/supabase/types';
+import type { TypedSupabaseClient } from '@/lib/supabase/types';
+import type { PostgrestError } from '@supabase/supabase-js';
 import type { FolderLink, FolderLinkRow, FolderLinkPayload } from './types';
 
-type FolderLinkUpdate = Database['public']['Tables']['folder_links']['Update'];
-type FolderLinkInsert = Database['public']['Tables']['folder_links']['Insert'];
+// type FolderLinkUpdate = Database['public']['Tables']['folder_links']['Update'];
+// type FolderLinkInsert = Database['public']['Tables']['folder_links']['Insert'];
 
 function toFolderLink(row: FolderLinkRow): FolderLink {
   return {
@@ -48,7 +49,7 @@ export async function updateFolderLink(
     })
     .eq('id', id)
     .select()
-    .single() as Promise<{ data: FolderLinkRow; error: any }>);
+    .single() as Promise<{ data: FolderLinkRow; error: PostgrestError | null }>);
 
   if (error) {
     throw new ApiError('Failed to update folder link', 500, error.message);
@@ -71,7 +72,7 @@ export async function createFolderLink(
       display_order: payload.displayOrder,
     })
     .select()
-    .single() as Promise<{ data: FolderLinkRow; error: any }>);
+    .single() as Promise<{ data: FolderLinkRow; error: PostgrestError | null }>);
 
   if (error) {
     throw new ApiError('Failed to create folder link', 500, error.message);

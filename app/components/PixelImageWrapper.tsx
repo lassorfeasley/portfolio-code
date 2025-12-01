@@ -57,8 +57,8 @@ export default function PixelImageWrapper({ children, enabled = true, className 
   }, [children]);
 
   // Check if we're inside a retro-window - disable if not
-  const isInsideRetroWindow = containerRef.current?.closest('.retro-window') !== null;
-  const shouldEnable = enabled && isInsideRetroWindow;
+  // const isInsideRetroWindow = containerRef.current?.closest('.retro-window') !== null;
+  // const shouldEnable = enabled && isInsideRetroWindow;
 
   return (
     <div ref={containerRef} className={className} style={{ position: 'relative', display: 'inline-block' }}>

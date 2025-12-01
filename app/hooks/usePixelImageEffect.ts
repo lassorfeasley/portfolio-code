@@ -89,11 +89,11 @@ export function usePixelImageEffect(
     downCtx.imageSmoothingEnabled = false;
     ctx.imageSmoothingEnabled = false;
 
-    try {
-      const computed = window.getComputedStyle(img);
-      const objectFit = computed.objectFit;
+      try {
+        const computed = window.getComputedStyle(img);
+        const objectFit = computed.objectFit;
 
-      if (objectFit === 'cover' || objectFit === 'contain') {
+        if (objectFit === 'cover' || objectFit === 'contain') {
         const imgRatio = img.naturalWidth / img.naturalHeight;
         const canvasRatio = width / height;
         let sx: number, sy: number, sw: number, sh: number;
@@ -132,7 +132,7 @@ export function usePixelImageEffect(
 
       ctx.clearRect(0, 0, width, height);
       ctx.drawImage(downCanvas, 0, 0, width, height);
-    } catch (e) {
+    } catch {
       // Silently handle draw errors
     }
   };
@@ -198,7 +198,7 @@ export function usePixelImageEffect(
           img.decode(),
           new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000)),
         ]);
-      } catch (e) {
+      } catch {
         // Decode failed or timed out, continue anyway
       }
     }
@@ -310,6 +310,7 @@ export function usePixelImageEffect(
     return () => {
       intersectionObserverRef.current?.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, isAnimating, isFinished]);
 
   // Setup canvas when image loads
@@ -382,6 +383,7 @@ export function usePixelImageEffect(
 
   // Cleanup on unmount
   useEffect(() => {
+    const currentCanvas = canvasRef.current; // Capture ref value for cleanup
     return () => {
       if (animationRef.current) {
         clearTimeout(animationRef.current);
@@ -392,9 +394,8 @@ export function usePixelImageEffect(
       if (intersectionObserverRef.current) {
         intersectionObserverRef.current.disconnect();
       }
-      const canvas = canvasRef.current;
-      if (canvas && canvas.parentNode) {
-        canvas.parentNode.removeChild(canvas);
+      if (currentCanvas && currentCanvas.parentNode) {
+        currentCanvas.parentNode.removeChild(currentCanvas);
       }
     };
   }, []);

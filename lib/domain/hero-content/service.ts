@@ -1,8 +1,9 @@
 import { ApiError } from '@/lib/api/errors';
-import type { TypedSupabaseClient, Database } from '@/lib/supabase/types';
+import type { TypedSupabaseClient } from '@/lib/supabase/types';
+import type { PostgrestError } from '@supabase/supabase-js';
 import type { HeroContent, HeroContentRow, HeroContentPayload } from './types';
 
-type HeroContentUpdate = Database['public']['Tables']['hero_content']['Update'];
+// type HeroContentUpdate = Database['public']['Tables']['hero_content']['Update'];
 
 function toHeroContent(row: HeroContentRow): HeroContent {
   return {
@@ -49,7 +50,7 @@ export async function updateHeroContent(
     })
     .eq('id', id)
     .select()
-    .single() as Promise<{ data: HeroContentRow; error: any }>);
+    .single() as Promise<{ data: HeroContentRow; error: PostgrestError | null }>);
 
   if (error) {
     throw new ApiError('Failed to update hero content', 500, error.message);

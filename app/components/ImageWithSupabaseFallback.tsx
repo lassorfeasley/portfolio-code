@@ -1,7 +1,7 @@
 "use client";
 
 import Image from 'next/image';
-import { CSSProperties, useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { CSSProperties, useMemo, useState, useRef, useEffect } from 'react';
 import { isSupabaseTransformedUrl, toOriginalObjectUrl } from '@/lib/supabase/image';
 import { usePixelImageEffect } from '@/app/hooks/usePixelImageEffect';
 
