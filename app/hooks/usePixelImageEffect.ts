@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface UsePixelImageEffectOptions {
   enabled?: boolean;
@@ -15,13 +15,13 @@ interface UsePixelImageEffectReturn {
   isFinished: boolean;
 }
 
-const DEFAULT_STEPS = 6;
-const DEFAULT_TOTAL_DURATION = 5000;
-const DEFAULT_MIN_STEP_DELAY = 250;
+const DEFAULT_STEPS = 8;
+const DEFAULT_TOTAL_DURATION = 3000;
+const DEFAULT_MIN_STEP_DELAY = 200;
 
 /**
  * Hook that applies a pixelation animation effect to an image element.
- * Creates a canvas overlay that progressively reduces pixelation as the image loads.
+ * Animation only starts when the parent .retro-window enters the viewport.
  */
 export function usePixelImageEffect(
   imageRef: React.RefObject<HTMLImageElement | null>,
@@ -35,51 +35,40 @@ export function usePixelImageEffect(
   } = options;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLElement | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const animationRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const intersectionObserverRef = useRef<IntersectionObserver | null>(null);
-  const isInViewportRef = useRef(false);
+  const isPreparedRef = useRef(false);
+  const hasStartedRef = useRef(false);
 
-  // Calculate max step delay
   const maxStepDelay = Math.max(0, (totalDuration - steps * minStepDelay) / steps);
 
-  // Update canvas position and size to match image
-  const updateCanvasPosition = (img: HTMLImageElement, canvas: HTMLCanvasElement) => {
-    const rect = img.getBoundingClientRect();
-    const parent = img.parentElement;
-    const parentRect = parent ? parent.getBoundingClientRect() : { left: 0, top: 0 };
+  // Update canvas size to match image
+  const updateCanvasSize = useCallback((img: HTMLImageElement, canvas: HTMLCanvasElement) => {
+    const width = Math.max(1, img.offsetWidth || img.naturalWidth || 100);
+    const height = Math.max(1, img.offsetHeight || img.naturalHeight || 100);
 
-    const left = img.offsetLeft || rect.left - parentRect.left;
-    const top = img.offsetTop || rect.top - parentRect.top;
-    const width = Math.max(1, img.offsetWidth || rect.width || img.naturalWidth || 100);
-    const height = Math.max(1, img.offsetHeight || rect.height || img.naturalHeight || 100);
-
-    canvas.style.left = `${left}px`;
-    canvas.style.top = `${top}px`;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-
-    // Update canvas buffer size
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width;
       canvas.height = height;
     }
-  };
+  }, []);
 
   // Draw a single pixelation step
-  const drawPixelStep = (img: HTMLImageElement, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, exponent: number) => {
-    if (!canvas.parentElement) return;
-
-    updateCanvasPosition(img, canvas);
+  const drawPixelStep = useCallback((
+    img: HTMLImageElement,
+    canvas: HTMLCanvasElement,
+    ctx: CanvasRenderingContext2D,
+    exponent: number
+  ) => {
+    updateCanvasSize(img, canvas);
 
     const width = canvas.width;
     const height = canvas.height;
     const pixelSize = Math.max(1, Math.pow(2, exponent));
 
-    // Create temporary canvas for downscaling
     const downCanvas = document.createElement('canvas');
     downCanvas.width = Math.max(1, Math.floor(width / pixelSize));
     downCanvas.height = Math.max(1, Math.floor(height / pixelSize));
@@ -89,11 +78,11 @@ export function usePixelImageEffect(
     downCtx.imageSmoothingEnabled = false;
     ctx.imageSmoothingEnabled = false;
 
-      try {
-        const computed = window.getComputedStyle(img);
-        const objectFit = computed.objectFit;
+    try {
+      const computed = window.getComputedStyle(img);
+      const objectFit = computed.objectFit;
 
-        if (objectFit === 'cover' || objectFit === 'contain') {
+      if (objectFit === 'cover' || objectFit === 'contain') {
         const imgRatio = img.naturalWidth / img.naturalHeight;
         const canvasRatio = width / height;
         let sx: number, sy: number, sw: number, sh: number;
@@ -111,7 +100,6 @@ export function usePixelImageEffect(
             sy = (img.naturalHeight - sh) / 2;
           }
         } else {
-          // contain
           if (imgRatio > canvasRatio) {
             sw = img.naturalWidth;
             sh = sw / canvasRatio;
@@ -133,13 +121,14 @@ export function usePixelImageEffect(
       ctx.clearRect(0, 0, width, height);
       ctx.drawImage(downCanvas, 0, 0, width, height);
     } catch {
-      // Silently handle draw errors
+      // ignore draw errors
     }
-  };
+  }, [updateCanvasSize]);
 
   // Start the pixelation animation
-  const startAnimation = (img: HTMLImageElement, canvas: HTMLCanvasElement) => {
-    if (isAnimating || isFinished) return;
+  const startAnimation = useCallback((img: HTMLImageElement, canvas: HTMLCanvasElement) => {
+    if (hasStartedRef.current || isFinished) return;
+    hasStartedRef.current = true;
 
     setIsAnimating(true);
     const ctx = canvas.getContext('2d');
@@ -152,21 +141,19 @@ export function usePixelImageEffect(
 
     const doStep = () => {
       if (currentStep > steps) {
-        // Animation complete - cleanup
         if (resizeObserverRef.current) {
           resizeObserverRef.current.disconnect();
           resizeObserverRef.current = null;
         }
+
+        // Hide canvas when animation is complete
+        canvas.style.opacity = '0';
+        setTimeout(() => {
+          if (canvas.parentNode) {
+            canvas.style.display = 'none';
+          }
+        }, 100);
         
-        // Show the actual image now that animation is complete
-        if (imageRef.current) {
-          imageRef.current.style.opacity = '1';
-          imageRef.current.style.visibility = 'visible';
-        }
-        
-        if (canvas.parentNode) {
-          canvas.parentNode.removeChild(canvas);
-        }
         setIsAnimating(false);
         setIsFinished(true);
         return;
@@ -180,210 +167,115 @@ export function usePixelImageEffect(
     };
 
     doStep();
-  };
+  }, [steps, minStepDelay, maxStepDelay, drawPixelStep, isFinished]);
 
-  // Setup canvas and prepare for animation
-  const prepareCanvas = async (img: HTMLImageElement) => {
-    if (!enabled || !img || isFinished) return;
-
-    // Check if image should be pixelated (opt-out via class)
-    if (img.classList?.contains('no-pixelate') || img.closest('.no-pixelate')) {
-      return;
-    }
-
-    // Ensure image is loaded
-    if ('decode' in img && img.naturalWidth === 0) {
-      try {
-        await Promise.race([
-          img.decode(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000)),
-        ]);
-      } catch {
-        // Decode failed or timed out, continue anyway
-      }
-    }
-
-    if (!img.parentElement) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // Hide the actual image immediately to prevent flash
-    img.style.opacity = '0';
-    img.style.visibility = 'hidden';
-
-    // Ensure parent is positioned
-    const parent = img.parentElement;
-    const parentStyle = window.getComputedStyle(parent);
-    if (parentStyle.position === 'static') {
-      parent.style.position = 'relative';
-    }
-    containerRef.current = parent;
-
-    // Setup canvas styling
-    canvas.style.position = 'absolute';
-    canvas.style.pointerEvents = 'none';
-    canvas.style.zIndex = '10';
-    canvas.style.maxWidth = '100%';
-    canvas.style.maxHeight = '100%';
-    canvas.style.display = 'block';
-
-    // Initial positioning
-    updateCanvasPosition(img, canvas);
-
-    // Ensure canvas is in DOM (it should be from the component, but verify)
-    if (!canvas.parentElement) {
-      if (img.nextSibling) {
-        parent.insertBefore(canvas, img.nextSibling);
-      } else {
-        parent.appendChild(canvas);
-      }
-    }
-
-    // Setup ResizeObserver for dynamic sizing
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserverRef.current = new ResizeObserver(() => {
-        if (canvas && img && !isFinished) {
-          updateCanvasPosition(img, canvas);
-        }
-      });
-      resizeObserverRef.current.observe(img);
-    }
-
-    // Draw initial pixelated state
-    requestAnimationFrame(() => {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        console.log('[Pixel Hook] 🎨 Drawing initial pixelated state, steps:', steps);
-        drawPixelStep(img, canvas, ctx, steps);
-
-        // Start animation if in viewport
-        if (isInViewportRef.current) {
-          console.log('[Pixel Hook] ▶️ Image in viewport, starting animation');
-          startAnimation(img, canvas);
-        } else {
-          console.log('[Pixel Hook] 👁️ Image not in viewport yet, waiting');
-        }
-      }
-    });
-  };
-
-  // Setup IntersectionObserver for viewport detection
+  // Main effect: setup canvas and viewport observer
   useEffect(() => {
-    if (!enabled || !imageRef.current) return;
+    if (!enabled) return;
 
-    const img = imageRef.current;
-
-    // Check if already in viewport
-    const checkViewport = () => {
-      const rect = img.getBoundingClientRect();
-      const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-      if (isVisible && !isInViewportRef.current) {
-        isInViewportRef.current = true;
-        const canvas = canvasRef.current;
-        if (canvas && !isAnimating && !isFinished) {
-          startAnimation(img, canvas);
-        }
-      }
-    };
-
-    // Setup IntersectionObserver
-    intersectionObserverRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            isInViewportRef.current = true;
-            const canvas = canvasRef.current;
-            if (canvas && !isAnimating && !isFinished) {
-              startAnimation(img, canvas);
-            }
-            intersectionObserverRef.current?.unobserve(img);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    intersectionObserverRef.current.observe(img);
-    checkViewport();
-
-    return () => {
-      intersectionObserverRef.current?.disconnect();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, isAnimating, isFinished]);
-
-  // Setup canvas when image loads
-  useEffect(() => {
-    console.log('[Pixel Hook] 🎨 Setup effect running:', {
-      enabled,
-      hasImage: !!imageRef.current,
-      hasCanvas: !!canvasRef.current,
-      imageSrc: imageRef.current?.src?.substring(imageRef.current.src.lastIndexOf('/') + 1, imageRef.current.src.lastIndexOf('/') + 30),
-      imageComplete: imageRef.current?.complete,
-      imageNaturalWidth: imageRef.current?.naturalWidth
-    });
-    
-    // If disabled, ensure canvas stays hidden
-    if (!enabled) {
-      console.log('[Pixel Hook] ❌ Disabled - hiding canvas');
-      if (canvasRef.current) {
-        canvasRef.current.style.display = 'none';
-      }
-      return;
-    }
-    
-    if (!imageRef.current || !canvasRef.current) {
-      console.log('[Pixel Hook] ⚠️ Missing refs, cannot setup');
-      return;
-    }
-    
-    console.log('[Pixel Hook] ✅ All conditions met, proceeding with setup');
-
-    const img = imageRef.current;
-    const canvas = canvasRef.current;
-
-    // Wait for canvas to be in DOM
-    const checkAndPrepare = () => {
-      console.log('[Pixel Hook] checkAndPrepare:', {
-        canvasInParent: !!canvas.parentElement,
-        canvasInBody: document.body.contains(canvas),
-        imageComplete: img.complete,
-        imageNaturalWidth: img.naturalWidth
-      });
+    const setupEffect = () => {
+      const img = imageRef.current;
+      const canvas = canvasRef.current;
       
-      if (canvas.parentElement || document.body.contains(canvas)) {
-        const handleLoad = () => {
-          console.log('[Pixel Hook] 📸 Image loaded event, preparing canvas');
-          prepareCanvas(img);
-        };
+      if (!img || !canvas) return false;
 
-        if (img.complete && img.naturalWidth > 0) {
-          // Image already loaded
-          console.log('[Pixel Hook] 📸 Image already complete, preparing canvas immediately');
-          prepareCanvas(img);
-        } else {
-          console.log('[Pixel Hook] ⏳ Waiting for image load event');
-          img.addEventListener('load', handleLoad, { once: true });
-        }
-      } else {
-        // Canvas not in DOM yet, retry
-        console.log('[Pixel Hook] ⏳ Canvas not in DOM yet, retrying in 50ms');
-        setTimeout(checkAndPrepare, 50);
+      // Skip if already processed or has no-pixelate class
+      if (img.classList?.contains('no-pixelate') || img.closest('.no-pixelate')) {
+        return true;
       }
+
+      // Wait for image to be ready
+      if (!img.complete || img.naturalWidth === 0) {
+        return false;
+      }
+
+      // Draw initial pixelated state
+      if (!isPreparedRef.current) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          drawPixelStep(img, canvas, ctx, steps);
+          isPreparedRef.current = true;
+        }
+      }
+
+      // Setup ResizeObserver
+      if (!resizeObserverRef.current && typeof ResizeObserver !== 'undefined') {
+        const parent = img.parentElement;
+        if (parent) {
+          resizeObserverRef.current = new ResizeObserver(() => {
+            if (canvas && img && !isFinished && !hasStartedRef.current) {
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                drawPixelStep(img, canvas, ctx, steps);
+              }
+            }
+          });
+          resizeObserverRef.current.observe(parent);
+        }
+      }
+
+      // Setup IntersectionObserver for viewport detection
+      if (!intersectionObserverRef.current && typeof IntersectionObserver !== 'undefined') {
+        // Find the retro window container
+        const retroWindow = img.closest('.retro-window') || img.closest('[data-pixel-effect-enabled]');
+        const observeTarget = retroWindow || img.parentElement || img;
+
+        intersectionObserverRef.current = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting && isPreparedRef.current && !hasStartedRef.current) {
+                // Small delay to ensure everything is rendered
+                setTimeout(() => {
+                  const currentImg = imageRef.current;
+                  const currentCanvas = canvasRef.current;
+                  if (currentImg && currentCanvas && !hasStartedRef.current) {
+                    startAnimation(currentImg, currentCanvas);
+                  }
+                }, 50);
+              }
+            });
+          },
+          {
+            threshold: 0.1,
+            rootMargin: '50px',
+          }
+        );
+
+        intersectionObserverRef.current.observe(observeTarget);
+      }
+
+      return true;
     };
 
-    checkAndPrepare();
+    // Try immediately
+    if (setupEffect()) return;
 
-    return () => {
-      // Cleanup handled by other effects
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled]);
+    // If image isn't ready, wait for load event
+    const img = imageRef.current;
+    if (img) {
+      const handleLoad = () => setupEffect();
+      img.addEventListener('load', handleLoad);
+      
+      // Also retry periodically for dynamic content
+      const intervalId = setInterval(() => {
+        if (setupEffect()) {
+          clearInterval(intervalId);
+        }
+      }, 100);
+
+      // Cleanup after max retries
+      const timeoutId = setTimeout(() => clearInterval(intervalId), 5000);
+
+      return () => {
+        img.removeEventListener('load', handleLoad);
+        clearInterval(intervalId);
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [enabled, steps, drawPixelStep, startAnimation, isFinished]);
 
   // Cleanup on unmount
   useEffect(() => {
-    const currentCanvas = canvasRef.current; // Capture ref value for cleanup
     return () => {
       if (animationRef.current) {
         clearTimeout(animationRef.current);
@@ -394,9 +286,6 @@ export function usePixelImageEffect(
       if (intersectionObserverRef.current) {
         intersectionObserverRef.current.disconnect();
       }
-      if (currentCanvas && currentCanvas.parentNode) {
-        currentCanvas.parentNode.removeChild(currentCanvas);
-      }
     };
   }, []);
 
@@ -406,4 +295,3 @@ export function usePixelImageEffect(
     isFinished,
   };
 }
-

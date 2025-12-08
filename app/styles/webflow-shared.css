@@ -4058,13 +4058,11 @@ a {
 }
 
 .retro-window-placeholder.alertmover {
-  position: relative !important;
-  top: 50% !important;
-  left: -30px !important;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  height: 100%;
+  /* Position alert 60px below the top of the summary window */
+  align-self: start !important;
+  height: fit-content !important;
+  margin-left: -30px;
+  margin-top: 60px;
   z-index: 100;
 }
 
@@ -4433,6 +4431,25 @@ a {
 }
 
 @media screen and (max-width: 767px) {
+  /* On mobile, retro windows should hug their content vertically (no internal scrolling) */
+  .retro-window {
+    aspect-ratio: auto !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  .window-content-wrapper {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .window-content {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
   .drawsquare {
     filter: blur(3px);
     width: 35px;

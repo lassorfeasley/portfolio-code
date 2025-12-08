@@ -1,9 +1,10 @@
 "use client";
 
 import Image, { type ImageLoaderProps } from 'next/image';
-import { useCallback, useEffect, useState, type SyntheticEvent } from 'react';
+import { useCallback, useEffect, useState, useRef, type SyntheticEvent } from 'react';
 import { toLargeUrl, toThumbUrl, toOriginalObjectUrl, isSupabaseTransformedUrl } from '@/lib/supabase/image';
 import { createPortal } from 'react-dom';
+import { usePixelImageEffect } from '@/app/hooks/usePixelImageEffect';
 
 type LightboxGalleryProps = {
   images: string[];
@@ -12,6 +13,96 @@ type LightboxGalleryProps = {
 };
 
 const passthroughLoader = ({ src }: ImageLoaderProps) => src;
+
+// Separate component for gallery thumbnails to use pixel effect hook
+function GalleryThumbnail({
+  src,
+  onClick,
+  linkClassName,
+  onError,
+}: {
+  src: string;
+  onClick: () => void;
+  linkClassName: string;
+  onError: (e: SyntheticEvent<HTMLImageElement>) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const [imageReady, setImageReady] = useState(false);
+  
+  // Only enable pixel effect once we have found the image
+  const { canvasRef } = usePixelImageEffect(imageRef, { enabled: imageReady });
+
+  // Find the actual img element rendered by Next.js Image using MutationObserver
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const findImage = (): HTMLImageElement | null => {
+      return containerRef.current?.querySelector('img') || null;
+    };
+
+    const checkImage = () => {
+      const img = findImage();
+      if (img && img !== imageRef.current) {
+        imageRef.current = img;
+        // Only mark as ready when image is actually loaded
+        if (img.complete && img.naturalWidth > 0) {
+          setImageReady(true);
+        } else {
+          img.addEventListener('load', () => setImageReady(true), { once: true });
+        }
+      }
+    };
+
+    // Try to find the image immediately
+    checkImage();
+
+    // Watch for DOM changes in case the image is rendered later
+    const observer = new MutationObserver(checkImage);
+
+    observer.observe(containerRef.current, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <a href="#" className={linkClassName} onClick={(e) => { e.preventDefault(); onClick(); }} aria-label="Open image">
+      <div ref={containerRef} className="thumb-frame" style={{ position: 'relative' }}>
+        <Image
+          loader={passthroughLoader}
+          src={src}
+          alt=""
+          fill
+          sizes="(max-width: 767px) 50vw, (max-width: 1279px) 33vw, 220px"
+          loading="lazy"
+          onError={onError}
+          unoptimized
+          className="cover-object"
+          style={{ objectFit: 'cover' }}
+          crossOrigin="anonymous"
+        />
+        {imageReady && (
+          <canvas
+            ref={canvasRef}
+            suppressHydrationWarning
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+              zIndex: 10,
+            }}
+          />
+        )}
+      </div>
+    </a>
+  );
+}
 
 export default function LightboxGallery({
   images,
@@ -64,23 +155,12 @@ export default function LightboxGallery({
           const thumb = toThumbUrl(url, 1000, 88);
           return (
             <div key={i} className={itemClassName}>
-              <a href="#" className={linkClassName} onClick={(e) => { e.preventDefault(); show(i); }} aria-label="Open image">
-                <div className="thumb-frame" style={{ position: 'relative' }}>
-                  <Image
-                    loader={passthroughLoader}
-                    src={thumb}
-                    alt=""
-                    fill
-                    sizes="(max-width: 767px) 50vw, (max-width: 1279px) 33vw, 220px"
-                    loading="lazy"
-                    onError={handleImageError}
-                    unoptimized
-                    className="cover-object"
-                    style={{ objectFit: 'cover' }}
-                    crossOrigin="anonymous"
-                  />
-                </div>
-              </a>
+              <GalleryThumbnail
+                src={thumb}
+                onClick={() => show(i)}
+                linkClassName={linkClassName}
+                onError={handleImageError}
+              />
             </div>
           );
         })}

@@ -87,7 +87,7 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
           <Link href={`/project-types/${typeData.slug}`} className="h _5 link w-inline-block w-condition-invisible w--current"><div>Collections</div><div>→</div></Link>
           <div className="h _5 link"><div className="text-block-5">{typeData.name}</div></div>
         </div>
-        <div className="windowcanvas onetwogrid alert">
+        <div className="windowcanvas onetwogrid alert" data-grid-mode="true">
           <div className="retro-window-placeholder">
             <RetroWindow title={`${typeData.name}.txt`} disableResize initialZIndex={1}>
               <div className="v _10">
