@@ -12,9 +12,11 @@ type Options = {
 type PointerState =
   | {
       mode: 'drag';
-      pointerOffsetX: number;
-      pointerOffsetY: number;
-      canvasRect: DOMRect;
+      // Cursor offset from the window's top-left corner (in viewport coords)
+      cursorOffsetX: number;
+      cursorOffsetY: number;
+      // Whether this is grid mode (affects containing block calculation)
+      isGridMode: boolean;
       lockedWidth: number;
       lockedHeight: number;
     }
@@ -87,29 +89,38 @@ export function useRetroWindowInteraction(options: Options) {
       if (!current || !state) return;
 
       if (state.mode === 'drag') {
-        const canvasRect = state.canvasRect;
-        const pointerX = event.pageX - canvasRect.left;
-        const pointerY = event.pageY - canvasRect.top;
-        const minLeft = -ALLOW_OVERFLOW_X;
+        // Calculate target window position in viewport coordinates
+        const targetViewportLeft = event.pageX - state.cursorOffsetX;
+        const targetViewportTop = event.pageY - state.cursorOffsetY;
+        
+        // Get fresh containing block rect
+        const placeholder = current.closest<HTMLElement>('.retro-window-placeholder');
+        const canvas = current.closest<HTMLElement>('.windowcanvas') ?? document.body;
+        const canvasRect = canvas.getBoundingClientRect();
+        const placeholderRect = placeholder?.getBoundingClientRect();
+        const containingBlockRect = state.isGridMode && placeholderRect ? placeholderRect : canvasRect;
+        
+        // Convert to containing block coordinates
+        const targetLeft = targetViewportLeft - containingBlockRect.left;
+        const targetTop = targetViewportTop - containingBlockRect.top;
+        
+        // Calculate bounds relative to containing block
+        const offsetX = containingBlockRect.left - canvasRect.left;
+        const offsetY = containingBlockRect.top - canvasRect.top;
+        
+        const minLeft = -ALLOW_OVERFLOW_X - offsetX;
         const maxLeft =
-          canvasRect.width - state.lockedWidth + ALLOW_OVERFLOW_X;
-        const minTop = -ALLOW_OVERFLOW_Y;
+          canvasRect.width - state.lockedWidth + ALLOW_OVERFLOW_X - offsetX;
+        const minTop = -ALLOW_OVERFLOW_Y - offsetY;
         const maxTop =
           canvasRect.height -
           state.lockedHeight +
-          Math.max(0, ALLOW_OVERFLOW_Y - SAFE_BOTTOM_PADDING);
-        const targetLeft = clampDragPosition(
-          pointerX - state.pointerOffsetX,
-          minLeft,
-          maxLeft
-        );
-        const targetTop = clampDragPosition(
-          pointerY - state.pointerOffsetY,
-          minTop,
-          maxTop
-        );
+          Math.max(0, ALLOW_OVERFLOW_Y - SAFE_BOTTOM_PADDING) - offsetY;
+        
+        const clampedLeft = clampDragPosition(targetLeft, minLeft, maxLeft);
+        const clampedTop = clampDragPosition(targetTop, minTop, maxTop);
 
-        setPosition({ left: targetLeft, top: targetTop });
+        setPosition({ left: clampedLeft, top: clampedTop });
         // Force width/height during drag to prevent CSS overrides
         setSize({
           width: state.lockedWidth,
@@ -202,38 +213,57 @@ export function useRetroWindowInteraction(options: Options) {
       current.classList.add('no-static-shadow');
       current.style.cursor = 'grabbing';
 
-      // Float legacy windows if helper exists
-      if (typeof window.retroFloatWindow === 'function') {
+      // Get the placeholder (positioned ancestor) and canvas for bounds clamping
+      const placeholder = current.closest<HTMLElement>('.retro-window-placeholder');
+      const canvas =
+        current.closest<HTMLElement>('.windowcanvas') ?? document.body;
+      const canvasRect = canvas.getBoundingClientRect();
+      const placeholderRect = placeholder?.getBoundingClientRect();
+      const rect = current.getBoundingClientRect();
+      
+      // Check if we're in grid mode - if so, don't call retroFloatWindow
+      const isGridMode = canvas.dataset?.gridMode === 'true';
+      
+      // Float legacy windows if helper exists (but not in grid mode)
+      if (!isGridMode && typeof window.retroFloatWindow === 'function') {
         try {
           window.retroFloatWindow(current);
         } catch {
           // ignore failure
         }
       }
-
-      const canvas =
-        current.closest<HTMLElement>('.windowcanvas') ?? document.body;
-      const canvasRect = canvas.getBoundingClientRect();
-      const rect = current.getBoundingClientRect();
       
-      // Use offsetLeft/Top if styles are missing (initial render)
+      // When in grid mode, the window stays inside the placeholder but becomes absolute.
+      // Position needs to be relative to the placeholder (the containing block).
+      // When NOT in grid mode, window is floated to canvas level, so position is relative to canvas.
+      const containingBlockRect = isGridMode && placeholderRect ? placeholderRect : canvasRect;
+      
+      // For grid mode, use offsetTop/offsetLeft which gives position relative to the
+      // offset parent (placeholder), avoiding issues with position:relative offsets.
+      // For non-grid mode, calculate relative to canvas.
       const currentLeft =
         Number.isFinite(parseFloat(current.style.left))
           ? parseFloat(current.style.left)
-          : rect.left - canvasRect.left;
+          : isGridMode
+            ? current.offsetLeft
+            : rect.left - canvasRect.left;
       const currentTop =
         Number.isFinite(parseFloat(current.style.top))
           ? parseFloat(current.style.top)
-          : rect.top - canvasRect.top;
+          : isGridMode
+            ? current.offsetTop
+            : rect.top - canvasRect.top;
           
-      const pointerX = event.pageX - canvasRect.left;
-      const pointerY = event.pageY - canvasRect.top;
+      // Store cursor offset from window's top-left corner in viewport coordinates.
+      // This offset stays constant during drag regardless of containing block changes.
+      const cursorOffsetX = event.pageX - rect.left;
+      const cursorOffsetY = event.pageY - rect.top;
 
       pointerState.current = {
         mode: 'drag',
-        pointerOffsetX: pointerX - currentLeft,
-        pointerOffsetY: pointerY - currentTop,
-        canvasRect,
+        cursorOffsetX,
+        cursorOffsetY,
+        isGridMode,
         lockedWidth: rect.width,
         lockedHeight: rect.height,
       };

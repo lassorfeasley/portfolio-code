@@ -4062,7 +4062,8 @@ a {
   align-self: start !important;
   height: fit-content !important;
   margin-left: -30px;
-  margin-top: 60px;
+  position: relative;
+  top: 60px;
   z-index: 100;
 }
 
@@ -4236,6 +4237,7 @@ a {
 .windowcanvas.onetwogrid {
   display: grid;
   width: 100%;
+  align-items: start;
 }
 
 .onetwogrid._40 {

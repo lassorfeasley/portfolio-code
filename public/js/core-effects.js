@@ -129,8 +129,11 @@ canvasLockObserver.observe(document.body, { childList: true, subtree: true });
     // Lock placeholder footprint so the grid never changes
     placeholder.style.minWidth = `${width}px`;
     placeholder.style.maxWidth = `${width}px`;
-    placeholder.style.minHeight = `${height}px`;
-    placeholder.style.maxHeight = `${height}px`;
+    // Skip height constraints on alertmover to preserve align-self: start behavior
+    if (!placeholder.classList.contains('alertmover')) {
+      placeholder.style.minHeight = `${height}px`;
+      placeholder.style.maxHeight = `${height}px`;
+    }
     if (getComputedStyle(placeholder).position === 'static') {
       placeholder.style.position = 'relative';
     }
@@ -202,8 +205,11 @@ canvasLockObserver.observe(document.body, { childList: true, subtree: true });
         // Keep footprint in sync (in case of responsive changes)
         ph.style.minWidth = `${width}px`;
         ph.style.maxWidth = `${width}px`;
-        ph.style.minHeight = `${height}px`;
-        ph.style.maxHeight = `${height}px`;
+        // Skip height constraints on alertmover to preserve align-self: start behavior
+        if (!ph.classList.contains('alertmover')) {
+          ph.style.minHeight = `${height}px`;
+          ph.style.maxHeight = `${height}px`;
+        }
 
         // Reposition the floated window to match
         win.style.left = `${left}px`;
