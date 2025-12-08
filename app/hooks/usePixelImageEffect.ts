@@ -278,7 +278,7 @@ export function usePixelImageEffect(
         clearTimeout(timeoutId);
       };
     }
-  }, [enabled, steps, drawPixelStep, startAnimation, isFinished]);
+  }, [enabled, steps, drawPixelStep, startAnimation, isFinished, imageRef]);
 
   // Cleanup on unmount
   useEffect(() => {

@@ -40,10 +40,13 @@ export default function ImageWithSupabaseFallback({
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const aspectRatio = width && height ? width / height : DEFAULT_WIDTH / DEFAULT_HEIGHT;
   const shouldPixelate = pixelate && !className?.includes('no-pixelate');
 
-  const { canvasRef } = usePixelImageEffect(imageRef, { enabled: shouldPixelate });
+  const { canvasRef, isFinished, isPrepared, effectSkipped } = usePixelImageEffect(imageRef, { enabled: shouldPixelate });
+  
+  // Determine if we should hide the original image
+  // Hide if: effect is enabled AND effect hasn't finished AND effect wasn't skipped
+  const shouldHideImage = shouldPixelate && !isFinished && !effectSkipped;
 
   // Ensure imageRef points to the actual img rendered by Next.js Image
   useEffect(() => {
@@ -86,7 +89,6 @@ export default function ImageWithSupabaseFallback({
       className={className}
     >
       <Image
-        ref={imageRef as any}
         src={currentSrc}
         alt={alt}
         fill
@@ -105,6 +107,8 @@ export default function ImageWithSupabaseFallback({
           position: 'absolute',
           top: 0,
           left: 0,
+          // Hide image while pixel effect is active
+          opacity: shouldHideImage ? 0 : 1,
         }}
       />
       {shouldPixelate && (
@@ -120,6 +124,9 @@ export default function ImageWithSupabaseFallback({
             height: '100%',
             pointerEvents: 'none',
             zIndex: 10,
+            // Only show canvas when prepared and not finished
+            opacity: isPrepared && !isFinished ? 1 : 0,
+            visibility: isPrepared && !isFinished ? 'visible' : 'hidden',
           }}
         />
       )}
