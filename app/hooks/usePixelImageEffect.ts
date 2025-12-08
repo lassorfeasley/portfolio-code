@@ -13,6 +13,8 @@ interface UsePixelImageEffectReturn {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   isAnimating: boolean;
   isFinished: boolean;
+  isPrepared: boolean;
+  effectSkipped: boolean;
 }
 
 const DEFAULT_STEPS = 8;
@@ -37,6 +39,8 @@ export function usePixelImageEffect(
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [isPrepared, setIsPrepared] = useState(false);
+  const [effectSkipped, setEffectSkipped] = useState(false);
   const animationRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const intersectionObserverRef = useRef<IntersectionObserver | null>(null);
@@ -181,6 +185,7 @@ export function usePixelImageEffect(
 
       // Skip if already processed or has no-pixelate class
       if (img.classList?.contains('no-pixelate') || img.closest('.no-pixelate')) {
+        setEffectSkipped(true);
         return true;
       }
 
@@ -195,6 +200,7 @@ export function usePixelImageEffect(
         if (ctx) {
           drawPixelStep(img, canvas, ctx, steps);
           isPreparedRef.current = true;
+          setIsPrepared(true);
         }
       }
 
@@ -293,5 +299,7 @@ export function usePixelImageEffect(
     canvasRef,
     isAnimating,
     isFinished,
+    isPrepared,
+    effectSkipped,
   };
 }
