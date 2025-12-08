@@ -256,28 +256,30 @@ export function usePixelImageEffect(
     // Try immediately
     if (setupEffect()) return;
 
-    // If image isn't ready, wait for load event
-    const img = imageRef.current;
-    if (img) {
-      const handleLoad = () => setupEffect();
-      img.addEventListener('load', handleLoad);
-      
-      // Also retry periodically for dynamic content
-      const intervalId = setInterval(() => {
-        if (setupEffect()) {
-          clearInterval(intervalId);
-        }
-      }, 100);
-
-      // Cleanup after max retries
-      const timeoutId = setTimeout(() => clearInterval(intervalId), 5000);
-
-      return () => {
-        img.removeEventListener('load', handleLoad);
+    // Retry periodically for dynamic content (imageRef may not be set yet)
+    const intervalId = setInterval(() => {
+      if (setupEffect()) {
         clearInterval(intervalId);
-        clearTimeout(timeoutId);
-      };
+      }
+    }, 100);
+
+    // Cleanup after max retries
+    const timeoutId = setTimeout(() => clearInterval(intervalId), 5000);
+
+    // If image is already available, also listen for load event
+    const img = imageRef.current;
+    const handleLoad = img ? () => setupEffect() : null;
+    if (img && handleLoad) {
+      img.addEventListener('load', handleLoad);
     }
+
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
+      if (img && handleLoad) {
+        img.removeEventListener('load', handleLoad);
+      }
+    };
   }, [enabled, steps, drawPixelStep, startAnimation, isFinished, imageRef]);
 
   // Cleanup on unmount

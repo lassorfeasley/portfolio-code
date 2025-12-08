@@ -77,6 +77,7 @@ export default function PixelImageWrapper({ children, enabled = true, className,
     <div
       ref={containerRef}
       className={className}
+      suppressHydrationWarning
       style={{
         position: 'relative',
         width: '100%',

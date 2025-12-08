@@ -79,6 +79,7 @@ export default function ImageWithSupabaseFallback({
   return (
     <div
       ref={containerRef}
+      suppressHydrationWarning
       style={{
         position: 'relative',
         width: '100%',
