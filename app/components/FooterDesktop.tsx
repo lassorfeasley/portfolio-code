@@ -59,15 +59,6 @@ export default function FooterDesktop({ folderLinks = defaultFolderLinks }: Foot
                   </div>
                 </div>
               ))}
-              {/* Extra "Account" link for the footer */}
-              <div className="icon-placeholder">
-                <div className="draggable-folder">
-                  <Link href="/auth/login" className="iconlink w-inline-block">
-                    <div className="folder"></div>
-                    <div className="navlink foldericon">Account</div>
-                  </Link>
-                </div>
-              </div>
             </div>
           </div>
         </div>
