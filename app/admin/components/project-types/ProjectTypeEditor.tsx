@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -27,6 +28,7 @@ function normalizePayload(projectType: ProjectTypePayload | null): ProjectTypePa
       name: '',
       slug: '',
       category: '',
+      landing_page_credentials: '',
       draft: true,
       archived: false,
     };
@@ -37,6 +39,7 @@ function normalizePayload(projectType: ProjectTypePayload | null): ProjectTypePa
     name: projectType.name ?? '',
     slug: projectType.slug ?? '',
     category: projectType.category ?? '',
+    landing_page_credentials: projectType.landing_page_credentials ?? '',
   };
 }
 
@@ -109,6 +112,7 @@ export function ProjectTypeEditor({ projectType, isCreating, onSaved, onDeleted 
         slug: formState.slug.trim(),
         name: formState.name?.trim() ?? '',
         category: formState.category?.trim() ?? '',
+        landing_page_credentials: formState.landing_page_credentials?.trim() ?? '',
       };
       const saved = await saveProjectType(payload);
       onSaved(saved);
@@ -198,6 +202,19 @@ export function ProjectTypeEditor({ projectType, isCreating, onSaved, onDeleted 
               />
               <p className="text-sm text-muted-foreground">
                 Optional category text shown on the project types index page.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="project-type-description">Page Description</Label>
+              <Textarea
+                id="project-type-description"
+                value={formState.landing_page_credentials ?? ''}
+                onChange={(event) => updateField('landing_page_credentials', event.target.value)}
+                placeholder="Description text that appears on this project type's landing page..."
+                rows={4}
+              />
+              <p className="text-sm text-muted-foreground">
+                This copy appears at the top of the project type page (e.g., /project-types/innovation).
               </p>
             </div>
             <div className="flex flex-wrap gap-6">
