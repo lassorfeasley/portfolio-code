@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Save, Plus, Trash2, GripVertical } from 'lucide-react';
+import AssetUploader from '@/app/admin/components/AssetUploader';
 import type { HeroContent } from '@/lib/domain/hero-content/types';
 import type { FolderLink } from '@/lib/domain/folder-links/types';
 
@@ -128,11 +129,14 @@ export function HomepageEditor({ initialHeroContent, initialFolderLinks }: Homep
               </div>
 
               <div>
-                <Label htmlFor="heroImageUrl">Hero Image URL</Label>
-                <Input
-                  id="heroImageUrl"
-                  value={heroContent.heroImageUrl}
-                  onChange={(e) => setHeroContent({ ...heroContent, heroImageUrl: e.target.value })}
+                <AssetUploader
+                  slug="homepage"
+                  folder="hero"
+                  label="Hero Image"
+                  description="The main image displayed in the hero window"
+                  files={heroContent.heroImageUrl ? [heroContent.heroImageUrl] : []}
+                  maxFiles={1}
+                  onFilesChange={(urls) => setHeroContent({ ...heroContent, heroImageUrl: urls[0] ?? '' })}
                 />
               </div>
 
