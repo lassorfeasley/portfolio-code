@@ -87,7 +87,7 @@ function AdminLoginForm() {
       setMessage('');
       const supabase = supabaseBrowser();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/admin/reset-password`,
+        redirectTo: `${window.location.origin}/admin/reset-password`,
       });
       if (error) {
         setStatus('error');

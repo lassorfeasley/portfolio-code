@@ -23,14 +23,33 @@ function ResetPasswordForm() {
   const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Check if we have a valid session (from the reset link)
+    const supabase = supabaseBrowser();
+    
+    // Listen for auth state changes (triggered when Supabase processes URL hash tokens)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Reset Password] Auth event:', event, 'Session:', !!session);
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        setIsValidToken(true);
+      } else if (event === 'SIGNED_OUT') {
+        setIsValidToken(false);
+      }
+    });
+
+    // Also check current session immediately
     const checkSession = async () => {
-      const supabase = supabaseBrowser();
       const { data: { session } } = await supabase.auth.getSession();
-      setIsValidToken(!!session);
+      console.log('[Reset Password] Initial session check:', !!session);
+      // Only set if we haven't already got a valid token from auth state change
+      if (isValidToken === null) {
+        setIsValidToken(!!session);
+      }
     };
     checkSession();
-  }, []);
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [isValidToken]);
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {

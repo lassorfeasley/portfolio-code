@@ -17,5 +17,12 @@ export function createSupabaseBrowserClient(
   key: string,
   options?: SupabaseClientOptions<Schema>
 ) {
-  return createBrowserClient<Database>(url, key, options);
+  // Use the SSR browser client with PKCE disabled for better password reset compatibility
+  return createBrowserClient<Database>(url, key, {
+    ...options,
+    auth: {
+      flowType: 'implicit',
+      ...options?.auth,
+    },
+  });
 }
