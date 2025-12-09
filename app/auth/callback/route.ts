@@ -11,17 +11,28 @@ export async function GET(request: Request) {
   const isLocalEnv = process.env.NODE_ENV === 'development';
   const baseUrl = isLocalEnv ? origin : forwardedHost ? `https://${forwardedHost}` : origin;
 
+  // Log all params for debugging
+  console.log('[Auth Callback] URL:', request.url);
+  console.log('[Auth Callback] All params:', Object.fromEntries(searchParams.entries()));
+  console.log('[Auth Callback] Code present:', !!code);
+
   if (code) {
     const supabase = await supabaseServerAuth();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    console.log('[Auth Callback] Exchange result:', { data: !!data, error: error?.message });
     if (!error) {
       return NextResponse.redirect(`${baseUrl}${next}`);
     }
+    // Code exchange failed - include error details
+    const loginUrl = new URL('/admin/login', baseUrl);
+    loginUrl.searchParams.set('error', 'code_exchange_failed');
+    loginUrl.searchParams.set('message', error.message);
+    return NextResponse.redirect(loginUrl.toString());
   }
 
   // No code provided - redirect to login with error message
   const loginUrl = new URL('/admin/login', baseUrl);
-  loginUrl.searchParams.set('error', 'auth_callback_failed');
+  loginUrl.searchParams.set('error', 'no_code');
   return NextResponse.redirect(loginUrl.toString());
 }
 

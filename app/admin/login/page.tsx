@@ -37,11 +37,18 @@ function AdminLoginForm() {
     if (searchError === 'unauthorized') {
       setStatus('error');
       setMessage('Your account does not have access to the admin dashboard.');
+    } else if (searchError === 'no_code') {
+      setStatus('error');
+      setMessage('Password reset link is invalid - no authorization code received.');
+    } else if (searchError === 'code_exchange_failed') {
+      const errorMessage = searchParams?.get('message') || 'Unknown error';
+      setStatus('error');
+      setMessage(`Password reset failed: ${errorMessage}`);
     } else if (searchError === 'auth_callback_failed') {
       setStatus('error');
       setMessage('Password reset link is invalid or expired. Please request a new one.');
     }
-  }, [searchError]);
+  }, [searchError, searchParams]);
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
