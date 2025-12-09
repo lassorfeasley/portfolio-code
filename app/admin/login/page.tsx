@@ -37,6 +37,9 @@ function AdminLoginForm() {
     if (searchError === 'unauthorized') {
       setStatus('error');
       setMessage('Your account does not have access to the admin dashboard.');
+    } else if (searchError === 'auth_callback_failed') {
+      setStatus('error');
+      setMessage('Password reset link is invalid or expired. Please request a new one.');
     }
   }, [searchError]);
 
