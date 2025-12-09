@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 export const dynamic = 'force-dynamic';
 
 type AuthState = 'idle' | 'submitting' | 'success' | 'error';
-type ViewMode = 'login' | 'forgot-password';
+type ViewMode = 'login' | 'forgot-password' | 'enter-code' | 'new-password';
 
 function AdminLoginForm() {
   const router = useRouter();
@@ -30,6 +30,8 @@ function AdminLoginForm() {
   const [viewMode, setViewMode] = useState<ViewMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [otpCode, setOtpCode] = useState('');
   const [status, setStatus] = useState<AuthState>('idle');
   const [message, setMessage] = useState<string>('');
 
@@ -86,8 +88,40 @@ function AdminLoginForm() {
       setStatus('submitting');
       setMessage('');
       const supabase = supabaseBrowser();
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/admin/reset-password`,
+      // Use resetPasswordForEmail which sends a recovery OTP
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) {
+        setStatus('error');
+        setMessage(error.message);
+        return;
+      }
+      setStatus('success');
+      setMessage('Check your email for a 6-digit code.');
+      // Move to code entry view
+      setTimeout(() => {
+        setViewMode('enter-code');
+        setStatus('idle');
+        setMessage('');
+      }, 1500);
+    },
+    [email]
+  );
+
+  const handleVerifyCode = useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!otpCode || otpCode.length !== 6) {
+        setStatus('error');
+        setMessage('Please enter the 6-digit code from your email.');
+        return;
+      }
+      setStatus('submitting');
+      setMessage('');
+      const supabase = supabaseBrowser();
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otpCode,
+        type: 'recovery',
       });
       if (error) {
         setStatus('error');
@@ -95,10 +129,71 @@ function AdminLoginForm() {
         return;
       }
       setStatus('success');
-      setMessage('Password reset email sent! Check your inbox.');
+      setMessage('Code verified! Set your new password.');
+      // Move to password reset view
+      setTimeout(() => {
+        setViewMode('new-password');
+        setStatus('idle');
+        setMessage('');
+      }, 1000);
     },
-    [email]
+    [email, otpCode]
   );
+
+  const handleSetNewPassword = useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!password) {
+        setStatus('error');
+        setMessage('Password is required.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setStatus('error');
+        setMessage('Passwords do not match.');
+        return;
+      }
+      if (password.length < 6) {
+        setStatus('error');
+        setMessage('Password must be at least 6 characters.');
+        return;
+      }
+      setStatus('submitting');
+      setMessage('');
+      const supabase = supabaseBrowser();
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        setStatus('error');
+        setMessage(error.message);
+        return;
+      }
+      setStatus('success');
+      setMessage('Password updated! Redirecting to admin...');
+      setTimeout(() => {
+        router.replace('/admin');
+        router.refresh();
+      }, 1500);
+    },
+    [password, confirmPassword, router]
+  );
+
+  const getTitle = () => {
+    switch (viewMode) {
+      case 'login': return 'Admin access';
+      case 'forgot-password': return 'Reset password';
+      case 'enter-code': return 'Enter code';
+      case 'new-password': return 'New password';
+    }
+  };
+
+  const getDescription = () => {
+    switch (viewMode) {
+      case 'login': return 'Enter your credentials to access the admin dashboard';
+      case 'forgot-password': return 'Enter your email to receive a reset code';
+      case 'enter-code': return `Enter the 6-digit code sent to ${email}`;
+      case 'new-password': return 'Choose a new password for your account';
+    }
+  };
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-muted/30 p-4">
@@ -112,15 +207,11 @@ function AdminLoginForm() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>{viewMode === 'login' ? 'Admin access' : 'Reset password'}</CardTitle>
-            <CardDescription>
-              {viewMode === 'login'
-                ? 'Enter your credentials to access the admin dashboard'
-                : 'Enter your email to receive a password reset link'}
-            </CardDescription>
+            <CardTitle>{getTitle()}</CardTitle>
+            <CardDescription>{getDescription()}</CardDescription>
           </CardHeader>
           <CardContent>
-            {viewMode === 'login' ? (
+            {viewMode === 'login' && (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -147,12 +238,7 @@ function AdminLoginForm() {
                   />
                 </div>
                 {message && (
-                  <p
-                    className={cn(
-                      'text-sm',
-                      status === 'error' ? 'text-destructive' : 'text-muted-foreground'
-                    )}
-                  >
+                  <p className={cn('text-sm', status === 'error' ? 'text-destructive' : 'text-muted-foreground')}>
                     {message}
                   </p>
                 )}
@@ -172,7 +258,9 @@ function AdminLoginForm() {
                   Forgot password?
                 </button>
               </form>
-            ) : (
+            )}
+
+            {viewMode === 'forgot-password' && (
               <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -187,17 +275,12 @@ function AdminLoginForm() {
                   />
                 </div>
                 {message && (
-                  <p
-                    className={cn(
-                      'text-sm',
-                      status === 'error' ? 'text-destructive' : 'text-success'
-                    )}
-                  >
+                  <p className={cn('text-sm', status === 'error' ? 'text-destructive' : 'text-green-600')}>
                     {message}
                   </p>
                 )}
                 <Button type="submit" className="w-full" disabled={status === 'submitting'}>
-                  {status === 'submitting' ? 'Sending…' : 'Send reset link'}
+                  {status === 'submitting' ? 'Sending…' : 'Send reset code'}
                 </Button>
                 <button
                   type="button"
@@ -210,6 +293,86 @@ function AdminLoginForm() {
                 >
                   ← Back to login
                 </button>
+              </form>
+            )}
+
+            {viewMode === 'enter-code' && (
+              <form onSubmit={handleVerifyCode} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="otp">6-digit code</Label>
+                  <Input
+                    id="otp"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={otpCode}
+                    onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, ''))}
+                    required
+                    disabled={status === 'submitting'}
+                    className="text-center text-2xl tracking-widest"
+                  />
+                </div>
+                {message && (
+                  <p className={cn('text-sm', status === 'error' ? 'text-destructive' : 'text-green-600')}>
+                    {message}
+                  </p>
+                )}
+                <Button type="submit" className="w-full" disabled={status === 'submitting' || otpCode.length !== 6}>
+                  {status === 'submitting' ? 'Verifying…' : 'Verify code'}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode('forgot-password');
+                    setStatus('idle');
+                    setMessage('');
+                    setOtpCode('');
+                  }}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  ← Send a new code
+                </button>
+              </form>
+            )}
+
+            {viewMode === 'new-password' && (
+              <form onSubmit={handleSetNewPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">New password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder="Enter new password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                    disabled={status === 'submitting'}
+                    minLength={6}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    required
+                    disabled={status === 'submitting'}
+                    minLength={6}
+                  />
+                </div>
+                {message && (
+                  <p className={cn('text-sm', status === 'error' ? 'text-destructive' : 'text-green-600')}>
+                    {message}
+                  </p>
+                )}
+                <Button type="submit" className="w-full" disabled={status === 'submitting'}>
+                  {status === 'submitting' ? 'Updating…' : 'Update password'}
+                </Button>
               </form>
             )}
           </CardContent>
@@ -245,4 +408,3 @@ export default function AdminLoginPage() {
     </Suspense>
   );
 }
-
