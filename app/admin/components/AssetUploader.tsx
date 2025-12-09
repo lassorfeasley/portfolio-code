@@ -171,6 +171,7 @@ export default function AssetUploader({
                 src={url}
                 alt={`${label} ${index + 1}`}
                 className="h-32 w-full object-cover"
+                pixelate={false}
               />
               <Button
                 type="button"

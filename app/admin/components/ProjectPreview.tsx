@@ -38,6 +38,7 @@ export default function ProjectPreview({ project }: Props) {
               alt={project.name ?? ''}
               className="w-full rounded-lg border"
               style={{ maxHeight: 260, objectFit: 'cover' }}
+              pixelate={false}
             />
           ) : null}
         </CardContent>
