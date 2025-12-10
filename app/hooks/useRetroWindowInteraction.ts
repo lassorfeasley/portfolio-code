@@ -12,11 +12,9 @@ type Options = {
 type PointerState =
   | {
       mode: 'drag';
-      // Cursor offset from the window's top-left corner (in viewport coords)
+      // Cursor offset from the window's top-left corner
       cursorOffsetX: number;
       cursorOffsetY: number;
-      // Whether this is grid mode (affects containing block calculation)
-      isGridMode: boolean;
       lockedWidth: number;
       lockedHeight: number;
     }
@@ -29,21 +27,31 @@ type PointerState =
     }
   | null;
 
-const SAFE_BOTTOM_PADDING = 80;
-const ALLOW_OVERFLOW_X = 100;
-const ALLOW_OVERFLOW_Y = 150;
-
 const isMobile = () =>
   typeof window !== 'undefined' &&
   window.matchMedia('(pointer:coarse), (max-width: 767px)').matches;
+
+// Get or create a float layer for windows that have been dragged
+function getFloatLayer(): HTMLElement {
+  let layer = document.getElementById('window-float-layer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'window-float-layer';
+    layer.className = 'window-float-layer';
+    document.body.appendChild(layer);
+  }
+  return layer;
+}
 
 export function useRetroWindowInteraction(options: Options) {
   const { disableDrag, disableResize, initialZIndex, autoFocus } = options;
   const ref = useRef<HTMLDivElement | null>(null);
   const pointerState = useRef<PointerState>(null);
-  const [zIndex, setZIndex] = useState<number | undefined>(initialZIndex);
+  // Default to 1000 to ensure windows are above canvases on initial render
+  const [zIndex, setZIndex] = useState<number>(initialZIndex ?? 1000);
   const [position, setPosition] = useState<{ left?: number; top?: number }>({});
   const [size, setSize] = useState<{ width?: number; height?: number }>({});
+  const [isFloated, setIsFloated] = useState(false);
 
   const markReactManaged = useCallback(() => {
     if (ref.current) {
@@ -61,17 +69,14 @@ export function useRetroWindowInteraction(options: Options) {
     const maxZ = windows.reduce((acc, el) => {
       const parsed = parseInt(window.getComputedStyle(el).zIndex, 10);
       return Number.isNaN(parsed) ? acc : Math.max(acc, parsed);
-    }, 0);
+    }, 1000); // Start from 1000 to ensure above canvases
     const nextZ = maxZ + 1;
     setZIndex(nextZ);
   }, []);
 
   useEffect(() => {
     markReactManaged();
-    if (typeof initialZIndex === 'number') {
-      setZIndex(initialZIndex);
-    }
-  }, [markReactManaged, initialZIndex]);
+  }, [markReactManaged]);
 
   useEffect(() => {
     if (autoFocus) {
@@ -79,8 +84,28 @@ export function useRetroWindowInteraction(options: Options) {
     }
   }, [autoFocus, bringToFront]);
 
-  const clampDragPosition = (value: number, min: number, max: number) =>
-    Math.min(max, Math.max(min, value));
+  // Move window to float layer so it escapes stacking contexts
+  const floatWindow = useCallback(() => {
+    const current = ref.current;
+    if (!current || isFloated) return;
+
+    const rect = current.getBoundingClientRect();
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+
+    // Calculate position relative to document (for absolute positioning in body)
+    const docLeft = rect.left + scrollX;
+    const docTop = rect.top + scrollY;
+
+    // Move to float layer
+    const floatLayer = getFloatLayer();
+    floatLayer.appendChild(current);
+
+    // Set position relative to document
+    setPosition({ left: docLeft, top: docTop });
+    setSize({ width: rect.width, height: rect.height });
+    setIsFloated(true);
+  }, [isFloated]);
 
   const handlePointerMove = useCallback(
     (event: MouseEvent) => {
@@ -89,39 +114,11 @@ export function useRetroWindowInteraction(options: Options) {
       if (!current || !state) return;
 
       if (state.mode === 'drag') {
-        // Calculate target window position in viewport coordinates
-        const targetViewportLeft = event.pageX - state.cursorOffsetX;
-        const targetViewportTop = event.pageY - state.cursorOffsetY;
-        
-        // Get fresh containing block rect
-        const placeholder = current.closest<HTMLElement>('.retro-window-placeholder');
-        const canvas = current.closest<HTMLElement>('.windowcanvas') ?? document.body;
-        const canvasRect = canvas.getBoundingClientRect();
-        const placeholderRect = placeholder?.getBoundingClientRect();
-        const containingBlockRect = state.isGridMode && placeholderRect ? placeholderRect : canvasRect;
-        
-        // Convert to containing block coordinates
-        const targetLeft = targetViewportLeft - containingBlockRect.left;
-        const targetTop = targetViewportTop - containingBlockRect.top;
-        
-        // Calculate bounds relative to containing block
-        const offsetX = containingBlockRect.left - canvasRect.left;
-        const offsetY = containingBlockRect.top - canvasRect.top;
-        
-        const minLeft = -ALLOW_OVERFLOW_X - offsetX;
-        const maxLeft =
-          canvasRect.width - state.lockedWidth + ALLOW_OVERFLOW_X - offsetX;
-        const minTop = -ALLOW_OVERFLOW_Y - offsetY;
-        const maxTop =
-          canvasRect.height -
-          state.lockedHeight +
-          Math.max(0, ALLOW_OVERFLOW_Y - SAFE_BOTTOM_PADDING) - offsetY;
-        
-        const clampedLeft = clampDragPosition(targetLeft, minLeft, maxLeft);
-        const clampedTop = clampDragPosition(targetTop, minTop, maxTop);
+        // Calculate position relative to document (pageX/pageY include scroll)
+        const targetLeft = event.pageX - state.cursorOffsetX;
+        const targetTop = event.pageY - state.cursorOffsetY;
 
-        setPosition({ left: clampedLeft, top: clampedTop });
-        // Force width/height during drag to prevent CSS overrides
+        setPosition({ left: targetLeft, top: targetTop });
         setSize({
           width: state.lockedWidth,
           height: state.lockedHeight,
@@ -154,19 +151,6 @@ export function useRetroWindowInteraction(options: Options) {
       current.classList.remove('no-static-shadow');
       current.classList.add('breathing-shadow');
       
-      // KEEP width and height so they don't snap back
-      // Also, we need to ensure the inline style is applied *immediately* via state
-      // because React batching might cause a flash.
-      // But we already set size in handlePointerMove, so it should be fine.
-      // The issue might be if we were clearing it. Here we explicitly set it.
-      // Maybe we need to read from current style if drag didn't move?
-      // But drag only starts on mouse move... wait no, drag starts on mouse down.
-      // If we mouse down but don't move, size state might be empty?
-      
-      // Actually, drag START sets size state.
-      // So we just need to ensure we don't clear it here.
-      // The previous code was: setSize((prev) => ({ ...prev, height: undefined }));
-      // which CLEARED height. Now we are doing:
       setSize(() => ({
         width: state.lockedWidth,
         height: state.lockedHeight,
@@ -213,57 +197,20 @@ export function useRetroWindowInteraction(options: Options) {
       current.classList.add('no-static-shadow');
       current.style.cursor = 'grabbing';
 
-      // Get the placeholder (positioned ancestor) and canvas for bounds clamping
-      const placeholder = current.closest<HTMLElement>('.retro-window-placeholder');
-      const canvas =
-        current.closest<HTMLElement>('.windowcanvas') ?? document.body;
-      const canvasRect = canvas.getBoundingClientRect();
-      const placeholderRect = placeholder?.getBoundingClientRect();
       const rect = current.getBoundingClientRect();
       
-      // Check if we're in grid mode - if so, don't call retroFloatWindow
-      const isGridMode = canvas.dataset?.gridMode === 'true';
-      
-      // Float legacy windows if helper exists (but not in grid mode)
-      if (!isGridMode && typeof window.retroFloatWindow === 'function') {
-        try {
-          window.retroFloatWindow(current);
-        } catch {
-          // ignore failure
-        }
-      }
-      
-      // When in grid mode, the window stays inside the placeholder but becomes absolute.
-      // Position needs to be relative to the placeholder (the containing block).
-      // When NOT in grid mode, window is floated to canvas level, so position is relative to canvas.
-      const containingBlockRect = isGridMode && placeholderRect ? placeholderRect : canvasRect;
-      
-      // For grid mode, use offsetTop/offsetLeft which gives position relative to the
-      // offset parent (placeholder), avoiding issues with position:relative offsets.
-      // For non-grid mode, calculate relative to canvas.
-      const currentLeft =
-        Number.isFinite(parseFloat(current.style.left))
-          ? parseFloat(current.style.left)
-          : isGridMode
-            ? current.offsetLeft
-            : rect.left - canvasRect.left;
-      const currentTop =
-        Number.isFinite(parseFloat(current.style.top))
-          ? parseFloat(current.style.top)
-          : isGridMode
-            ? current.offsetTop
-            : rect.top - canvasRect.top;
+      // Float the window to escape stacking contexts
+      floatWindow();
           
-      // Store cursor offset from window's top-left corner in viewport coordinates.
-      // This offset stays constant during drag regardless of containing block changes.
-      const cursorOffsetX = event.pageX - rect.left;
-      const cursorOffsetY = event.pageY - rect.top;
+      // Store cursor offset from window's top-left corner
+      // Use pageX/pageY for document-relative positioning
+      const cursorOffsetX = event.pageX - (rect.left + window.scrollX);
+      const cursorOffsetY = event.pageY - (rect.top + window.scrollY);
 
       pointerState.current = {
         mode: 'drag',
         cursorOffsetX,
         cursorOffsetY,
-        isGridMode,
         lockedWidth: rect.width,
         lockedHeight: rect.height,
       };
@@ -274,13 +221,13 @@ export function useRetroWindowInteraction(options: Options) {
         height: rect.height,
       });
       
-      // Also sync position state immediately so we don't snap to 0,0
+      // Set initial position relative to document
       setPosition({
-        left: currentLeft,
-        top: currentTop,
+        left: rect.left + window.scrollX,
+        top: rect.top + window.scrollY,
       });
     },
-    [bringToFront, disableDrag]
+    [bringToFront, disableDrag, floatWindow]
   );
 
   const handleResizeStart = useCallback(
@@ -290,6 +237,10 @@ export function useRetroWindowInteraction(options: Options) {
       if (!current || pointerState.current?.mode === 'drag') return;
       event.preventDefault();
       bringToFront();
+      
+      // Float the window to escape stacking contexts
+      floatWindow();
+      
       const computed = window.getComputedStyle(current);
 
       pointerState.current = {
@@ -299,29 +250,25 @@ export function useRetroWindowInteraction(options: Options) {
         startWidth: parseFloat(computed.width) || current.offsetWidth,
         startHeight: parseFloat(computed.height) || current.offsetHeight,
       };
-
-      // Float legacy windows if helper exists
-      if (typeof window.retroFloatWindow === 'function') {
-        try {
-          window.retroFloatWindow(current);
-        } catch {
-          // ignore failure
-        }
-      }
     },
-    [bringToFront, disableResize]
+    [bringToFront, disableResize, floatWindow]
   );
 
   const windowStyle = useMemo<React.CSSProperties>(() => {
     const style: React.CSSProperties = {};
-    if (typeof position.left === 'number') {
-      style.left = `${position.left}px`;
-      style.position = 'absolute';
+    
+    // Only apply position styles if the window has been floated
+    if (isFloated) {
+      if (typeof position.left === 'number') {
+        style.left = `${position.left}px`;
+        style.position = 'absolute';
+      }
+      if (typeof position.top === 'number') {
+        style.top = `${position.top}px`;
+        style.position = 'absolute';
+      }
     }
-    if (typeof position.top === 'number') {
-      style.top = `${position.top}px`;
-      style.position = 'absolute';
-    }
+    
     if (typeof size.width === 'number') {
       style.width = `${size.width}px`;
       style.maxWidth = `${size.width}px`;
@@ -330,11 +277,10 @@ export function useRetroWindowInteraction(options: Options) {
       style.height = `${size.height}px`;
       style.maxHeight = `${size.height}px`;
     }
-    if (typeof zIndex === 'number') {
-      style.zIndex = zIndex;
-    }
+    // Always set zIndex to ensure windows are above canvases
+    style.zIndex = zIndex;
     return style;
-  }, [position.left, position.top, size.height, size.width, zIndex]);
+  }, [position.left, position.top, size.height, size.width, zIndex, isFloated]);
 
   const handleClose = useCallback(() => {
     if (ref.current) {

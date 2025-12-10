@@ -3711,7 +3711,7 @@ a {
   --retro-translate-y: 0px;
   --retro-width: auto;
   --retro-z: 10000;
-  z-index: 0;
+  z-index: 1000;
   grid-column-gap: 0px;
   grid-row-gap: 0px;
   aspect-ratio: 3 / 2;
@@ -4185,15 +4185,23 @@ a {
   display: flex;
   width: 100%;
   position: relative !important;
+  /* No z-index here - allows windows to escape stacking context and overlap other canvases */
 }
 
-/* Float layer overlay to keep live windows on top without affecting layout */
+/* Float layer for windows that have been dragged - they escape stacking contexts */
+#window-float-layer,
 .window-float-layer {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
   pointer-events: none;
+  /* High z-index to ensure floated windows are above everything */
   z-index: 10000;
 }
+#window-float-layer .retro-window,
 .window-float-layer .retro-window {
   pointer-events: auto;
 }
