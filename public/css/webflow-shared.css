@@ -5254,6 +5254,11 @@ a {
   box-shadow: none !important;
 }
 
+.retro-window.dragging {
+  transform: none !important;
+  will-change: left, top;
+}
+
 #w-node-_38ebf15a-819b-09f4-cd49-03e45cf325e1-54a3410e {
   place-self: start end;
 }

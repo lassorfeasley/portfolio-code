@@ -451,12 +451,18 @@ function initRetroWindowInteractions() {
       // Remove breathing shadow and static shadow when dragging starts
       windowEl.classList.remove('breathing-shadow');
       windowEl.classList.add('no-static-shadow');
+      windowEl.classList.add('dragging');
       bringToFront();
 
       // Lock current size before taking the element out of normal flow
       const rect = windowEl.getBoundingClientRect();
       lockedWidth = rect.width;
       lockedHeight = rect.height;
+      
+      // Remove hover transform during drag to prevent offset issues
+      windowEl.style.setProperty('--retro-translate-x', '0px');
+      windowEl.style.setProperty('--retro-translate-y', '0px');
+      windowEl.style.transform = 'none';
       
       // Set position first, then enforce width with !important to override CSS rules
       windowEl.style.position = 'absolute';
@@ -505,6 +511,13 @@ function initRetroWindowInteractions() {
         isDragging = false;
         windowEl.style.cursor = 'default';
         windowEl.classList.remove('no-static-shadow');
+        windowEl.classList.remove('dragging');
+        
+        // Reset transform override (allow CSS transforms to work again)
+        windowEl.style.removeProperty('--retro-translate-x');
+        windowEl.style.removeProperty('--retro-translate-y');
+        windowEl.style.transform = '';
+        
         // Clear width/height constraints after dragging ends (remove important flag)
         windowEl.style.removeProperty('width');
         windowEl.style.removeProperty('max-width');

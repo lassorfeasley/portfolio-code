@@ -86,11 +86,12 @@ export function useRetroWindowInteraction(options: Options) {
         const targetLeft = event.clientX - state.cursorOffsetX;
         const targetTop = event.clientY - state.cursorOffsetY;
 
+        // Apply directly to DOM for flicker-free dragging (bypasses React re-render)
+        current.style.left = `${targetLeft}px`;
+        current.style.top = `${targetTop}px`;
+        
+        // Also update React state so windowStyle stays in sync
         setPosition({ left: targetLeft, top: targetTop });
-        setSize({
-          width: state.lockedWidth,
-          height: state.lockedHeight,
-        });
       } else if (state.mode === 'resize') {
         const nextWidth = Math.max(
           200,
@@ -117,7 +118,13 @@ export function useRetroWindowInteraction(options: Options) {
     if (state.mode === 'drag') {
       current.style.cursor = 'default';
       current.classList.remove('no-static-shadow');
+      current.classList.remove('dragging');
       current.classList.add('breathing-shadow');
+      
+      // Reset transform override (allow CSS transforms to work again)
+      current.style.removeProperty('--retro-translate-x');
+      current.style.removeProperty('--retro-translate-y');
+      current.style.transform = '';
       
       // Convert from viewport (fixed) to parent-relative (absolute) coordinates
       // so the window scrolls with the page
@@ -196,14 +203,28 @@ export function useRetroWindowInteraction(options: Options) {
       bringToFront();
       current.classList.remove('breathing-shadow');
       current.classList.add('no-static-shadow');
+      current.classList.add('dragging');
       current.style.cursor = 'grabbing';
 
+      // Get current visual position BEFORE removing transforms
       const rect = current.getBoundingClientRect();
       
-      // Mark as dragged and actively dragging
-      setIsDragged(true);
-      setIsDragging(true);
-          
+      // Remove hover transform during drag to prevent offset issues
+      // The :hover state applies transform which affects getBoundingClientRect
+      // but stacks with our positioning, causing double offset
+      current.style.setProperty('--retro-translate-x', '0px');
+      current.style.setProperty('--retro-translate-y', '0px');
+      current.style.transform = 'none';
+      
+      // Apply position immediately to DOM to prevent flicker
+      current.style.position = 'fixed';
+      current.style.left = `${rect.left}px`;
+      current.style.top = `${rect.top}px`;
+      current.style.width = `${rect.width}px`;
+      current.style.maxWidth = `${rect.width}px`;
+      current.style.height = `${rect.height}px`;
+      current.style.maxHeight = `${rect.height}px`;
+      
       // Store cursor offset from window's top-left corner (in viewport coordinates for fixed positioning)
       const cursorOffsetX = event.clientX - rect.left;
       const cursorOffsetY = event.clientY - rect.top;
@@ -215,6 +236,10 @@ export function useRetroWindowInteraction(options: Options) {
         lockedWidth: rect.width,
         lockedHeight: rect.height,
       };
+
+      // Mark as dragged and actively dragging
+      setIsDragged(true);
+      setIsDragging(true);
 
       // Lock size immediately on drag start
       setSize({
