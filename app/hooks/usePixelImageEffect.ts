@@ -44,8 +44,10 @@ export function usePixelImageEffect(
   const animationRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const intersectionObserverRef = useRef<IntersectionObserver | null>(null);
+  const dragObserverRef = useRef<MutationObserver | null>(null);
   const isPreparedRef = useRef(false);
   const hasStartedRef = useRef(false);
+  const draggingRef = useRef(false);
 
   const maxStepDelay = Math.max(0, (totalDuration - steps * minStepDelay) / steps);
 
@@ -210,13 +212,47 @@ export function usePixelImageEffect(
         if (parent) {
           const retroWindow = img.closest('.retro-window');
           
+          // Observe drag start/end to disable pixel effect during drag
+          if (retroWindow && !dragObserverRef.current && typeof MutationObserver !== 'undefined') {
+            const stopAndShowImage = () => {
+              draggingRef.current = true;
+              if (animationRef.current) {
+                clearTimeout(animationRef.current);
+                animationRef.current = null;
+              }
+              const currentCanvas = canvasRef.current;
+              const currentImg = imageRef.current;
+              if (currentCanvas) {
+                currentCanvas.style.opacity = '0';
+                currentCanvas.style.display = 'none';
+              }
+              if (currentImg) {
+                currentImg.style.opacity = '1';
+              }
+              hasStartedRef.current = true;
+              setIsAnimating(false);
+              setIsFinished(true);
+            };
+
+            dragObserverRef.current = new MutationObserver(() => {
+              const isDragging =
+                retroWindow.classList.contains('no-static-shadow') ||
+                retroWindow.classList.contains('dragging');
+              if (isDragging && !draggingRef.current) {
+                stopAndShowImage();
+              } else if (!isDragging) {
+                draggingRef.current = false;
+              }
+            });
+            dragObserverRef.current.observe(retroWindow, { attributes: true, attributeFilter: ['class'] });
+          }
+          
           resizeObserverRef.current = new ResizeObserver(() => {
             // Skip redraw if animation already started or finished
-            if (hasStartedRef.current) return;
+            if (hasStartedRef.current || isFinished) return;
             
             // Skip redraw during drag to prevent flickering
-            const isDragging = retroWindow?.classList.contains('no-static-shadow') ?? false;
-            if (isDragging) return;
+            if (draggingRef.current) return;
             
             const currentImg = imageRef.current;
             const currentCanvas = canvasRef.current;
@@ -298,6 +334,9 @@ export function usePixelImageEffect(
     return () => {
       if (animationRef.current) {
         clearTimeout(animationRef.current);
+      }
+      if (dragObserverRef.current) {
+        dragObserverRef.current.disconnect();
       }
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
