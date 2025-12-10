@@ -97,3 +97,20 @@ if (document.readyState === 'loading') {
 }
 // Also try window load to be safe
 window.addEventListener('load', initFolderDrag);
+
+// Expose globally for re-initialization
+window.initFolderDrag = initFolderDrag;
+
+// Re-run periodically to catch dynamically rendered elements (React)
+let folderDragRetries = 0;
+const maxFolderDragRetries = 10;
+const folderDragInterval = setInterval(() => {
+  folderDragRetries++;
+  const folders = document.querySelectorAll('.draggable-folder:not([data-folder-drag-attached="true"])');
+  if (folders.length > 0) {
+    initFolderDrag();
+  }
+  if (folderDragRetries >= maxFolderDragRetries) {
+    clearInterval(folderDragInterval);
+  }
+}, 500);

@@ -4188,22 +4188,12 @@ a {
   /* No z-index here - allows windows to escape stacking context and overlap other canvases */
 }
 
-/* Float layer for windows that have been dragged - they escape stacking contexts */
-#window-float-layer,
-.window-float-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 0;
-  height: 0;
-  overflow: visible;
-  pointer-events: none;
-  /* High z-index to ensure floated windows are above everything */
-  z-index: 10000;
-}
-#window-float-layer .retro-window,
-.window-float-layer .retro-window {
-  pointer-events: auto;
+/* Dragged windows use absolute positioning relative to body */
+/* This class is added to body when any window is being dragged */
+body > .retro-window,
+.retro-root > .retro-window {
+  /* Ensure dragged windows at root level are above everything */
+  z-index: 10000 !important;
 }
 
 .windowcanvas.search {

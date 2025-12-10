@@ -60,31 +60,38 @@ function createEcho(el) {
   // Clone the original element
   const echo = el.cloneNode(true);
 
-  // Get computed style to preserve visual appearance
+  // Get current position using getBoundingClientRect
+  const rect = el.getBoundingClientRect();
   const style = window.getComputedStyle(el);
-
-  // Set basic styling for the echo
+  
+  // Clear ALL positioning styles first to prevent conflicts (Safari fix)
+  echo.style.cssText = '';
+  
+  // Convert viewport coordinates to document coordinates so echoes scroll with page
+  const docLeft = rect.left + window.scrollX;
+  const docTop = rect.top + window.scrollY;
+  
+  // Set echo styling from scratch - use absolute positioning for scrolling
   echo.style.position = 'absolute';
-  echo.style.pointerEvents = 'none';
+  echo.style.left = docLeft + 'px';
+  echo.style.top = docTop + 'px';
+  echo.style.width = rect.width + 'px';
+  echo.style.height = rect.height + 'px';
   echo.style.margin = '0';
-  // Use getBoundingClientRect for more accurate position relative to viewport,
-  // but we need it relative to offset parent.
-  // For simplicty, stick to style.left/top if available, otherwise offsetLeft/Top
-  echo.style.left = el.style.left;
-  echo.style.top = el.style.top;
-  echo.style.width = style.width;
-  echo.style.height = style.height;
+  echo.style.padding = '0';
+  echo.style.transform = 'none';
+  echo.style.pointerEvents = 'none';
   echo.style.opacity = ECHO_OPACITY;
   echo.style.filter = `blur(${ECHO_BLUR})`;
-  // Ensure echo is behind
+  echo.style.boxSizing = 'border-box';
+  
+  // Ensure echo is behind the original
   const z = parseInt(style.zIndex || 0, 10);
   echo.style.zIndex = isNaN(z) ? -1 : z - 1;
 
-  // Add echo to DOM
-  if (el.parentElement) {
-      el.parentElement.appendChild(echo);
-      echos.push(echo);
-  }
+  // Add echo to body
+  document.body.appendChild(echo);
+  echos.push(echo);
 
   // Remove echo after specified duration without dissolve
   setTimeout(() => {
@@ -119,21 +126,17 @@ function setupEchoEffect(draggableSelector) {
       draggable.classList.remove('breathing-shadow');
       draggable.classList.add('no-static-shadow');
       
-      // Capture initial position
-      lastX = parseInt(draggable.style.left, 10) || draggable.offsetLeft;
-      lastY = parseInt(draggable.style.top, 10) || draggable.offsetTop;
+      // Capture initial position using getBoundingClientRect for accuracy with fixed positioning
+      const initialRect = draggable.getBoundingClientRect();
+      lastX = initialRect.left;
+      lastY = initialRect.top;
 
       const mouseMoveHandler = (moveEvent) => {
-        // For Safari/React interop, we might be reading values before the style updates.
-        // We can use the mouse position delta if the element style isn't updating fast enough,
-        // but ideally we read the element's actual position.
-        
-        // Use getBoundingClientRect for truth, then convert to offset-relative if possible?
-        // Actually, checking style.left is usually fine if the drag handler is updating it.
-        // But if it's a transform drag (unlikely here), we need to check transform.
-        
-        const currentX = parseInt(draggable.style.left, 10) || draggable.offsetLeft;
-        const currentY = parseInt(draggable.style.top, 10) || draggable.offsetTop;
+        // Use getBoundingClientRect for accurate position tracking
+        // This works correctly for both fixed and absolute positioned windows
+        const rect = draggable.getBoundingClientRect();
+        const currentX = rect.left;
+        const currentY = rect.top;
 
         const dx = currentX - lastX;
         const dy = currentY - lastY;

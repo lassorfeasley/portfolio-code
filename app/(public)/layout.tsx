@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Script from 'next/script';
 import { PublicStyles } from './components/PublicStyles';
 import { ErrorBoundary } from '@/app/components/ErrorBoundary';
+import { RouteCleanup } from './components/RouteCleanup';
 
 const guardCss = `
 .globalmargin{max-width:1500px;margin:0 auto;padding:40px 40px 80px;}
@@ -12,6 +13,7 @@ const guardCss = `
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary>
+      <RouteCleanup />
       <PublicStyles />
       <style dangerouslySetInnerHTML={{ __html: guardCss }} />
       <Script src="/js/retro-window-state.js?v=1" strategy="afterInteractive" />
