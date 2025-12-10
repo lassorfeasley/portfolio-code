@@ -208,11 +208,22 @@ export function usePixelImageEffect(
       if (!resizeObserverRef.current && typeof ResizeObserver !== 'undefined') {
         const parent = img.parentElement;
         if (parent) {
+          const retroWindow = img.closest('.retro-window');
+          
           resizeObserverRef.current = new ResizeObserver(() => {
-            if (canvas && img && !isFinished && !hasStartedRef.current) {
-              const ctx = canvas.getContext('2d');
+            // Skip redraw if animation already started or finished
+            if (hasStartedRef.current) return;
+            
+            // Skip redraw during drag to prevent flickering
+            const isDragging = retroWindow?.classList.contains('no-static-shadow') ?? false;
+            if (isDragging) return;
+            
+            const currentImg = imageRef.current;
+            const currentCanvas = canvasRef.current;
+            if (currentCanvas && currentImg) {
+              const ctx = currentCanvas.getContext('2d');
               if (ctx) {
-                drawPixelStep(img, canvas, ctx, steps);
+                drawPixelStep(currentImg, currentCanvas, ctx, steps);
               }
             }
           });

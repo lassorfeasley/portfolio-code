@@ -4058,12 +4058,11 @@ a {
 }
 
 .retro-window-placeholder.alertmover {
+  /* Position alert 40px below the top of the summary window */
   position: relative !important;
   left: -20px !important;
-  top: 60px !important;
+  top: 40px !important;
   align-self: start !important;
-  display: flex;
-  align-items: center;
   height: fit-content;
   z-index: 100;
 }
