@@ -10,9 +10,12 @@ import {
   listProjectTypeSlugs,
 } from '@/lib/domain/project-types/service';
 import { listPublishedProjectsByType } from '@/lib/domain/projects/service';
+import { getFolderLinks } from '@/lib/domain/folder-links/service';
+import { defaultFolderLinks } from '@/lib/domain/folder-links/defaults';
 import { NotFoundError } from '@/lib/api/errors';
 import type { ProjectTypeDetail } from '@/lib/domain/project-types/types';
 import type { ProjectSummary } from '@/lib/domain/projects/types';
+import type { FolderLink } from '@/lib/domain/folder-links/types';
 import { hasSupabaseEnv } from '@/lib/utils/env';
 
 export const revalidate = 60;
@@ -67,8 +70,15 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
     const supabase = supabaseServer();
     let typeData: ProjectTypeDetail;
     let projects: ProjectSummary[] = [];
+    let folderLinks: FolderLink[] = defaultFolderLinks;
+
     try {
-      typeData = await getPublishedProjectTypeBySlug(supabase, slug);
+      const [fetchedTypeData, fetchedLinks] = await Promise.all([
+        getPublishedProjectTypeBySlug(supabase, slug),
+        getFolderLinks(supabase)
+      ]);
+      typeData = fetchedTypeData;
+      folderLinks = fetchedLinks;
       projects = await listPublishedProjectsByType(supabase, typeData.id);
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -159,7 +169,7 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
         </div>
       </div>
 
-      <FooterDesktop />
+      <FooterDesktop folderLinks={folderLinks} />
     </main>
   );
   } catch (error) {

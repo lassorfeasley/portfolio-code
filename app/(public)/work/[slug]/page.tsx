@@ -12,7 +12,10 @@ import {
   getPublishedProjectBySlug,
   listPublicProjectSlugs,
 } from '@/lib/domain/projects/service';
+import { getFolderLinks } from '@/lib/domain/folder-links/service';
+import { defaultFolderLinks } from '@/lib/domain/folder-links/defaults';
 import type { ProjectDetail } from '@/lib/domain/projects/types';
+import type { FolderLink } from '@/lib/domain/folder-links/types';
 import { NotFoundError } from '@/lib/api/errors';
 import { hasSupabaseEnv } from '@/lib/utils/env';
 import { toEmbedUrl, toBrand } from '@/lib/utils/urls';
@@ -65,8 +68,17 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   }
   const supabase = supabaseServer();
   let project: ProjectDetail;
+  let folderLinks: FolderLink[] = defaultFolderLinks;
+
   try {
-    project = await getPublishedProjectBySlug(supabase, slug);
+    // Fetch project and folder links in parallel
+    // getFolderLinks handles its own errors and returns defaults, so it won't fail the Promise.all unless something critical happens
+    const [projectData, links] = await Promise.all([
+      getPublishedProjectBySlug(supabase, slug),
+      getFolderLinks(supabase)
+    ]);
+    project = projectData;
+    folderLinks = links;
   } catch (error) {
     if (error instanceof NotFoundError) {
       return notFound();
@@ -173,7 +185,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         </div>
       </div>
 
-      <FooterDesktop />
+      <FooterDesktop folderLinks={folderLinks} />
     </main>
   );
 }

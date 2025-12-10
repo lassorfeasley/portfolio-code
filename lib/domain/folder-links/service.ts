@@ -2,6 +2,7 @@ import { ApiError } from '@/lib/api/errors';
 import type { TypedSupabaseClient } from '@/lib/supabase/types';
 import type { PostgrestError } from '@supabase/supabase-js';
 import type { FolderLink, FolderLinkRow, FolderLinkPayload } from './types';
+import { mergeLinksWithDefaults } from './defaults';
 
 // type FolderLinkUpdate = Database['public']['Tables']['folder_links']['Update'];
 // type FolderLinkInsert = Database['public']['Tables']['folder_links']['Insert'];
@@ -15,6 +16,19 @@ function toFolderLink(row: FolderLinkRow): FolderLink {
     external: row.external,
     displayOrder: row.display_order,
   };
+}
+
+export async function getFolderLinks(
+  client: TypedSupabaseClient
+): Promise<FolderLink[]> {
+  try {
+    const links = await listFolderLinks(client);
+    return mergeLinksWithDefaults(links);
+  } catch (error) {
+    console.error('Error fetching folder links:', error);
+    // If DB fetch fails, return defaults
+    return mergeLinksWithDefaults(null);
+  }
 }
 
 export async function listFolderLinks(
