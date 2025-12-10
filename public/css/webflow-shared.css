@@ -5285,3 +5285,16 @@ a {
     justify-self: auto;
   }
 }
+
+/* Hide pixel effect canvas and show original image during window drag */
+.retro-window.dragging canvas[data-pixel-canvas],
+.retro-window.no-static-shadow canvas[data-pixel-canvas] {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+.retro-window.dragging img,
+.retro-window.no-static-shadow img {
+  opacity: 1 !important;
+}
+
