@@ -15,6 +15,7 @@ type AdminShellProps = {
 const navigation = [
   { href: '/admin', label: 'Projects' },
   { href: '/admin/project-types', label: 'Project Types' },
+  { href: '/admin/articles', label: 'Articles' },
   { href: '/admin/homepage', label: 'Homepage' },
 ];
 

@@ -132,6 +132,7 @@ export type Database = {
           featured_image_url: string | null;
           id: string;
           name: string | null;
+          project_id: string | null;
           publication: string | null;
           slug: string;
           title: string | null;
@@ -146,6 +147,7 @@ export type Database = {
           featured_image_url?: string | null;
           id?: string;
           name?: string | null;
+          project_id?: string | null;
           publication?: string | null;
           slug: string;
           title?: string | null;
@@ -160,13 +162,21 @@ export type Database = {
           featured_image_url?: string | null;
           id?: string;
           name?: string | null;
+          project_id?: string | null;
           publication?: string | null;
-          slug: string;
+          slug?: string;
           title?: string | null;
           updated_at?: string | null;
           url?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'articles_project_id_fkey';
+            columns: ['project_id'];
+            referencedRelation: 'projects';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       hero_content: {
         Row: {

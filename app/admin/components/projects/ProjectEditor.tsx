@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import type { ProjectPayload, ProjectRecord, ProjectTypeRecord } from '@/types/projects';
+import type { ProjectPayload, ProjectRecord, ProjectTypeRecord, ArticleRecord } from '@/types/projects';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import AssetUploader from '@/app/admin/components/AssetUploader';
 import ProjectPreview from '@/app/admin/components/ProjectPreview';
@@ -29,6 +30,7 @@ const RichTextEditor = dynamic(() => import('@/app/admin/components/RichTextEdit
 type Props = {
   project: ProjectPayload | null;
   projectTypes: ProjectTypeRecord[];
+  articles: ArticleRecord[];
   isCreating: boolean;
   onSaved: (project: ProjectRecord) => void;
   onDeleted: (projectId: string) => void;
@@ -118,16 +120,28 @@ async function revalidateContent(paths: string[]) {
   }
 }
 
-export function ProjectEditor({ project, projectTypes, isCreating, onSaved, onDeleted }: Props) {
+export function ProjectEditor({ project, projectTypes, articles, isCreating, onSaved, onDeleted }: Props) {
   const [formState, setFormState] = useState<ProjectPayload>(normalizePayload(project));
   const [status, setStatus] = useState<StatusState>(baseStatus);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedArticleIds, setSelectedArticleIds] = useState<Set<string>>(new Set());
+  const [articlesDirty, setArticlesDirty] = useState(false);
   const isEditingExisting = Boolean(project?.id);
 
+  // Get initial selected articles based on which articles have this project_id
   useEffect(() => {
     setFormState(normalizePayload(project));
     setStatus(baseStatus);
-  }, [project]);
+    if (project?.id) {
+      const associatedIds = new Set(
+        articles.filter((a) => a.project_id === project.id).map((a) => a.id)
+      );
+      setSelectedArticleIds(associatedIds);
+    } else {
+      setSelectedArticleIds(new Set());
+    }
+    setArticlesDirty(false);
+  }, [project, articles]);
 
   const projectTypeLookup = useMemo(() => {
     const map = new Map<string, ProjectTypeRecord>();
@@ -144,6 +158,32 @@ export function ProjectEditor({ project, projectTypes, isCreating, onSaved, onDe
 
   const updateField = <K extends keyof ProjectPayload>(field: K, value: ProjectPayload[K]) => {
     setFormState((current) => ({ ...current, [field]: value }));
+  };
+
+  const toggleArticle = (articleId: string) => {
+    setSelectedArticleIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(articleId)) {
+        next.delete(articleId);
+      } else {
+        next.add(articleId);
+      }
+      return next;
+    });
+    setArticlesDirty(true);
+  };
+
+  const saveArticleAssociations = async (projectId: string) => {
+    const response = await fetch(`/api/admin/projects/${projectId}/articles`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ articleIds: Array.from(selectedArticleIds) }),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data?.error ?? 'Failed to save article associations');
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -169,6 +209,13 @@ export function ProjectEditor({ project, projectTypes, isCreating, onSaved, onDe
         year: formState.year?.trim() ?? '',
       };
       const saved = await saveProject(payload);
+      
+      // Save article associations if there are changes or if we just created the project
+      if (articlesDirty || !payload.id) {
+        await saveArticleAssociations(saved.id);
+        setArticlesDirty(false);
+      }
+      
       onSaved(saved);
       setFormState(normalizePayload(saved));
       setStatus({ type: 'success', message: 'Saved!' });
@@ -393,6 +440,60 @@ export function ProjectEditor({ project, projectTypes, isCreating, onSaved, onDe
                   onChange={(event) => updateField('fallback_writing_url', event.target.value)}
                 />
               </div>
+          </section>
+          <section className="space-y-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium text-muted-foreground">Associated Articles</p>
+              <p className="text-sm text-muted-foreground">
+                Select articles to associate with this project. These will appear as retro windows on the project page.
+              </p>
+            </div>
+            <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+              {articles.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No articles available. Create articles first in the Articles section.</p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {articles.map((article) => {
+                    const isSelected = selectedArticleIds.has(article.id);
+                    const isAssociatedElsewhere = article.project_id && article.project_id !== formState.id;
+                    return (
+                      <div
+                        key={article.id}
+                        className="flex items-start gap-3 rounded-lg border bg-background p-3"
+                      >
+                        <Checkbox
+                          id={`article-${article.id}`}
+                          checked={isSelected}
+                          onCheckedChange={() => toggleArticle(article.id)}
+                          disabled={isAssociatedElsewhere ? true : false}
+                        />
+                        <label
+                          htmlFor={`article-${article.id}`}
+                          className="flex-1 cursor-pointer text-sm"
+                        >
+                          <p className="font-medium">{article.title || article.name || '(Untitled)'}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {article.publication ? `${article.publication} · ` : ''}
+                            {article.slug}
+                            {isAssociatedElsewhere ? (
+                              <span className="ml-2 text-amber-600">(associated with another project)</span>
+                            ) : null}
+                          </p>
+                        </label>
+                        <Badge variant={article.draft ? 'secondary' : 'outline'} className="text-xs">
+                          {article.draft ? 'Draft' : 'Published'}
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {selectedArticleIds.size > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  {selectedArticleIds.size} article{selectedArticleIds.size === 1 ? '' : 's'} selected
+                </p>
+              ) : null}
+            </div>
           </section>
         </CardContent>
         <CardFooter className="flex flex-wrap items-center justify-between gap-3">

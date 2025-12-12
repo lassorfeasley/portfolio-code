@@ -12,9 +12,11 @@ import {
   getPublishedProjectBySlug,
   listPublicProjectSlugs,
 } from '@/lib/domain/projects/service';
+import { listPublishedArticlesByProjectId } from '@/lib/domain/articles/service';
 import { getFolderLinks } from '@/lib/domain/folder-links/service';
 import { defaultFolderLinks } from '@/lib/domain/folder-links/defaults';
 import type { ProjectDetail } from '@/lib/domain/projects/types';
+import type { ArticleSummary } from '@/lib/domain/articles/types';
 import type { FolderLink } from '@/lib/domain/folder-links/types';
 import { NotFoundError } from '@/lib/api/errors';
 import { hasSupabaseEnv } from '@/lib/utils/env';
@@ -69,6 +71,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   const supabase = supabaseServer();
   let project: ProjectDetail;
   let folderLinks: FolderLink[] = defaultFolderLinks;
+  let articles: ArticleSummary[] = [];
 
   try {
     // Fetch project and folder links in parallel
@@ -79,6 +82,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
     ]);
     project = projectData;
     folderLinks = links;
+    
+    // Fetch articles associated with this project
+    articles = await listPublishedArticlesByProjectId(supabase, project.id);
   } catch (error) {
     if (error instanceof NotFoundError) {
       return notFound();
@@ -157,12 +163,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                 </RetroWindow>
               </div>
             ) : null}
-          </div>
-
-          <div className="twoonegrid moveup">
-            {hasProcessSection ? (
-              <div className="retro-window-placeholder">
-                <RetroWindow title="Process and context" className="doublewide noratioonm">
+            {/* Show process section in the same row when no final images */}
+            {!hasFinalImages && hasProcessSection ? (
+              <div className="retro-window-placeholder" style={{ marginTop: 120, height: 'fit-content' }}>
+                <RetroWindow title="Process and context" className="doublewide noratio">
                   {(project.process_and_context_html ?? '').trim() !== '' ? (
                     <div className="v _10">
                       <div className="paragraph w-richtext" dangerouslySetInnerHTML={{ __html: project.process_and_context_html as string }} />
@@ -181,8 +185,91 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             ) : null}
           </div>
 
+          {/* Show process section below when there are final images */}
+          {hasFinalImages && hasProcessSection ? (
+            <div className="twoonegrid moveup">
+              <div className="retro-window-placeholder">
+                <RetroWindow title="Process and context" className="doublewide noratioonm">
+                  {(project.process_and_context_html ?? '').trim() !== '' ? (
+                    <div className="v _10">
+                      <div className="paragraph w-richtext" dangerouslySetInnerHTML={{ __html: project.process_and_context_html as string }} />
+                    </div>
+                  ) : null}
+                  {Array.isArray(project.process_image_urls) && project.process_image_urls.length > 0 ? (
+                    <div className="v _10">
+                      {project.process_images_label ? <div className="captionlable">{project.process_images_label}</div> : null}
+                      <div className="gallery">
+                        <LightboxGallery images={project.process_image_urls} />
+                      </div>
+                    </div>
+                  ) : null}
+                </RetroWindow>
+              </div>
+            </div>
+          ) : null}
+
           <ExternalLinksWindow links={externalLinks} />
         </div>
+
+        {/* Articles section - three column grid */}
+        {articles.length > 0 ? (
+          <div className="windowcanvas w-dyn-list" style={{ height: 'fit-content', minHeight: 'auto' }}>
+            <div role="list" className="desktopgrid w-dyn-items" style={{ alignItems: 'start' }}>
+              {articles.map((article) => {
+                const articleTitle = article.title || article.name || 'Article';
+                const publicationName = article.publication || 'Article';
+                const contentEl = (
+                  <>
+                    <div className="v _10">
+                      <div className="paragraph homepage">{articleTitle}</div>
+                      {article.url ? (
+                        <div className="paragraph mxht learn-more">
+                          Read @ {publicationName} →
+                        </div>
+                      ) : null}
+                    </div>
+                    {article.featured_image_url ? (
+                      <ImageWithSupabaseFallback
+                        src={article.featured_image_url}
+                        alt={articleTitle}
+                        className="lightbox-link"
+                        style={{ width: '100%', height: 'auto' }}
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                      />
+                    ) : null}
+                  </>
+                );
+                return (
+                  <div key={article.id} role="listitem" className="retro-window-placeholder w-dyn-item" style={{ height: 'fit-content' }}>
+                    <div id="draggable-window" className="retro-window" style={{ height: 'fit-content' }}>
+                      <div className="window-bar">
+                        <div className="paragraph wide">{publicationName}</div>
+                        <div className="x-out">×</div>
+                      </div>
+                      <div className="window-content-wrapper">
+                        {article.url ? (
+                          <a
+                            href={article.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="window-content w-inline-block"
+                          >
+                            {contentEl}
+                          </a>
+                        ) : (
+                          <div className="window-content">
+                            {contentEl}
+                          </div>
+                        )}
+                      </div>
+                      <div className="resize-corner" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <FooterDesktop folderLinks={folderLinks} />

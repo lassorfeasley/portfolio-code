@@ -1,38 +1,32 @@
 import Link from 'next/link';
 import { requireAdminSession } from '@/lib/auth/admin';
 import { AdminShell } from '@/app/admin/components/AdminShell';
-import { ProjectsWorkspace } from '@/app/admin/components/projects/ProjectsWorkspace';
+import { ArticlesWorkspace } from '@/app/admin/components/articles/ArticlesWorkspace';
 import { supabaseServiceRole } from '@/lib/supabase/admin';
-import { listAdminProjects } from '@/lib/domain/projects/service';
-import { listAdminProjectTypes } from '@/lib/domain/project-types/service';
 import { listAdminArticles } from '@/lib/domain/articles/service';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminDashboardPage() {
+export default async function ArticlesPage() {
   const { session } = await requireAdminSession();
   const email = session.user.email ?? 'unknown';
 
   const adminClient = supabaseServiceRole();
   try {
-    const [projects, projectTypes, articles] = await Promise.all([
-      listAdminProjects(adminClient),
-      listAdminProjectTypes(adminClient),
-      listAdminArticles(adminClient),
-    ]);
-
+    const articles = await listAdminArticles(adminClient);
     return (
       <AdminShell userEmail={email}>
-        <ProjectsWorkspace initialProjects={projects} projectTypes={projectTypes} articles={articles} />
+        <ArticlesWorkspace initialArticles={articles} />
       </AdminShell>
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
     return (
       <AdminShell userEmail={email}>
         <section className="rounded-xl border bg-card p-6 shadow-sm">
-          <h1 className="text-2xl font-semibold">Unable to load admin data</h1>
-          <p className="mt-2 text-muted-foreground">{message}</p>
+          <h1 className="text-2xl font-semibold">Unable to load articles</h1>
+          <p className="mt-2 text-muted-foreground">
+            {error instanceof Error ? error.message : 'Unknown error'}
+          </p>
           <Link href="/" className="mt-4 inline-flex text-sm text-primary underline">
             Return to Lassor.com
           </Link>
@@ -41,5 +35,4 @@ export default async function AdminDashboardPage() {
     );
   }
 }
-
 

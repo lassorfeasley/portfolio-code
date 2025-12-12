@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowLeft } from 'lucide-react';
-import type { ProjectPayload, ProjectRecord, ProjectTypeRecord } from '@/types/projects';
+import type { ProjectPayload, ProjectRecord, ProjectTypeRecord, ArticleRecord } from '@/types/projects';
 import { Button } from '@/components/ui/button';
 import { ProjectsTable } from './ProjectsTable';
 import { ProjectEditor } from './ProjectEditor';
@@ -10,6 +10,7 @@ import { useWorkspace, useSelectedPayload } from '@/app/hooks/useWorkspace';
 type ProjectsWorkspaceProps = {
   initialProjects: ProjectRecord[];
   projectTypes: ProjectTypeRecord[];
+  articles: ArticleRecord[];
 };
 
 const emptyProject: ProjectPayload = {
@@ -47,7 +48,7 @@ function toPayload(project: ProjectRecord | null): ProjectPayload {
   };
 }
 
-export function ProjectsWorkspace({ initialProjects, projectTypes }: ProjectsWorkspaceProps) {
+export function ProjectsWorkspace({ initialProjects, projectTypes, articles }: ProjectsWorkspaceProps) {
   const workspace = useWorkspace<ProjectRecord, ProjectPayload>({
     initialItems: initialProjects,
     emptyPayload: emptyProject,
@@ -90,6 +91,7 @@ export function ProjectsWorkspace({ initialProjects, projectTypes }: ProjectsWor
             key={selectedProject.id ?? (workspace.isCreating ? 'new-project' : 'empty-state')}
             project={selectedProject}
             projectTypes={projectTypes}
+            articles={articles}
             isCreating={workspace.isCreating}
             onSaved={workspace.handleSaved}
             onDeleted={workspace.handleDeleted}

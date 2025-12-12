@@ -8,5 +8,5 @@ export type ArticleUpdate = Tables['articles']['Update'];
 
 export type ArticleSummary = Pick<
   ArticleRow,
-  'id' | 'name' | 'slug' | 'title' | 'publication' | 'date_published' | 'featured_image_url'
+  'id' | 'name' | 'slug' | 'title' | 'publication' | 'date_published' | 'featured_image_url' | 'project_id' | 'url'
 >;
