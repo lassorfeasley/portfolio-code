@@ -2,9 +2,13 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import { getPublishedArticleBySlug, listArticleSlugs } from '@/lib/domain/articles/service';
+import { getFolderLinks } from '@/lib/domain/folder-links/service';
+import { defaultFolderLinks } from '@/lib/domain/folder-links/defaults';
 import type { ArticleRow } from '@/lib/domain/articles/types';
+import type { FolderLink } from '@/lib/domain/folder-links/types';
 import { NotFoundError } from '@/lib/api/errors';
 import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
+import FooterDesktop from '@/app/components/FooterDesktop';
 import { hasSupabaseEnv } from '@/lib/utils/env';
 
 export const revalidate = 60;
@@ -45,13 +49,21 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             <div className="resize-corner" />
           </div>
         </section>
+        <FooterDesktop />
       </main>
     );
   }
   const supabase = supabaseServer();
   let a: ArticleRow;
+  let folderLinks: FolderLink[] = defaultFolderLinks;
+  
   try {
-    a = await getPublishedArticleBySlug(supabase, slug);
+    const [articleData, links] = await Promise.all([
+      getPublishedArticleBySlug(supabase, slug),
+      getFolderLinks(supabase),
+    ]);
+    a = articleData;
+    folderLinks = links;
   } catch (error) {
     if (error instanceof NotFoundError) {
       return notFound();
@@ -86,6 +98,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <div className="resize-corner" />
         </div>
       </section>
+      <FooterDesktop folderLinks={folderLinks} />
     </main>
   );
 }

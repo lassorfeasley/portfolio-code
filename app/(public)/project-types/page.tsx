@@ -1,22 +1,38 @@
 import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabase/server';
 import { listPublishedProjectTypes } from '@/lib/domain/project-types/service';
+import { getFolderLinks } from '@/lib/domain/folder-links/service';
+import { defaultFolderLinks } from '@/lib/domain/folder-links/defaults';
 import type { ProjectTypeSummary } from '@/lib/domain/project-types/types';
+import type { FolderLink } from '@/lib/domain/folder-links/types';
+import FooterDesktop from '@/app/components/FooterDesktop';
 
 export const revalidate = 60;
 
 export default async function ProjectTypesIndex() {
   const supabase = supabaseServer();
   let types: ProjectTypeSummary[] = [];
+  let folderLinks: FolderLink[] = defaultFolderLinks;
   let errorMessage: string | null = null;
+  
   try {
-    types = await listPublishedProjectTypes(supabase);
+    const [typesData, links] = await Promise.all([
+      listPublishedProjectTypes(supabase),
+      getFolderLinks(supabase),
+    ]);
+    types = typesData;
+    folderLinks = links;
   } catch (error) {
     errorMessage = error instanceof Error ? error.message : 'Failed to load project types.';
   }
 
   if (errorMessage) {
-    return <main className="retro-root"><div className="globalmargin"><p>Failed to load project types.</p></div></main>;
+    return (
+      <main className="retro-root">
+        <div className="globalmargin"><p>Failed to load project types.</p></div>
+        <FooterDesktop folderLinks={folderLinks} />
+      </main>
+    );
   }
 
   return (
@@ -42,6 +58,7 @@ export default async function ProjectTypesIndex() {
           </div>
         ))}
       </div>
+      <FooterDesktop folderLinks={folderLinks} />
     </main>
   );
 }

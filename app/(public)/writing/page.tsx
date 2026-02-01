@@ -1,16 +1,27 @@
 import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabase/server';
 import { listPublishedArticles } from '@/lib/domain/articles/service';
+import { getFolderLinks } from '@/lib/domain/folder-links/service';
+import { defaultFolderLinks } from '@/lib/domain/folder-links/defaults';
 import type { ArticleSummary } from '@/lib/domain/articles/types';
+import type { FolderLink } from '@/lib/domain/folder-links/types';
 import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
+import FooterDesktop from '@/app/components/FooterDesktop';
 
 export const revalidate = 60;
 
 export default async function WritingIndex() {
   const supabase = supabaseServer();
   let articles: ArticleSummary[] = [];
+  let folderLinks: FolderLink[] = defaultFolderLinks;
+  
   try {
-    articles = await listPublishedArticles(supabase);
+    const [articlesData, links] = await Promise.all([
+      listPublishedArticles(supabase),
+      getFolderLinks(supabase),
+    ]);
+    articles = articlesData;
+    folderLinks = links;
   } catch (error) {
     console.error(error);
   }
@@ -39,6 +50,7 @@ export default async function WritingIndex() {
           </div>
         ))}
       </section>
+      <FooterDesktop folderLinks={folderLinks} />
     </main>
   );
 }

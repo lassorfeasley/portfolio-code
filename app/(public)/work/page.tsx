@@ -1,13 +1,23 @@
 import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabase/server';
 import { listPublishedProjects } from '@/lib/domain/projects/service';
+import { getFolderLinks } from '@/lib/domain/folder-links/service';
+import { defaultFolderLinks } from '@/lib/domain/folder-links/defaults';
+import type { FolderLink } from '@/lib/domain/folder-links/types';
 import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
+import FooterDesktop from '@/app/components/FooterDesktop';
 
 export const revalidate = 60;
 
 export default async function WorkIndex() {
   const supabase = supabaseServer();
-  const projects = await listPublishedProjects(supabase);
+  let folderLinks: FolderLink[] = defaultFolderLinks;
+  
+  const [projects, links] = await Promise.all([
+    listPublishedProjects(supabase),
+    getFolderLinks(supabase),
+  ]);
+  folderLinks = links;
 
   return (
     <main className="retro-root">
@@ -33,6 +43,7 @@ export default async function WorkIndex() {
           </div>
         ))}
       </section>
+      <FooterDesktop folderLinks={folderLinks} />
     </main>
   );
 }

@@ -216,9 +216,6 @@ body {
   font-family: Arial, sans-serif;
   font-size: 14px;
   line-height: 20px;
-  /* Also stabilize on body in case UA ignores html */
-  overflow-y: scroll;
-  scrollbar-gutter: stable both-edges;
 }
 
 img {
@@ -4745,6 +4742,12 @@ body > .retro-window,
 }
 
 @media screen and (max-width: 479px) {
+  /* Disable scrollbar-gutter on mobile - mobile browsers use overlay scrollbars */
+  html {
+    scrollbar-gutter: auto;
+    overflow-y: auto;
+  }
+
   .drawsquare {
     filter: blur(4px);
     width: 30px;
@@ -4977,25 +4980,22 @@ body > .retro-window,
   }
 
   .folder-grid {
-    width: 100% !important;
-    max-width: 100% !important;
-    flex: 1 1 100% !important;
-    align-self: stretch !important;
     grid-column-gap: 15px;
     grid-row-gap: 15px;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(3, 75px);
+    justify-content: center;
   }
   
   .folder-grid .icon-placeholder {
-    width: 100% !important;
-    max-width: none !important;
+    width: 75px;
+    height: 90px;
   }
   
   .folder-grid .draggable-folder {
-    width: 100% !important;
-    max-width: 100% !important;
-    aspect-ratio: 1 / 1.2 !important;
-    height: auto !important;
+    width: 75px;
+    max-width: 75px;
+    height: 90px;
+    max-height: 90px;
   }
 
   .align-right {
@@ -5175,8 +5175,8 @@ body > .retro-window,
   }
 
   .windowcanvas.twoonegrid {
-    grid-column-gap: 0;
-    grid-row-gap: 20px;
+    grid-column-gap: 40px;
+    grid-row-gap: 40px;
     display: flex;
     grid-template-columns: 1fr;
   }
