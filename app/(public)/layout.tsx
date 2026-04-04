@@ -21,6 +21,13 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
       <Script src="/js/core-effects.js?v=2" strategy="afterInteractive" />
       <Script src="/js/visual-effects.js?v=9" strategy="afterInteractive" />
       <Script src="/js/drag-and-drop-icons.js?v=1" strategy="afterInteractive" />
+      <Script id="microsoft-clarity" strategy="afterInteractive">
+        {`(function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "r65yzd1emd");`}
+      </Script>
       <div className="public-body">{children}</div>
     </ErrorBoundary>
   );
