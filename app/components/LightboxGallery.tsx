@@ -82,7 +82,6 @@ function GalleryThumbnail({
           unoptimized
           className="cover-object"
           style={{ objectFit: 'cover' }}
-          crossOrigin="anonymous"
         />
         {imageReady && (
           <canvas
@@ -186,7 +185,6 @@ export default function LightboxGallery({
               onError={handleImageError}
               unoptimized
               style={{ objectFit: 'contain' }}
-              crossOrigin="anonymous"
             />
           </div>
           <button className="lf-lightbox-next" aria-label="Next" onClick={next}>›</button>

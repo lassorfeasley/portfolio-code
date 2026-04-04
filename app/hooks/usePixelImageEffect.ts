@@ -275,8 +275,13 @@ export function usePixelImageEffect(
       }
     }, 100);
 
-    // Cleanup after max retries
-    const timeoutId = setTimeout(() => clearInterval(intervalId), 5000);
+    // Cleanup after max retries — skip effect so image becomes visible
+    const timeoutId = setTimeout(() => {
+      clearInterval(intervalId);
+      if (!isPreparedRef.current && !hasStartedRef.current) {
+        setEffectSkipped(true);
+      }
+    }, 5000);
 
     // If image is already available, also listen for load event
     const img = imageRef.current;

@@ -37,6 +37,7 @@ export default function ImageWithSupabaseFallback({
 }: Props) {
   const initial = useMemo(() => src, [src]);
   const [currentSrc, setCurrentSrc] = useState(initial);
+  const [hasError, setHasError] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +47,7 @@ export default function ImageWithSupabaseFallback({
   
   // Determine if we should hide the original image
   // Hide if: effect is enabled AND effect hasn't finished AND effect wasn't skipped
-  const shouldHideImage = shouldPixelate && !isFinished && !effectSkipped;
+  const shouldHideImage = shouldPixelate && !isFinished && !effectSkipped && !hasError;
 
   // Ensure imageRef points to the actual img rendered by Next.js Image
   useEffect(() => {
@@ -97,11 +98,11 @@ export default function ImageWithSupabaseFallback({
         priority={priority}
         loading={priority ? undefined : loading}
         unoptimized={unoptimized}
-        crossOrigin="anonymous"
         onError={() => {
           if (isSupabaseTransformedUrl(currentSrc)) {
             setCurrentSrc(toOriginalObjectUrl(currentSrc));
           }
+          setHasError(true);
         }}
         style={{
           objectFit: 'cover',
