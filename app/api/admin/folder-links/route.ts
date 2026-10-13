@@ -3,7 +3,7 @@ import { requireAdminSession } from '@/lib/auth/admin';
 import { supabaseServiceRole } from '@/lib/supabase/admin';
 import { updateFolderLink, createFolderLink, deleteFolderLink, listFolderLinks } from '@/lib/domain/folder-links/service';
 import type { FolderLinkPayload } from '@/lib/domain/folder-links/types';
-import { revalidatePath } from 'next/cache';
+import { revalidatePublicSite } from '@/lib/revalidate';
 
 type FolderLinkInput = FolderLinkPayload & { id: string };
 
@@ -47,7 +47,7 @@ export async function PUT(request: Request) {
       })
     );
 
-    revalidatePath('/');
+    revalidatePublicSite();
     
     return NextResponse.json(results);
   } catch (error) {

@@ -2,29 +2,17 @@ import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabase/server';
 import { listPublishedArticles } from '@/lib/domain/articles/service';
 import { getFolderLinks } from '@/lib/domain/folder-links/service';
-import { defaultFolderLinks } from '@/lib/domain/folder-links/defaults';
-import type { ArticleSummary } from '@/lib/domain/articles/types';
-import type { FolderLink } from '@/lib/domain/folder-links/types';
-import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
+import SiteImage from '@/app/components/SiteImage';
 import FooterDesktop from '@/app/components/FooterDesktop';
 
-export const revalidate = 60;
+export const revalidate = false;
 
 export default async function WritingIndex() {
   const supabase = supabaseServer();
-  let articles: ArticleSummary[] = [];
-  let folderLinks: FolderLink[] = defaultFolderLinks;
-  
-  try {
-    const [articlesData, links] = await Promise.all([
-      listPublishedArticles(supabase),
-      getFolderLinks(supabase),
-    ]);
-    articles = articlesData;
-    folderLinks = links;
-  } catch (error) {
-    console.error(error);
-  }
+  const [articles, folderLinks] = await Promise.all([
+    listPublishedArticles(supabase),
+    getFolderLinks(supabase),
+  ]);
 
   return (
     <main className="retro-root">
@@ -37,7 +25,7 @@ export default async function WritingIndex() {
             <div className="window-content">
               <h2><Link href={`/writing/${a.slug}`}>{a.title ?? a.name}</Link></h2>
               {a.featured_image_url ? (
-                <ImageWithSupabaseFallback
+                <SiteImage
                   src={a.featured_image_url}
                   alt={a.title ?? a.name ?? ''}
                   style={{ width: '100%', height: 'auto' }}

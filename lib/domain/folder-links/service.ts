@@ -21,14 +21,8 @@ function toFolderLink(row: FolderLinkRow): FolderLink {
 export async function getFolderLinks(
   client: TypedSupabaseClient
 ): Promise<FolderLink[]> {
-  try {
-    const links = await listFolderLinks(client);
-    return mergeLinksWithDefaults(links);
-  } catch (error) {
-    console.error('Error fetching folder links:', error);
-    // If DB fetch fails, return defaults
-    return mergeLinksWithDefaults(null);
-  }
+  const links = await listFolderLinks(client);
+  return mergeLinksWithDefaults(links);
 }
 
 export async function listFolderLinks(

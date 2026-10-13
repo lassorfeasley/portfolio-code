@@ -1,8 +1,7 @@
 "use client";
 
-import Image, { type ImageLoaderProps } from 'next/image';
-import { useCallback, useEffect, useState, useRef, type SyntheticEvent } from 'react';
-import { toLargeUrl, toThumbUrl, toOriginalObjectUrl, isSupabaseTransformedUrl } from '@/lib/supabase/image';
+import Image from 'next/image';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { usePixelImageEffect } from '@/app/hooks/usePixelImageEffect';
 
@@ -12,19 +11,15 @@ type LightboxGalleryProps = {
   linkClassName?: string;
 };
 
-const passthroughLoader = ({ src }: ImageLoaderProps) => src;
-
 // Separate component for gallery thumbnails to use pixel effect hook
 function GalleryThumbnail({
   src,
   onClick,
   linkClassName,
-  onError,
 }: {
   src: string;
   onClick: () => void;
   linkClassName: string;
-  onError: (e: SyntheticEvent<HTMLImageElement>) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -72,14 +67,11 @@ function GalleryThumbnail({
     <a href="#" className={linkClassName} onClick={(e) => { e.preventDefault(); onClick(); }} aria-label="Open image">
       <div ref={containerRef} className="thumb-frame" style={{ position: 'relative' }}>
         <Image
-          loader={passthroughLoader}
           src={src}
           alt=""
           fill
           sizes="(max-width: 767px) 50vw, (max-width: 1279px) 33vw, 220px"
           loading="lazy"
-          onError={onError}
-          unoptimized
           className="cover-object"
           style={{ objectFit: 'cover' }}
         />
@@ -116,16 +108,6 @@ export default function LightboxGallery({
   const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length]);
   const prev = useCallback(() => setIndex((i) => (i - 1 + images.length) % images.length), [images.length]);
 
-  const handleImageError = useCallback((event: SyntheticEvent<HTMLImageElement>) => {
-    const img = event.currentTarget;
-    const failingSrc = img.currentSrc || img.src;
-    if (isSupabaseTransformedUrl(failingSrc)) {
-      const fallback = toOriginalObjectUrl(failingSrc);
-      img.src = fallback;
-      img.srcset = '';
-    }
-  }, []);
-
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -145,24 +127,18 @@ export default function LightboxGallery({
   if (!Array.isArray(images) || images.length === 0) return null;
 
   const safeIndex = Math.max(0, Math.min(index, images.length - 1));
-  const activeImageSrc = toLargeUrl(images[safeIndex], 2200);
   return (
     <>
       <div className="collection-list w-dyn-items">
-        {images.map((url, i) => {
-          // Sharper thumbnails to reduce visible pixelation while still smaller than full
-          const thumb = toThumbUrl(url, 1000, 88);
-          return (
-            <div key={i} className={itemClassName}>
-              <GalleryThumbnail
-                src={thumb}
-                onClick={() => show(i)}
-                linkClassName={linkClassName}
-                onError={handleImageError}
-              />
-            </div>
-          );
-        })}
+        {images.map((url, i) => (
+          <div key={i} className={itemClassName}>
+            <GalleryThumbnail
+              src={url}
+              onClick={() => show(i)}
+              linkClassName={linkClassName}
+            />
+          </div>
+        ))}
       </div>
 
       {open ? createPortal((
@@ -176,14 +152,11 @@ export default function LightboxGallery({
           <button className="lf-lightbox-prev" aria-label="Previous" onClick={prev}>‹</button>
           <div className="lf-lightbox-img-wrapper">
             <Image
-              loader={passthroughLoader}
               className="lf-lightbox-img no-pixelate"
-              src={activeImageSrc}
+              src={images[safeIndex]}
               alt=""
               fill
               sizes="(max-width: 767px) 90vw, min(92vw, 1600px)"
-              onError={handleImageError}
-              unoptimized
               style={{ objectFit: 'contain' }}
             />
           </div>

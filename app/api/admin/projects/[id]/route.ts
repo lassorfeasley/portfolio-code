@@ -3,6 +3,7 @@ import { requireAdminSession } from '@/lib/auth/admin';
 import { validateProjectPayload } from '@/lib/validators/projects';
 import { ApiError } from '@/lib/api/errors';
 import { handleApiError, json } from '@/lib/api/response';
+import { revalidatePublicSite } from '@/lib/revalidate';
 import { supabaseServiceRole } from '@/lib/supabase/admin';
 import {
   deleteProject,
@@ -41,6 +42,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     const adminClient = supabaseServiceRole();
     const updated = await updateProject(adminClient, id, data);
+    revalidatePublicSite();
     return json(updated);
   } catch (error) {
     return handleApiError(error);
@@ -53,6 +55,7 @@ export async function DELETE(_: NextRequest, { params }: Params) {
     const { id } = await params;
     const adminClient = supabaseServiceRole();
     await deleteProject(adminClient, id);
+    revalidatePublicSite();
     return json({ success: true });
   } catch (error) {
     return handleApiError(error);

@@ -3,7 +3,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { CloudUpload, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
+import { upload } from '@vercel/blob/client';
+import SiteImage from '@/app/components/SiteImage';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -19,8 +20,17 @@ type Props = {
   onFilesChange: (urls: string[]) => void;
 };
 
-const uploadBucket = process.env.NEXT_PUBLIC_ADMIN_UPLOAD_BUCKET || 'projects';
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
+function toPathSegment(value: string): string {
+  return value.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function buildPathname(prefix: string, filename: string): string {
+  const extension = filename.includes('.') ? toPathSegment(filename.split('.').pop() ?? '') : '';
+  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${prefix}/${name}.${(extension || 'bin').toLowerCase()}`;
+}
 
 export default function AssetUploader({
   slug,
@@ -37,8 +47,8 @@ export default function AssetUploader({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const prefix = useMemo(() => {
-    const safeSlug = slug?.trim() || 'new-project';
-    return ['projects', safeSlug, folder].filter(Boolean).join('/');
+    const safeSlug = toPathSegment(slug?.trim() ?? '') || 'new-project';
+    return ['projects', safeSlug, folder ? toPathSegment(folder) : ''].filter(Boolean).join('/');
   }, [folder, slug]);
 
   const handleFiles = async (fileList: FileList | null) => {
@@ -70,20 +80,12 @@ export default function AssetUploader({
 
       setStatus(`Uploading ${file.name}…`);
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('bucket', uploadBucket);
-        formData.append('prefix', prefix);
-        const response = await fetch('/api/admin/uploads', {
-          method: 'POST',
-          body: formData,
-          credentials: 'include',
+        const blob = await upload(buildPathname(prefix, file.name), file, {
+          access: 'public',
+          handleUploadUrl: '/api/admin/uploads',
+          contentType: file.type,
         });
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data?.error ?? 'Upload failed');
-        }
-        nextFiles = [...nextFiles, data.publicUrl];
+        nextFiles = [...nextFiles, blob.url];
         onFilesChange(nextFiles);
         setStatus(`Uploaded ${file.name}`);
         toast.success(`Uploaded ${file.name}`);
@@ -167,7 +169,7 @@ export default function AssetUploader({
               key={`${url}-${index}`}
               className="relative overflow-hidden rounded-lg border bg-background"
             >
-              <ImageWithSupabaseFallback
+              <SiteImage
                 src={url}
                 alt={`${label} ${index + 1}`}
                 className="h-32 w-full object-cover"

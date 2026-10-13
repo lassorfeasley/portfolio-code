@@ -11,17 +11,10 @@ import type { ProjectTypeSummary } from '@/lib/domain/project-types/types';
 import type { HeroContent } from '@/lib/domain/hero-content/types';
 import type { FolderLink } from '@/lib/domain/folder-links/types';
 import { hasSupabaseEnv } from '@/lib/utils/env';
-import { redirect } from 'next/navigation';
 
-export const revalidate = 60;
+export const revalidate = false;
 
-export default async function Home(props: { searchParams: Promise<{ code?: string }> }) {
-  const searchParams = await props.searchParams;
-
-  if (searchParams.code) {
-    redirect(`/auth/callback?code=${searchParams.code}&next=/admin/reset-password`);
-  }
-
+export default async function Home() {
   const envConfigured = hasSupabaseEnv();
 
   let projects: ProjectSummary[] = [];
@@ -34,20 +27,12 @@ export default async function Home(props: { searchParams: Promise<{ code?: strin
     statusMessage = 'Supabase environment variables are not configured. Dynamic project data is unavailable.';
   } else {
     const supabase = supabaseServer();
-    try {
-      const [projectData, typeData, hero, links] = await Promise.all([
-        listPublishedProjects(supabase),
-        listPublishedProjectTypes(supabase),
-        getHeroContent(supabase),
-        getFolderLinks(supabase),
-      ]);
-      projects = projectData;
-      projectTypes = typeData;
-      heroContent = hero;
-      folderLinks = links;
-    } catch (error) {
-      statusMessage = error instanceof Error ? error.message : 'Failed to load project data.';
-    }
+    [projects, projectTypes, heroContent, folderLinks] = await Promise.all([
+      listPublishedProjects(supabase),
+      listPublishedProjectTypes(supabase),
+      getHeroContent(supabase),
+      getFolderLinks(supabase),
+    ]);
   }
 
   return (

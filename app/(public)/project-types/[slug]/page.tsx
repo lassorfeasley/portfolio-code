@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import FooterDesktop from '@/app/components/FooterDesktop';
 import RetroWindow from '@/app/components/RetroWindow';
-import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
+import SiteImage from '@/app/components/SiteImage';
 import {
   getPublishedProjectTypeBySlug,
   listProjectTypeSlugs,
@@ -18,7 +18,7 @@ import type { ProjectSummary } from '@/lib/domain/projects/types';
 import type { FolderLink } from '@/lib/domain/folder-links/types';
 import { hasSupabaseEnv } from '@/lib/utils/env';
 
-export const revalidate = 60;
+export const revalidate = false;
 
 export async function generateStaticParams() {
   if (!hasSupabaseEnv()) return [];
@@ -42,50 +42,49 @@ export async function generateMetadata(
 }
 
 export default async function ProjectTypePage({ params }: { params: Promise<{ slug: string }> }) {
-  try {
-    const { slug } = await params;
-    if (!hasSupabaseEnv()) {
-      return (
-        <main className="retro-root">
-          <div className="globalmargin">
-            <div className="topbar">
-              <Link href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></Link>
-              <Link href={`/project-types/${slug}`} className="h _5 link w-inline-block"><div>Collections</div><div>→</div></Link>
-              <div className="h _5 link"><div className="text-block-5">{slug}</div></div>
-            </div>
-            <div className="windowcanvas">
-              <div className="retro-window-placeholder">
-                <div className="retro-window">
-                  <div className="window-bar"><div className="paragraph">This collection is unavailable in local dev</div><div className="x-out">×</div></div>
-                  <div className="window-content-wrapper"><div className="window-content"><div className="paragraph">Supabase env vars are not set.</div></div></div>
-                  <div className="resize-corner" />
-                </div>
+  const { slug } = await params;
+  if (!hasSupabaseEnv()) {
+    return (
+      <main className="retro-root">
+        <div className="globalmargin">
+          <div className="topbar">
+            <Link href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></Link>
+            <Link href={`/project-types/${slug}`} className="h _5 link w-inline-block"><div>Collections</div><div>→</div></Link>
+            <div className="h _5 link"><div className="text-block-5">{slug}</div></div>
+          </div>
+          <div className="windowcanvas">
+            <div className="retro-window-placeholder">
+              <div className="retro-window">
+                <div className="window-bar"><div className="paragraph">This collection is unavailable in local dev</div><div className="x-out">×</div></div>
+                <div className="window-content-wrapper"><div className="window-content"><div className="paragraph">Supabase env vars are not set.</div></div></div>
+                <div className="resize-corner" />
               </div>
             </div>
           </div>
-          <FooterDesktop />
-        </main>
-      );
-    }
-    const supabase = supabaseServer();
-    let typeData: ProjectTypeDetail;
-    let projects: ProjectSummary[] = [];
-    let folderLinks: FolderLink[] = defaultFolderLinks;
+        </div>
+        <FooterDesktop />
+      </main>
+    );
+  }
+  const supabase = supabaseServer();
+  let typeData: ProjectTypeDetail;
+  let projects: ProjectSummary[] = [];
+  let folderLinks: FolderLink[] = defaultFolderLinks;
 
-    try {
-      const [fetchedTypeData, fetchedLinks] = await Promise.all([
-        getPublishedProjectTypeBySlug(supabase, slug),
-        getFolderLinks(supabase)
-      ]);
-      typeData = fetchedTypeData;
-      folderLinks = fetchedLinks;
-      projects = await listPublishedProjectsByType(supabase, typeData.id);
-    } catch (error) {
-      if (error instanceof NotFoundError) {
-        return notFound();
-      }
-      throw error;
+  try {
+    const [fetchedTypeData, fetchedLinks] = await Promise.all([
+      getPublishedProjectTypeBySlug(supabase, slug),
+      getFolderLinks(supabase)
+    ]);
+    typeData = fetchedTypeData;
+    folderLinks = fetchedLinks;
+    projects = await listPublishedProjectsByType(supabase, typeData.id);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return notFound();
     }
+    throw error;
+  }
 
   const article = /^[aeiou]/i.test(typeData.name ?? '') ? 'an' : 'a';
 
@@ -151,7 +150,7 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
                         <div className="paragraph mxht learn-more">learn more →</div>
                       </div>
                       {p.featured_image_url ? (
-                        <ImageWithSupabaseFallback
+                        <SiteImage
                           src={p.featured_image_url}
                           alt={p.name ?? ''}
                           className="lightbox-link"
@@ -172,35 +171,6 @@ export default async function ProjectTypePage({ params }: { params: Promise<{ sl
       <FooterDesktop folderLinks={folderLinks} />
     </main>
   );
-  } catch (error) {
-    console.error('Error in ProjectTypePage:', error);
-    return (
-      <main className="retro-root">
-        <div className="globalmargin">
-          <div className="topbar">
-            <Link href="/" className="h _5 link w-inline-block"><div>Lassor.com</div><div>→</div></Link>
-            <div className="h _5 link"><div>Error</div></div>
-          </div>
-          <div className="windowcanvas">
-            <div className="retro-window-placeholder">
-              <div className="retro-window">
-                <div className="window-bar"><div className="paragraph">Error</div><div className="x-out">×</div></div>
-                <div className="window-content-wrapper">
-                  <div className="window-content">
-                    <div className="paragraph">
-                      {error instanceof Error ? error.message : 'An error occurred loading this page.'}
-                    </div>
-                  </div>
-                </div>
-                <div className="resize-corner" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <FooterDesktop />
-      </main>
-    );
-  }
 }
 
 

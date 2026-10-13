@@ -3,6 +3,7 @@ import { requireAdminSession } from '@/lib/auth/admin';
 import { validateArticlePayload } from '@/lib/validators/articles';
 import { ApiError } from '@/lib/api/errors';
 import { handleApiError, json } from '@/lib/api/response';
+import { revalidatePublicSite } from '@/lib/revalidate';
 import { supabaseServiceRole } from '@/lib/supabase/admin';
 import { createArticle, listAdminArticles } from '@/lib/domain/articles/service';
 
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     const created = await createArticle(adminClient, data);
+    revalidatePublicSite();
     return json(created, { status: 201 });
   } catch (error) {
     return handleApiError(error);

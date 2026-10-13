@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { isAllowedAdminEmail } from '@/lib/auth/allowlist';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string | undefined;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string | undefined;
-const allowedEmails = (process.env.ADMIN_ALLOWED_EMAILS ?? '')
-  .split(',')
-  .map((email) => email.trim().toLowerCase())
-  .filter(Boolean);
-const hasAllowList = allowedEmails.length > 0;
 
 function createSupabaseClient(req: NextRequest, res: NextResponse) {
   if (!url || !anonKey) return null;
@@ -28,6 +24,20 @@ function createSupabaseClient(req: NextRequest, res: NextResponse) {
 }
 
 export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Legacy password-reset links land on the homepage; the page itself is static and never reads query params.
+  if (pathname === '/') {
+    const code = req.nextUrl.searchParams.get('code');
+    if (!code) return NextResponse.next();
+    const callbackUrl = req.nextUrl.clone();
+    callbackUrl.pathname = '/auth/callback';
+    callbackUrl.search = '';
+    callbackUrl.searchParams.set('code', code);
+    callbackUrl.searchParams.set('next', '/admin/reset-password');
+    return NextResponse.redirect(callbackUrl);
+  }
+
   const res = NextResponse.next();
   const supabase = createSupabaseClient(req, res);
 
@@ -37,20 +47,16 @@ export async function middleware(req: NextRequest) {
   }
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const { pathname } = req.nextUrl;
-const isAdminRoute = pathname.startsWith('/admin');
+  const isAdminRoute = pathname.startsWith('/admin');
   const isLoginRoute = pathname.startsWith('/admin/login');
   const isResetPasswordRoute = pathname.startsWith('/admin/reset-password');
   const isApiRoute = pathname.startsWith('/api/admin');
-const isAuthLoginRoute = pathname.startsWith('/auth/login');
-const isAuthCreateRoute = pathname.startsWith('/auth/create-account');
-  const userEmail = session?.user?.email?.toLowerCase() ?? null;
-const isAllowedUser = session
-  ? !hasAllowList || (userEmail ? allowedEmails.includes(userEmail) : false)
-  : false;
+  const isAuthLoginRoute = pathname.startsWith('/auth/login');
+  const isAuthCreateRoute = pathname.startsWith('/auth/create-account');
+  const isAllowedUser = Boolean(user) && isAllowedAdminEmail(user?.email);
 
   if (isApiRoute && !isAllowedUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -61,14 +67,14 @@ const isAllowedUser = session
     return res;
   }
 
-if (isAdminRoute && !session && !isLoginRoute) {
+  if (isAdminRoute && !user && !isLoginRoute) {
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = '/admin/login';
     redirectUrl.searchParams.set('redirect', pathname + (req.nextUrl.search ?? ''));
     return NextResponse.redirect(redirectUrl);
   }
 
-if (isAdminRoute && session && !isAllowedUser) {
+  if (isAdminRoute && user && !isAllowedUser) {
     await supabase.auth.signOut();
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = '/admin/login';
@@ -76,24 +82,23 @@ if (isAdminRoute && session && !isAllowedUser) {
     return NextResponse.redirect(loginUrl);
   }
 
-if (session && isLoginRoute && isAllowedUser) {
+  if (user && isLoginRoute && isAllowedUser) {
     const dashboardUrl = req.nextUrl.clone();
     dashboardUrl.pathname = '/admin';
     dashboardUrl.searchParams.delete('redirect');
     return NextResponse.redirect(dashboardUrl);
   }
 
-if (session && (isAuthLoginRoute || isAuthCreateRoute)) {
-  const homeUrl = req.nextUrl.clone();
-  homeUrl.pathname = '/';
-  homeUrl.searchParams.delete('redirect');
-  return NextResponse.redirect(homeUrl);
+  if (user && (isAuthLoginRoute || isAuthCreateRoute)) {
+    const homeUrl = req.nextUrl.clone();
+    homeUrl.pathname = '/';
+    homeUrl.searchParams.delete('redirect');
+    return NextResponse.redirect(homeUrl);
   }
 
   return res;
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*', '/auth/:path*'],
+  matcher: ['/', '/admin/:path*', '/api/admin/:path*', '/auth/:path*'],
 };
-

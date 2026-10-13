@@ -1,31 +1,19 @@
 import { supabaseServerAuth } from '@/lib/supabase/ssr';
 import { ForbiddenError, UnauthorizedError } from '@/lib/api/errors';
-
-const allowedEmails = (process.env.ADMIN_ALLOWED_EMAILS ?? '')
-  .split(',')
-  .map((email) => email.trim().toLowerCase())
-  .filter(Boolean);
-
-function isAllowed(email: string | null | undefined): boolean {
-  if (!allowedEmails.length) return true;
-  if (!email) return false;
-  return allowedEmails.includes(email.toLowerCase());
-}
+import { isAllowedAdminEmail } from '@/lib/auth/allowlist';
 
 export async function requireAdminSession() {
   const supabase = await supabaseServerAuth();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     throw new UnauthorizedError('Sign in to continue.');
   }
-  if (!isAllowed(session.user.email)) {
+  if (!isAllowedAdminEmail(user.email)) {
     throw new ForbiddenError('Your account is not authorized.');
   }
 
-  return { supabase, session };
+  return { supabase, user };
 }
-
-

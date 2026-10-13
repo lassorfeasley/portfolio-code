@@ -7,11 +7,11 @@ import { defaultFolderLinks } from '@/lib/domain/folder-links/defaults';
 import type { ArticleRow } from '@/lib/domain/articles/types';
 import type { FolderLink } from '@/lib/domain/folder-links/types';
 import { NotFoundError } from '@/lib/api/errors';
-import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
+import SiteImage from '@/app/components/SiteImage';
 import FooterDesktop from '@/app/components/FooterDesktop';
 import { hasSupabaseEnv } from '@/lib/utils/env';
 
-export const revalidate = 60;
+export const revalidate = false;
 
 export async function generateStaticParams() {
   if (!hasSupabaseEnv()) return [];
@@ -83,7 +83,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             {a.publication ? <p>{a.publication}</p> : null}
             {a.date_published ? <p>{new Date(a.date_published).toLocaleDateString()}</p> : null}
             {a.featured_image_url ? (
-              <ImageWithSupabaseFallback
+              <SiteImage
                 src={a.featured_image_url}
                 alt={a.title ?? a.name ?? ''}
                 style={{ width: '100%', height: 'auto' }}

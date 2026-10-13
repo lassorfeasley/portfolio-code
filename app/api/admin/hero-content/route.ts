@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/auth/admin';
 import { supabaseServiceRole } from '@/lib/supabase/admin';
 import { updateHeroContent } from '@/lib/domain/hero-content/service';
-import { revalidatePath } from 'next/cache';
+import { revalidatePublicSite } from '@/lib/revalidate';
 
 export async function PUT(request: Request) {
   try {
@@ -18,7 +18,7 @@ export async function PUT(request: Request) {
       footerLinkHref: body.footerLinkHref,
     });
 
-    revalidatePath('/');
+    revalidatePublicSite();
     
     return NextResponse.json(result);
   } catch (error) {

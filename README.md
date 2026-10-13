@@ -31,11 +31,9 @@ Set these in `.env.local` (and in your deployment provider):
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key for client-side auth. |
 | `SUPABASE_URL` | ✅ | Server-side URL (falls back to `NEXT_PUBLIC_SUPABASE_URL`). |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Service-role key for admin CRUD/storage. Never expose client-side. |
-| `ADMIN_ALLOWED_EMAILS` | ✅ | Comma-separated list of email addresses allowed into `/admin`. |
-| `ADMIN_UPLOAD_BUCKETS` | ➖ | Comma-separated allowlist of storage buckets (default `projects`). |
-| `ADMIN_UPLOAD_BUCKET` | ➖ | Default bucket name when client omits one (default `projects`). |
+| `ADMIN_ALLOWED_EMAILS` | ✅ | Comma-separated list of email addresses allowed into `/admin`. If empty, nobody can access the admin. |
+| `BLOB_READ_WRITE_TOKEN` | ✅ | Vercel Blob token for image uploads. Set automatically when a Blob store is connected to the Vercel project. |
 | `ADMIN_UPLOAD_MAX_BYTES` | ➖ | Optional upload size ceiling in bytes (default 25MB). |
-| `NEXT_PUBLIC_ADMIN_UPLOAD_BUCKET` | ➖ | Client-side default bucket label for uploader controls. |
 
 ## Supabase Configuration
 
@@ -73,7 +71,11 @@ npm run test       # vitest unit tests (validators, etc.)
 
 ## Media uploads
 
-Uploads are proxied through `/api/admin/uploads` so the service-role key never hits the browser. Files are written to the bucket/prefix specified by the uploader UI (default `projects/<slug>`), and the endpoint returns the public URL that the form then attaches to featured/final/process image lists.
+Images are stored in Vercel Blob and served through `next/image`. The browser uploads directly to Blob (`projects/<slug>/<folder>/...`) using a short-lived token from `/api/admin/uploads`, which only issues tokens to signed-in admins. The returned public URL is attached to the featured/final/process image lists.
+
+The public site is fully static and never contacts Supabase at runtime. Every admin save revalidates all public pages, so they are rebuilt from Supabase on the next visit.
+
+`scripts/migrate-images.ts` is a one-time script that copied the original Supabase Storage images to Blob and rewrote the database URLs (`npm run migrate-images -- --dry-run`).
 
 ## Testing
 

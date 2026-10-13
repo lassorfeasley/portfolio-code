@@ -25,19 +25,14 @@ function getProcessedBody(): string {
   return body;
 }
 
-export const revalidate = 60;
+export const revalidate = false;
 
 export default async function FaceblindPage() {
   const body = getProcessedBody();
   let folderLinks: FolderLink[] = defaultFolderLinks;
 
   if (hasSupabaseEnv()) {
-    const supabase = supabaseServer();
-    try {
-      folderLinks = await getFolderLinks(supabase);
-    } catch (error) {
-      console.error('Failed to load folder links:', error);
-    }
+    folderLinks = await getFolderLinks(supabaseServer());
   }
 
   return (

@@ -5,8 +5,7 @@ import { supabaseServer } from '@/lib/supabase/server';
 import FooterDesktop from '@/app/components/FooterDesktop';
 import RetroWindow from '@/app/components/RetroWindow';
 import ExternalLinksWindow from '@/app/components/ExternalLinksWindow';
-import { toLargeUrl } from '@/lib/supabase/image';
-import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
+import SiteImage from '@/app/components/SiteImage';
 import LightboxGallery from '@/app/components/LightboxGallery';
 import {
   getPublishedProjectBySlug,
@@ -22,7 +21,7 @@ import { NotFoundError } from '@/lib/api/errors';
 import { hasSupabaseEnv } from '@/lib/utils/env';
 import { toEmbedUrl, toBrand } from '@/lib/utils/urls';
 
-export const revalidate = 60;
+export const revalidate = false;
 
 export async function generateStaticParams() {
   if (!hasSupabaseEnv()) return [];
@@ -74,8 +73,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   let articles: ArticleSummary[] = [];
 
   try {
-    // Fetch project and folder links in parallel
-    // getFolderLinks handles its own errors and returns defaults, so it won't fail the Promise.all unless something critical happens
     const [projectData, links] = await Promise.all([
       getPublishedProjectBySlug(supabase, slug),
       getFolderLinks(supabase)
@@ -127,11 +124,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                 {project.description ? <div className="paragraph">{project.description}</div> : null}
                 {/* If a video is present, do not show featured image to avoid duplication */}
                 {!project.video_url && project.featured_image_url ? (
-                  <ImageWithSupabaseFallback
-                    src={toLargeUrl(project.featured_image_url, 1800)}
+                  <SiteImage
+                    src={project.featured_image_url}
                     alt={project.name ?? ''}
                     className="lightbox-link"
                     style={{ maxWidth: '100%', height: 'auto' }}
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    priority
                   />
                 ) : null}
                 {project.video_url ? (
@@ -229,7 +228,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                       ) : null}
                     </div>
                     {article.featured_image_url ? (
-                      <ImageWithSupabaseFallback
+                      <SiteImage
                         src={article.featured_image_url}
                         alt={articleTitle}
                         className="lightbox-link"

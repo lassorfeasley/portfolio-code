@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { requireAdminSession } from '@/lib/auth/admin';
 import { ApiError } from '@/lib/api/errors';
 import { handleApiError, json } from '@/lib/api/response';
+import { revalidatePublicSite } from '@/lib/revalidate';
 import { supabaseServiceRole } from '@/lib/supabase/admin';
 import {
   listArticlesByProjectId,
@@ -34,6 +35,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     const adminClient = supabaseServiceRole();
     await updateArticleProjectAssociations(adminClient, id, payload.articleIds);
+    revalidatePublicSite();
     
     // Return the updated list
     const articles = await listArticlesByProjectId(adminClient, id);

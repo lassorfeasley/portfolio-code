@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
+import SiteImage from '@/app/components/SiteImage';
 import type { ProjectPayload } from '@/types/projects';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -33,7 +33,7 @@ export default function ProjectPreview({ project }: Props) {
               Video embed detected
             </div>
           ) : project.featured_image_url ? (
-            <ImageWithSupabaseFallback
+            <SiteImage
               src={project.featured_image_url}
               alt={project.name ?? ''}
               className="w-full rounded-lg border"

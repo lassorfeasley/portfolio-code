@@ -18,7 +18,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
       <style dangerouslySetInnerHTML={{ __html: guardCss }} />
       <Script src="/js/retro-window-state.js?v=1" strategy="afterInteractive" />
       <Script src="/js/retro-scatter-engine.js?v=1" strategy="afterInteractive" />
-      <Script src="/js/core-effects.js?v=2" strategy="afterInteractive" />
+      <Script src="/js/core-effects.js?v=3" strategy="afterInteractive" />
       <Script src="/js/visual-effects.js?v=9" strategy="afterInteractive" />
       <Script src="/js/drag-and-drop-icons.js?v=1" strategy="afterInteractive" />
       <Script id="microsoft-clarity" strategy="afterInteractive">

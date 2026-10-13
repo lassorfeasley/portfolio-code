@@ -3,6 +3,7 @@ import { requireAdminSession } from '@/lib/auth/admin';
 import { validateProjectPayload } from '@/lib/validators/projects';
 import { ApiError } from '@/lib/api/errors';
 import { handleApiError, json } from '@/lib/api/response';
+import { revalidatePublicSite } from '@/lib/revalidate';
 import { supabaseServiceRole } from '@/lib/supabase/admin';
 import { createProject, listAdminProjects } from '@/lib/domain/projects/service';
 
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     const created = await createProject(adminClient, data);
+    revalidatePublicSite();
     return json(created, { status: 201 });
   } catch (error) {
     return handleApiError(error);

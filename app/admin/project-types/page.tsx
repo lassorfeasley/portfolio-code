@@ -8,8 +8,8 @@ import { listAdminProjectTypes } from '@/lib/domain/project-types/service';
 export const dynamic = 'force-dynamic';
 
 export default async function ProjectTypesPage() {
-  const { session } = await requireAdminSession();
-  const email = session.user.email ?? 'unknown';
+  const { user } = await requireAdminSession();
+  const email = user.email ?? 'unknown';
 
   const adminClient = supabaseServiceRole();
   try {

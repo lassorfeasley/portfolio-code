@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import ImageWithSupabaseFallback from '@/app/components/ImageWithSupabaseFallback';
+import SiteImage from '@/app/components/SiteImage';
 import RetroWindow from '@/app/components/RetroWindow';
 import type { ProjectSummary } from '@/lib/domain/projects/types';
 import type { ProjectTypeSummary } from '@/lib/domain/project-types/types';
@@ -145,7 +145,7 @@ export default function HomeDesktop({
               <div className="paragraph homepage">
                 {displayHeroContent.heroText}
               </div>
-              <ImageWithSupabaseFallback
+              <SiteImage
                 src={displayHeroContent.heroImageUrl}
                 alt="Portrait of Lassor Feasley"
                 className="image-2 max-with"
@@ -231,11 +231,12 @@ export default function HomeDesktop({
                     </div>
                     </div>
                     {project.featured_image_url ? (
-                      <ImageWithSupabaseFallback
+                      <SiteImage
                         src={project.featured_image_url}
                         alt={project.name ?? ''}
                         className="maxw450px"
                         style={{ width: '100%', height: 'auto' }}
+                        sizes="(max-width: 768px) 100vw, 450px"
                       />
                     ) : null}
                   </RetroWindow>

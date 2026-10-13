@@ -7,7 +7,8 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "migrate-images": "node --env-file=.env.local scripts/migrate-images.ts"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.1.0",
@@ -29,6 +30,7 @@
     "@tiptap/extension-placeholder": "^3.11.1",
     "@tiptap/react": "^3.11.1",
     "@tiptap/starter-kit": "^3.11.1",
+    "@vercel/blob": "^2.8.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.469.0",
