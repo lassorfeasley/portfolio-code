@@ -87,37 +87,54 @@ export function usePixelImageEffect(
       const objectFit = computed.objectFit;
 
       if (objectFit === 'cover' || objectFit === 'contain') {
-        const imgRatio = img.naturalWidth / img.naturalHeight;
+        const naturalWidth = img.naturalWidth;
+        const naturalHeight = img.naturalHeight;
+        // Image may be mid-swap between srcset candidates; keep the previous frame.
+        if (naturalWidth === 0 || naturalHeight === 0) return;
+
+        // For responsive images (srcset + sizes) naturalWidth/naturalHeight are
+        // density-corrected, but drawImage()'s source rectangle is in bitmap pixels,
+        // so cropping the <img> directly draws only a zoomed-in corner of the image.
+        // Normalise by painting the whole bitmap into a canvas whose pixel grid matches
+        // the natural dimensions, then crop from that.
+        const source = document.createElement('canvas');
+        source.width = naturalWidth;
+        source.height = naturalHeight;
+        const sourceCtx = source.getContext('2d');
+        if (!sourceCtx) return;
+        sourceCtx.drawImage(img, 0, 0, naturalWidth, naturalHeight);
+
+        const imgRatio = naturalWidth / naturalHeight;
         const canvasRatio = width / height;
         let sx: number, sy: number, sw: number, sh: number;
 
         if (objectFit === 'cover') {
           if (imgRatio > canvasRatio) {
-            sh = img.naturalHeight;
+            sh = naturalHeight;
             sw = sh * canvasRatio;
             sy = 0;
-            sx = (img.naturalWidth - sw) / 2;
+            sx = (naturalWidth - sw) / 2;
           } else {
-            sw = img.naturalWidth;
+            sw = naturalWidth;
             sh = sw / canvasRatio;
             sx = 0;
-            sy = (img.naturalHeight - sh) / 2;
+            sy = (naturalHeight - sh) / 2;
           }
         } else {
           if (imgRatio > canvasRatio) {
-            sw = img.naturalWidth;
+            sw = naturalWidth;
             sh = sw / canvasRatio;
             sx = 0;
-            sy = (img.naturalHeight - sh) / 2;
+            sy = (naturalHeight - sh) / 2;
           } else {
-            sh = img.naturalHeight;
+            sh = naturalHeight;
             sw = sh * canvasRatio;
-            sx = 0;
-            sy = (img.naturalWidth - sw) / 2;
+            sy = 0;
+            sx = (naturalWidth - sw) / 2;
           }
         }
 
-        downCtx.drawImage(img, sx, sy, sw, sh, 0, 0, downCanvas.width, downCanvas.height);
+        downCtx.drawImage(source, sx, sy, sw, sh, 0, 0, downCanvas.width, downCanvas.height);
       } else {
         downCtx.drawImage(img, 0, 0, downCanvas.width, downCanvas.height);
       }
