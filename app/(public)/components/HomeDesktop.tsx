@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import SiteImage from '@/app/components/SiteImage';
 import RetroWindow from '@/app/components/RetroWindow';
+import FeaturedBrowserWindow from '@/app/components/featured/FeaturedBrowserWindow';
 import type { ProjectSummary } from '@/lib/domain/projects/types';
 import type { ProjectTypeSummary } from '@/lib/domain/project-types/types';
 import type { HeroContent } from '@/lib/domain/hero-content/types';
@@ -166,6 +167,8 @@ export default function HomeDesktop({
           <FolderGrid links={folderLinks} />
         </div>
       </section>
+
+      <FeaturedBrowserWindow />
 
       <section className="windowcanvas search">
         <div className="h search">
