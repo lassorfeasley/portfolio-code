@@ -10,6 +10,10 @@ import type { ProjectTypeSummary } from '@/lib/domain/project-types/types';
 import type { HeroContent } from '@/lib/domain/hero-content/types';
 import type { FolderLink } from '@/lib/domain/folder-links/types';
 
+// The featured "browser" carousel (app/components/featured) is parked while the
+// standalone software site takes over that job. Flip this to bring it back.
+const SHOW_FEATURED_BROWSER = false;
+
 type HomeDesktopProps = {
   projects: ProjectSummary[];
   projectTypes: ProjectTypeSummary[];
@@ -43,7 +47,7 @@ export default function HomeDesktop({
   const displayHeroContent = heroContent ?? {
     id: '',
     windowTitle: 'Lassor_headshot.jpg',
-    heroText: 'Hi! I am Lassor Feasley. I am a product designer, entrepreneur, and the cofounder and CEO of Renewables.org, the solar crowdfunding nonprofit. Take a look around!',
+    heroText: 'Hi! I am Lassor Feasley. I am a product designer, entrepreneur, and the cofounder and CEO of Renewables.org, the Global South crowdfunding nonprofit. Take a look around!',
     heroImageUrl: 'https://cdn.prod.website-files.com/5e9a6fed9ba599718ff8fdb0/67e33283b8d549afbb87ff55_1658416295792-1.jpeg',
     footerLinkText: 'Lassor is face-blind. Learn more →',
     footerLinkHref: '/faceblind',
@@ -168,7 +172,7 @@ export default function HomeDesktop({
         </div>
       </section>
 
-      <FeaturedBrowserWindow />
+      {SHOW_FEATURED_BROWSER ? <FeaturedBrowserWindow /> : null}
 
       <section className="windowcanvas search">
         <div className="h search">
