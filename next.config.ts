@@ -58,7 +58,8 @@ const nextConfig: NextConfig = {
       toOriginal("/admin/:path*"),
       toOriginal("/auth/:path*"),
       toOriginal("/work"),
-      toOriginal(`/work/:slug((?!(?:${STREAMLINED_WORK})$)[^/]+)`, `${BASE}/work/:slug`),
+      // The streamlined site's client navigation also fetches /work/<slug>.txt.
+      toOriginal(`/work/:slug((?!(?:${STREAMLINED_WORK})(?:\\.txt)?$)[^/]+)`, `${BASE}/work/:slug`),
       toOriginal("/projects/:slug", `${BASE}/work/:slug`),
       toOriginal("/writing"),
       toOriginal("/writing/:path*"),
