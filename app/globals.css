@@ -62,6 +62,19 @@
   }
 }
 
+/* Drifting pools behind the public pages; set --flow-x, --flow-y, --flow-ms,
+   and --flow-delay. */
+@keyframes page-flow {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(var(--flow-x), var(--flow-y)) scale(1.4); }
+}
+.page-flow {
+  animation: page-flow var(--flow-ms, 20s) ease-in-out var(--flow-delay, 0s) infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-flow { animation: none; }
+}
+
 @layer components {
   .tiptap-editor {
     min-height: 220px;

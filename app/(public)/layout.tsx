@@ -3,10 +3,12 @@ import Script from 'next/script';
 import { PublicStyles } from './components/PublicStyles';
 import { ErrorBoundary } from '@/app/components/ErrorBoundary';
 import { RouteCleanup } from './components/RouteCleanup';
+import PageFlow from '@/app/components/PageFlow';
 
 const guardCss = `
 .globalmargin{max-width:1500px;margin:0 auto;padding:40px 40px 80px;}
 .public-body{overflow-x:hidden;}
+body .public-body{background-color:transparent;}
 @media(max-width:768px){.globalmargin{padding:40px 20px 80px;}}
 `;
 
@@ -28,6 +30,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
             y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
         })(window, document, "clarity", "script", "r65yzd1emd");`}
       </Script>
+      <PageFlow />
       <div className="public-body">{children}</div>
     </ErrorBoundary>
   );
